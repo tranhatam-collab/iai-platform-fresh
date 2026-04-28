@@ -1,0 +1,12 @@
+PENDING_OWNER_EVIDENCE — checkout-screenshot.png
+
+Owner: Team Pay (sandbox checkout via payOS) + Team B Pay Runtime
+Due: see TEAM_NOVA_OPS_TRAMSAIGON_ESCALATION_PACKET_2026-04-28.md
+Replace when: Team Pay completes a payOS checkout flow for tramsaigon.com
+
+Required content:
+- Full-page screenshot of payOS checkout UI showing tramsaigon.com order
+- Visible: amount, currency=VND, payment method selection, order ID
+- Sanitization: blur or crop any internal credential / staff-only field
+- Format: PNG, min 800x600 px
+- Filename: replace this .PENDING.txt with checkout-screenshot.png

@@ -1,0 +1,13 @@
+{
+  "_status": "PENDING_OWNER_EVIDENCE",
+  "_owner": "Team Pay (D1 readback) — pay.iai.one production database",
+  "_due": "see TEAM_NOVA_OPS_TRAMSAIGON_ESCALATION_PACKET_2026-04-28.md",
+  "_replace_when": "Team Pay completes payOS checkout and D1 row exists for the order",
+  "_required_tables": [
+    "orders (filter site_code=TRAMSAIGON, tenant_code=TBD)",
+    "payments (filter order_id=<ord_*>)",
+    "refunds (if applicable)",
+    "audit_log (state transitions for the order)"
+  ],
+  "_sanitization_rule": "Strip PII (customer email, phone, name) — replace with hashed identifiers."
+}

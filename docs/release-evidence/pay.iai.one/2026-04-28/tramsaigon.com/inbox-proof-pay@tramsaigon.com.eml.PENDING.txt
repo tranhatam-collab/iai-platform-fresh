@@ -1,0 +1,12 @@
+PENDING_OWNER_EVIDENCE — inbox-proof-pay@tramsaigon.com.eml
+
+Owner: Team Email + Team SMTP — mailbox pay@tramsaigon.com on mailcow
+Due: see TEAM_NOVA_OPS_TRAMSAIGON_ESCALATION_PACKET_2026-04-28.md
+Replace when: pay@tramsaigon.com mailbox bound on mailcow + receives a real test email (or sends one)
+
+Required content:
+- Raw RFC822 .eml export of one email landed in pay@tramsaigon.com
+- Full headers including Received chain, DKIM-Signature, Authentication-Results, Message-ID
+- Body must show one of the 4 Team D core templates (any locale)
+- Sanitization: strip customer PII (recipient email/name/order details) — keep header chain + message_id intact
+- Filename: replace this .PENDING.txt with inbox-proof-pay@tramsaigon.com.eml
