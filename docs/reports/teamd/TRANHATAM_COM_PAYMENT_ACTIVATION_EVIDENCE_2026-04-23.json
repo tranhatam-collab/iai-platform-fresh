@@ -1,0 +1,98 @@
+{
+  "domain": "tranhatam.com",
+  "intake_id": "SITE-INTAKE-100",
+  "status": "EXTERNAL_STEPS_PENDING",
+  "pay_gate_rule": {
+    "ready_for_live_forbidden_while_locked": true,
+    "current_pay_gate_state": "LOCK_RETAINED"
+  },
+  "mailboxes": [
+    {
+      "address": "pay@tranhatam.com",
+      "purpose": "payment_receipt_sender",
+      "binding_status": "PENDING",
+      "inbound_routing_status": "PENDING",
+      "inbox_proof_ref": ""
+    },
+    {
+      "address": "billing@tranhatam.com",
+      "purpose": "billing_failed_refund_sender",
+      "binding_status": "PENDING",
+      "inbound_routing_status": "PENDING",
+      "inbox_proof_ref": ""
+    },
+    {
+      "address": "support@tranhatam.com",
+      "purpose": "reply_to_support",
+      "binding_status": "PENDING",
+      "inbound_routing_status": "PENDING",
+      "inbox_proof_ref": ""
+    },
+    {
+      "address": "noreply@tranhatam.com",
+      "purpose": "reserved_not_payment_sender",
+      "binding_status": "PENDING",
+      "inbound_routing_status": "PENDING",
+      "inbox_proof_ref": ""
+    }
+  ],
+  "sender_policy": {
+    "payment_receipt": "pay@tranhatam.com",
+    "checkout_status_update": "billing@tranhatam.com",
+    "payment_failed_notice": "billing@tranhatam.com",
+    "refund_notice": "billing@tranhatam.com",
+    "reply_to": "support@tranhatam.com",
+    "noreply_payment_sender_allowed": false
+  },
+  "international_gateway": {
+    "vnd_primary_receiver": "recv_vnd_personal_tranhatam_acb",
+    "vnd_fallback_receiver": "recv_vnd_personal_tranhatam_vcb",
+    "usd_primary_receiver": "recv_usd_personal_tranhatam_paypal",
+    "usd_provider": "paypal",
+    "currency_policy_when_id_country_present": {
+      "VN": "VND_REQUIRED",
+      "NON_VN": "USD_REQUIRED"
+    },
+    "live_policy_wiring_status": "PENDING"
+  },
+  "runtime_bindings": {
+    "MAIL_API_BASE_URL": {
+      "required": true,
+      "secret": false,
+      "status": "PENDING",
+      "value_ref": "https://api.mail.iai.one/v1"
+    },
+    "MAIL_API_KEY": {
+      "required": true,
+      "secret": true,
+      "status": "PENDING",
+      "value_ref": "secure_channel_required"
+    },
+    "MAIL_API_WORKSPACE_ID": {
+      "required": true,
+      "secret": false,
+      "status": "PENDING",
+      "value_ref": ""
+    },
+    "PAY_EMAIL_ADAPTER_INTERNAL_KEY": {
+      "required": true,
+      "secret": true,
+      "status": "PENDING",
+      "value_ref": "secure_channel_required"
+    }
+  },
+  "payment_proof": {
+    "flow_type": "sandbox_or_live_TBD",
+    "provider_ref": "",
+    "checkout_or_payment_session_ref": "",
+    "mail_message_id": "",
+    "d1_or_canonical_row_ref": "",
+    "inbox_proof_ref": ""
+  },
+  "evidence_refs": {
+    "packet": "docs/reports/teamd/TRANHATAM_COM_P0_PAYMENT_ACTIVATION_PACKET_2026-04-23.md",
+    "checklist": "docs/reports/teamd/TRANHATAM_COM_PAYMENT_EMAIL_LIVE_CHECKLIST_2026-04-22.md",
+    "board": "docs/PAY_IAI_ONE_SITE_PAYMENT_ACTIVATION_INTAKE_BOARD_2026.md",
+    "adapter_contract": "docs/PAY_IAI_ONE_PAYMENT_EMAIL_OUTBOUND_ADAPTER_CONTRACT_2026.md"
+  }
+}

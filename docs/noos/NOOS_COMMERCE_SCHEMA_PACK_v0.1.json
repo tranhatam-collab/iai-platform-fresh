@@ -1,0 +1,2032 @@
+{
+  "openapi": "3.1.0",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "info": {
+    "title": "NOOS Commerce Schema Pack",
+    "version": "0.1.0",
+    "summary": "Machine-readable commerce contract pack for NOOS Team 2, Team 3, and Team 4 execution.",
+    "description": "This pack converts the locked NOOS commerce files into a machine-readable OpenAPI 3.1 contract for product catalog, pricing, checkout, entitlements, buyer library, upsell logic, KPI governance, support operations, and launch sequencing."
+  },
+  "servers": [
+    {
+      "url": "https://noos.iai.one/api/commerce/v0.1",
+      "description": "NOOS commerce surface"
+    },
+    {
+      "url": "https://app.iai.one/api/commerce/v0.1",
+      "description": "Human-facing buyer library and account surface"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Catalog",
+      "description": "Locked product catalog and product detail contracts"
+    },
+    {
+      "name": "Pricing",
+      "description": "Pricing ladder, license model, and upgrade-credit policies"
+    },
+    {
+      "name": "Checkout",
+      "description": "Stripe checkout session creation and webhook fulfillment contracts"
+    },
+    {
+      "name": "Entitlements",
+      "description": "Entitlement truth, access states, and version windows"
+    },
+    {
+      "name": "Library",
+      "description": "Buyer library routes, item states, and update visibility"
+    },
+    {
+      "name": "Recommendations",
+      "description": "Locked upsell, cross-sell, and upgrade ladder outputs"
+    },
+    {
+      "name": "Operations",
+      "description": "Team 3 and Team 4 execution surfaces, KPI contracts, and support ops"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "x-noos-status": "production-lock-derived",
+  "x-noos-sourceFiles": [
+    "24_NOOS_PRODUCT_PAGE_TEMPLATE_AND_COPY_SYSTEM_2026.md",
+    "25_NOOS_PRICING_LADDER_AND_LICENSE_MODEL_2026.md",
+    "26_NOOS_BUYER_LIBRARY_ENTITLEMENTS_AND_DELIVERY_SYSTEM_2026.md",
+    "27_NOOS_STRIPE_CHECKOUT_AND_DIGITAL_PRODUCT_FULFILLMENT_PLAN_2026.md",
+    "28_NOOS_FIRST_12_PRODUCTS_FULL_DEFINITIONS_2026.md",
+    "29_NOOS_UPSELL_CROSS_SELL_AND_PRODUCT_LADDER_SYSTEM_2026.md",
+    "32_NOOS_TEAM3_SITE_IA_AND_APP_SURFACE_EXECUTION_PLAN_2026.md",
+    "33_NOOS_TEAM4_GROWTH_REVENUE_AND_OPERATIONS_EXECUTION_PLAN_2026.md"
+  ],
+  "x-noos-commerceRules": {
+    "productTruthLocked": true,
+    "pricingTruthLocked": true,
+    "entitlementTruthLocked": true,
+    "noExecutionBypassOfEntitlements": true,
+    "noRandomUpsellsOutsideLockedMap": true,
+    "noFakeScarcity": true,
+    "noDiscountSpam": true
+  },
+  "x-noos-teamOwnership": {
+    "team2": [
+      "checkout",
+      "webhooks",
+      "entitlements",
+      "delivery-protection",
+      "version-log-states"
+    ],
+    "team3": [
+      "catalog-routes",
+      "product-pages",
+      "comparison-blocks",
+      "buyer-library-surface",
+      "checkout-success-surface"
+    ],
+    "team4": [
+      "launch-sequencing",
+      "funnel-performance",
+      "upgrade-operations",
+      "support-sla",
+      "kpi-governance"
+    ]
+  },
+  "paths": {
+    "/products": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Get the locked NOOS product catalog",
+        "operationId": "listProducts",
+        "responses": {
+          "200": {
+            "description": "Locked product catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductCatalogCollection"
+                },
+                "examples": {
+                  "initialCatalog": {
+                    "$ref": "#/components/examples/InitialCatalogV1"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products/{productCode}": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "Get one locked product definition",
+        "operationId": "getProductByCode",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProductCode"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Locked product definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDefinition"
+                },
+                "examples": {
+                  "masterPack": {
+                    "$ref": "#/components/examples/ProductP11"
+                  },
+                  "teamBundle": {
+                    "$ref": "#/components/examples/ProductP12"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/pricing/ladder": {
+      "get": {
+        "tags": [
+          "Pricing"
+        ],
+        "summary": "Get pricing ladder, license model, and upgrade-credit rules",
+        "operationId": "getPricingLadder",
+        "responses": {
+          "200": {
+            "description": "Pricing ladder",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingLadder"
+                },
+                "examples": {
+                  "pricingLadder": {
+                    "$ref": "#/components/examples/PricingLadderV1"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout/sessions": {
+      "post": {
+        "tags": [
+          "Checkout"
+        ],
+        "summary": "Create a checkout session for a locked NOOS product",
+        "operationId": "createCheckoutSession",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutSessionRequest"
+              },
+              "examples": {
+                "masterPackCheckout": {
+                  "$ref": "#/components/examples/CheckoutSessionP11"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Checkout session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutSessionReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/webhooks/stripe/checkout-session-completed": {
+      "post": {
+        "tags": [
+          "Checkout"
+        ],
+        "summary": "Process Stripe checkout.session.completed fulfillment",
+        "operationId": "handleStripeCheckoutCompleted",
+        "security": [
+          {
+            "StripeWebhookSignature": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookFulfillmentEvent"
+              },
+              "examples": {
+                "completedSession": {
+                  "$ref": "#/components/examples/FulfillmentCompletedP11"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fulfillment processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FulfillmentOutcome"
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/orders/{orderId}": {
+      "get": {
+        "tags": [
+          "Checkout"
+        ],
+        "summary": "Get immutable order truth for one purchase",
+        "operationId": "getOrderRecord",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrderId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderRecord"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/entitlements/{entitlementId}": {
+      "get": {
+        "tags": [
+          "Entitlements"
+        ],
+        "summary": "Get an entitlement record",
+        "operationId": "getEntitlementRecord",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EntitlementId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entitlement record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitlementRecord"
+                },
+                "examples": {
+                  "masterEntitlement": {
+                    "$ref": "#/components/examples/EntitlementP11"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/library/{buyerId}": {
+      "get": {
+        "tags": [
+          "Library"
+        ],
+        "summary": "Get buyer library surface",
+        "operationId": "getBuyerLibrary",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BuyerId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Buyer library",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryView"
+                },
+                "examples": {
+                  "buyerLibrary": {
+                    "$ref": "#/components/examples/BuyerLibraryView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recommendations/next-step": {
+      "post": {
+        "tags": [
+          "Recommendations"
+        ],
+        "summary": "Get locked next-step recommendations",
+        "operationId": "getNextStepRecommendation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationRequest"
+              },
+              "examples": {
+                "afterP03": {
+                  "$ref": "#/components/examples/RecommendationAfterP03"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Locked recommendation output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/surfaces/team3": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Get Team 3 site IA and app surface contract",
+        "operationId": "getTeam3SurfaceContract",
+        "responses": {
+          "200": {
+            "description": "Team 3 surface contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team3SurfaceContract"
+                },
+                "examples": {
+                  "team3Surface": {
+                    "$ref": "#/components/examples/Team3SurfaceExample"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operations/team4": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Get Team 4 growth, revenue, and operations contract",
+        "operationId": "getTeam4OperationsContract",
+        "responses": {
+          "200": {
+            "description": "Team 4 operations contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team4OperationsContract"
+                },
+                "examples": {
+                  "team4Ops": {
+                    "$ref": "#/components/examples/Team4OpsExample"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "StripeWebhookSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "stripe-signature"
+      }
+    },
+    "parameters": {
+      "ProductCode": {
+        "name": "productCode",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/ProductCode"
+        }
+      },
+      "OrderId": {
+        "name": "orderId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^ord_[A-Za-z0-9_-]{6,80}$"
+        }
+      },
+      "EntitlementId": {
+        "name": "entitlementId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^ent_[A-Za-z0-9_-]{6,80}$"
+        }
+      },
+      "BuyerId": {
+        "name": "buyerId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^buyer_[A-Za-z0-9_-]{6,80}$"
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Structured error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "InitialCatalogV1": {
+        "summary": "Locked v1 NOOS commerce catalog",
+        "value": {
+          "version": "1.0",
+          "products": [
+            {
+              "productCode": "P01",
+              "name": "NOOS Manifesto and Foundation Pack",
+              "route": "/product/noos-manifesto-foundation-pack",
+              "tier": "Entry",
+              "priceUsd": 19,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P02"
+            },
+            {
+              "productCode": "P02",
+              "name": "NOOS White Paper - Official Extended Edition",
+              "route": "/product/noos-white-paper-official-extended-edition",
+              "tier": "Entry/Core",
+              "priceUsd": 39,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P03"
+            },
+            {
+              "productCode": "P03",
+              "name": "NOOS Architecture and System Map Pack",
+              "route": "/product/noos-architecture-system-map-pack",
+              "tier": "Core",
+              "priceUsd": 99,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P11"
+            },
+            {
+              "productCode": "P04",
+              "name": "The 8 Layers of Future Civilization Technology",
+              "route": "/product/the-8-layers-of-future-civilization-technology",
+              "tier": "Entry/Core",
+              "priceUsd": 49,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P11"
+            },
+            {
+              "productCode": "P05",
+              "name": "Governance, Trust, and Human Sovereignty Pack",
+              "route": "/product/governance-trust-human-sovereignty-pack",
+              "tier": "Core",
+              "priceUsd": 129,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P06"
+            },
+            {
+              "productCode": "P06",
+              "name": "Post-Quantum, Auditability, and Security Direction Pack",
+              "route": "/product/post-quantum-auditability-security-direction-pack",
+              "tier": "Core",
+              "priceUsd": 149,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P11"
+            },
+            {
+              "productCode": "P07",
+              "name": "Vietnam Sovereign Resilience Profile Pack",
+              "route": "/product/vietnam-sovereign-resilience-profile-pack",
+              "tier": "Core",
+              "priceUsd": 149,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P08"
+            },
+            {
+              "productCode": "P08",
+              "name": "Planetary Care Grid and Field Intelligence Pack",
+              "route": "/product/planetary-care-grid-field-intelligence-pack",
+              "tier": "Advanced Program",
+              "priceUsd": 349,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P11"
+            },
+            {
+              "productCode": "P09",
+              "name": "Orbit, NTN, and Space Utility Pack",
+              "route": "/product/orbit-ntn-space-utility-pack",
+              "tier": "Advanced Program",
+              "priceUsd": 349,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P11"
+            },
+            {
+              "productCode": "P10",
+              "name": "Programmable Biology and Regenerative Systems Pack",
+              "route": "/product/programmable-biology-regenerative-systems-pack",
+              "tier": "Advanced Program",
+              "priceUsd": 349,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P11"
+            },
+            {
+              "productCode": "P11",
+              "name": "Future Civilization Technology Master Pack",
+              "route": "/product/future-civilization-technology-master-pack",
+              "tier": "Master",
+              "priceUsd": 399,
+              "defaultLicense": "Individual",
+              "primaryUpsell": "P12"
+            },
+            {
+              "productCode": "P12",
+              "name": "NOOS Builder Bundle for Teams",
+              "route": "/product/noos-builder-bundle-for-teams",
+              "tier": "Team",
+              "priceUsd": 799,
+              "defaultLicense": "Small Team",
+              "primaryUpsell": "Organization Inquiry"
+            }
+          ]
+        }
+      },
+      "ProductP11": {
+        "summary": "Master pack definition",
+        "value": {
+          "productCode": "P11",
+          "name": "Future Civilization Technology Master Pack",
+          "route": "/product/future-civilization-technology-master-pack",
+          "tier": "Master",
+          "priceUsd": 399,
+          "positioning": "Flagship integrated NOOS bundle for serious individual buyers.",
+          "audience": [
+            "strategists",
+            "researchers",
+            "founders",
+            "educators"
+          ],
+          "includedItems": [
+            "P02",
+            "P03",
+            "P04",
+            "P05",
+            "bonus sheets/index"
+          ],
+          "deliverables": [
+            "bundle access",
+            "PDFs",
+            "roadmap sheet",
+            "library entry"
+          ],
+          "defaultLicense": "Individual",
+          "updatePolicy": {
+            "windowLabel": "12 months",
+            "updateTypes": [
+              "selected"
+            ],
+            "upgradePath": "P12"
+          },
+          "primaryCta": "Get the Master Pack",
+          "secondaryUpsell": "P12",
+          "entitlementCode": "ENT_MASTER",
+          "pageTemplateClass": "Master"
+        }
+      },
+      "ProductP12": {
+        "summary": "Builder bundle for teams",
+        "value": {
+          "productCode": "P12",
+          "name": "NOOS Builder Bundle for Teams",
+          "route": "/product/noos-builder-bundle-for-teams",
+          "tier": "Team",
+          "priceUsd": 799,
+          "positioning": "Team-ready handoff bundle for product/design/dev alignment.",
+          "audience": [
+            "dev teams",
+            "design teams",
+            "innovation offices",
+            "builder groups"
+          ],
+          "includedItems": [
+            "architecture handoff",
+            "IA/route logic",
+            "subsystem boundaries",
+            "checklists"
+          ],
+          "deliverables": [
+            "team bundle set",
+            "library access",
+            "team license sheet"
+          ],
+          "defaultLicense": "Small Team",
+          "updatePolicy": {
+            "windowLabel": "12 months",
+            "updateTypes": [
+              "selected"
+            ],
+            "upgradePath": "Organization Inquiry"
+          },
+          "primaryCta": "Get the Builder Bundle",
+          "secondaryUpsell": "Organization Inquiry",
+          "entitlementCode": "ENT_BUILDER_TEAM",
+          "pageTemplateClass": "Team"
+        }
+      },
+      "PricingLadderV1": {
+        "summary": "Locked pricing ladder",
+        "value": {
+          "currency": "USD",
+          "priceTiers": [
+            {
+              "tier": "Entry",
+              "minPriceUsd": 19,
+              "maxPriceUsd": 49
+            },
+            {
+              "tier": "Core",
+              "minPriceUsd": 99,
+              "maxPriceUsd": 149
+            },
+            {
+              "tier": "Advanced Program",
+              "minPriceUsd": 349,
+              "maxPriceUsd": 399
+            },
+            {
+              "tier": "Team",
+              "minPriceUsd": 799,
+              "maxPriceUsd": 2500
+            },
+            {
+              "tier": "Institutional/Strategic",
+              "minPriceUsd": 2500,
+              "maxPriceUsd": 100000
+            }
+          ],
+          "upgradeCreditPolicies": [
+            {
+              "fromTier": "Entry",
+              "toTier": "Core",
+              "windowDays": 14,
+              "creditPercent": 100
+            },
+            {
+              "fromTier": "Core",
+              "toTier": "Master",
+              "windowDays": 21,
+              "creditPercent": 100
+            },
+            {
+              "fromTier": "Master",
+              "toTier": "Team",
+              "windowDays": 30,
+              "creditPercent": 100,
+              "creditCapUsd": 399
+            }
+          ],
+          "licensePolicies": [
+            {
+              "licenseType": "Individual",
+              "minSeats": 1,
+              "maxSeats": 1,
+              "allowsExternalSharing": false
+            },
+            {
+              "licenseType": "Small Team",
+              "minSeats": 3,
+              "maxSeats": 10,
+              "allowsExternalSharing": false
+            },
+            {
+              "licenseType": "Organization",
+              "minSeats": 11,
+              "maxSeats": 10000,
+              "allowsExternalSharing": false
+            }
+          ]
+        }
+      },
+      "CheckoutSessionP11": {
+        "summary": "Master pack checkout",
+        "value": {
+          "productCode": "P11",
+          "licenseType": "Individual",
+          "entitlementCode": "ENT_MASTER",
+          "buyerEmail": "buyer@example.com",
+          "successUrl": "https://noos.iai.one/checkout-success?session_id={CHECKOUT_SESSION_ID}",
+          "cancelUrl": "https://noos.iai.one/product/future-civilization-technology-master-pack",
+          "sourceSurface": "product-detail",
+          "upgradePath": null
+        }
+      },
+      "FulfillmentCompletedP11": {
+        "summary": "Stripe session fulfillment event",
+        "value": {
+          "eventType": "checkout.session.completed",
+          "checkoutSessionId": "cs_test_a1b2c3d4",
+          "productCode": "P11",
+          "licenseType": "Individual",
+          "entitlementCode": "ENT_MASTER",
+          "buyerEmail": "buyer@example.com",
+          "orderId": "ord_20260414_master_001",
+          "fulfillmentKey": "cs_test_a1b2c3d4",
+          "idempotencyPassed": true,
+          "entitlementActions": [
+            {
+              "action": "grant_parent_entitlement",
+              "entitlementCode": "ENT_MASTER"
+            },
+            {
+              "action": "project_child_access",
+              "entitlementCode": "ENT_WHITEPAPER"
+            }
+          ],
+          "confirmationEmailQueued": true,
+          "loggedAt": "2026-04-14T11:02:00Z"
+        }
+      },
+      "EntitlementP11": {
+        "summary": "Master pack entitlement",
+        "value": {
+          "entitlementId": "ent_master_001",
+          "buyerId": "buyer_alpha001",
+          "productCode": "P11",
+          "licenseType": "Individual",
+          "orderId": "ord_20260414_master_001",
+          "grantedAt": "2026-04-14T11:02:00Z",
+          "accessStatus": "active",
+          "updateWindowEnd": "2027-04-14T11:02:00Z",
+          "entitlementCode": "ENT_MASTER",
+          "versionScope": "full_bundle_window"
+        }
+      },
+      "BuyerLibraryView": {
+        "summary": "Library view with one owned product and one next-step card",
+        "value": {
+          "buyerId": "buyer_alpha001",
+          "items": [
+            {
+              "productCode": "P11",
+              "name": "Future Civilization Technology Master Pack",
+              "currentVersion": "1.0",
+              "purchasedDate": "2026-04-14T11:02:00Z",
+              "licenseType": "Individual",
+              "updateStatus": "current",
+              "actions": [
+                "view",
+                "download",
+                "updates"
+              ]
+            }
+          ],
+          "recommendations": {
+            "nextProductPrimary": "P12",
+            "upgradeLicenseOffer": "Small Team"
+          },
+          "routeSet": [
+            "/library",
+            "/library/product/future-civilization-technology-master-pack",
+            "/library/updates",
+            "/library/licenses",
+            "/library/account"
+          ]
+        }
+      },
+      "RecommendationAfterP03": {
+        "summary": "Recommendation input after architecture pack purchase",
+        "value": {
+          "purchasedProducts": [
+            "P03"
+          ],
+          "licenseType": "Individual",
+          "lastPurchaseDate": "2026-04-14T11:02:00Z",
+          "roleTag": "builder",
+          "sourceSurface": "library-home"
+        }
+      },
+      "Team3SurfaceExample": {
+        "summary": "Team 3 surface contract",
+        "value": {
+          "routes": [
+            "/products",
+            "/documents",
+            "/programs",
+            "/licenses",
+            "/product/[slug]",
+            "/library",
+            "/library/product/[product-slug]",
+            "/library/updates",
+            "/checkout-success"
+          ],
+          "requiredComponents": [
+            "ProductHero",
+            "IncludedItemsList",
+            "LicenseBox",
+            "UpdatePolicyBox",
+            "RelatedProductsGrid",
+            "FAQAccordion",
+            "FinalCTABlock",
+            "PurchasedProductsGrid",
+            "LibraryProductCard",
+            "VersionHistoryList",
+            "UpgradeCallout"
+          ],
+          "productPageSections": [
+            "Product Hero",
+            "Product Positioning",
+            "Who It Is For",
+            "What Problems It Solves",
+            "What Is Included",
+            "Deliverables and Format",
+            "License and Usage",
+            "Version and Updates",
+            "Why This Matters",
+            "Related Products",
+            "FAQ",
+            "Final CTA"
+          ],
+          "uiStates": [
+            "empty-library",
+            "update-available",
+            "update-window-expired",
+            "upgrade-available"
+          ],
+          "integrationCheckpoints": [
+            "cta-to-checkout-product-code-mapping",
+            "checkout-success-order-license-rendering",
+            "library-status-active-expired-upgraded"
+          ]
+        }
+      },
+      "Team4OpsExample": {
+        "summary": "Team 4 operations contract",
+        "value": {
+          "launchWaves": [
+            {
+              "waveId": "wave-1",
+              "label": "Wave 1",
+              "productCodes": [
+                "P02",
+                "P03",
+                "P04",
+                "P05",
+                "P07",
+                "P11"
+              ]
+            },
+            {
+              "waveId": "wave-2",
+              "label": "Wave 2",
+              "productCodes": [
+                "P01",
+                "P06",
+                "P08",
+                "P09",
+                "P10",
+                "P12"
+              ]
+            }
+          ],
+          "kpis": [
+            "conversion-rate-by-product",
+            "aov",
+            "checkout-completion-rate",
+            "library-activation-rate-24h",
+            "upgrade-rate",
+            "repeat-purchase-rate-30-60-90d",
+            "support-response-sla",
+            "refund-dispute-rate",
+            "pricing-mismatch-incidents",
+            "failed-fulfillment-incidents"
+          ],
+          "supportSla": {
+            "firstResponseHours": 24,
+            "resolutionHours": 72,
+            "queues": [
+              "purchase-access",
+              "license-upgrade",
+              "refund-dispute"
+            ]
+          },
+          "guardrails": [
+            "authority-led-messaging-only",
+            "no-fake-scarcity",
+            "no-discount-spam",
+            "no-price-license-drift"
+          ],
+          "runbooks": [
+            "launch-day-monitoring",
+            "failed-purchase-missing-access",
+            "license-upgrade-support",
+            "updates-announcement"
+          ]
+        }
+      }
+    },
+    "schemas": {
+      "ProductCode": {
+        "type": "string",
+        "enum": [
+          "P01",
+          "P02",
+          "P03",
+          "P04",
+          "P05",
+          "P06",
+          "P07",
+          "P08",
+          "P09",
+          "P10",
+          "P11",
+          "P12"
+        ]
+      },
+      "TierName": {
+        "type": "string",
+        "enum": [
+          "Entry",
+          "Entry/Core",
+          "Core",
+          "Advanced Program",
+          "Master",
+          "Team",
+          "Institutional/Strategic"
+        ]
+      },
+      "LicenseType": {
+        "type": "string",
+        "enum": [
+          "Individual",
+          "Small Team",
+          "Organization",
+          "Strategic"
+        ]
+      },
+      "EntitlementCode": {
+        "type": "string",
+        "enum": [
+          "ENT_FOUNDATION",
+          "ENT_WHITEPAPER",
+          "ENT_ARCHITECTURE",
+          "ENT_LAYERS",
+          "ENT_GOVERNANCE",
+          "ENT_SECURITY",
+          "ENT_VIETNAM",
+          "ENT_GRID",
+          "ENT_ORBIT",
+          "ENT_BIOS",
+          "ENT_MASTER",
+          "ENT_BUILDER_TEAM"
+        ]
+      },
+      "UpdateStatus": {
+        "type": "string",
+        "enum": [
+          "current",
+          "update_available",
+          "window_expired",
+          "upgraded"
+        ]
+      },
+      "AccessStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "expired_updates_only",
+          "revoked",
+          "upgraded",
+          "replaced"
+        ]
+      },
+      "VersionScope": {
+        "type": "string",
+        "enum": [
+          "current_only",
+          "current_plus_minor_updates",
+          "current_plus_selected_updates",
+          "full_bundle_window"
+        ]
+      },
+      "ProductCatalogCollection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "products"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "products": {
+            "type": "array",
+            "minItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/ProductCatalogEntry"
+            }
+          }
+        }
+      },
+      "ProductCatalogEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productCode",
+          "name",
+          "route",
+          "tier",
+          "priceUsd",
+          "defaultLicense",
+          "primaryUpsell"
+        ],
+        "properties": {
+          "productCode": {
+            "$ref": "#/components/schemas/ProductCode"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 160
+          },
+          "route": {
+            "type": "string",
+            "pattern": "^/product/[a-z0-9-]+$"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/TierName"
+          },
+          "priceUsd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "defaultLicense": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "primaryUpsell": {
+            "type": "string"
+          }
+        }
+      },
+      "ProductDefinition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productCode",
+          "name",
+          "route",
+          "tier",
+          "priceUsd",
+          "positioning",
+          "audience",
+          "includedItems",
+          "deliverables",
+          "defaultLicense",
+          "updatePolicy",
+          "primaryCta",
+          "secondaryUpsell",
+          "entitlementCode",
+          "pageTemplateClass"
+        ],
+        "properties": {
+          "productCode": {
+            "$ref": "#/components/schemas/ProductCode"
+          },
+          "name": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string",
+            "pattern": "^/product/[a-z0-9-]+$"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/TierName"
+          },
+          "priceUsd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "positioning": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 240
+          },
+          "audience": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "includedItems": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "deliverables": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "defaultLicense": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "updatePolicy": {
+            "$ref": "#/components/schemas/UpdatePolicy"
+          },
+          "primaryCta": {
+            "type": "string"
+          },
+          "secondaryUpsell": {
+            "type": "string"
+          },
+          "entitlementCode": {
+            "$ref": "#/components/schemas/EntitlementCode"
+          },
+          "pageTemplateClass": {
+            "type": "string",
+            "enum": [
+              "Entry",
+              "Core",
+              "Advanced Program",
+              "Master",
+              "Team"
+            ]
+          }
+        }
+      },
+      "UpdatePolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "windowLabel",
+          "updateTypes",
+          "upgradePath"
+        ],
+        "properties": {
+          "windowLabel": {
+            "type": "string"
+          },
+          "updateTypes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "minor",
+                "selected",
+                "content"
+              ]
+            }
+          },
+          "upgradePath": {
+            "type": "string"
+          }
+        }
+      },
+      "PriceTier": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tier",
+          "minPriceUsd",
+          "maxPriceUsd"
+        ],
+        "properties": {
+          "tier": {
+            "$ref": "#/components/schemas/TierName"
+          },
+          "minPriceUsd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxPriceUsd": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "UpgradeCreditPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fromTier",
+          "toTier",
+          "windowDays",
+          "creditPercent"
+        ],
+        "properties": {
+          "fromTier": {
+            "$ref": "#/components/schemas/TierName"
+          },
+          "toTier": {
+            "$ref": "#/components/schemas/TierName"
+          },
+          "windowDays": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "creditPercent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "creditCapUsd": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "LicensePolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "licenseType",
+          "minSeats",
+          "maxSeats",
+          "allowsExternalSharing"
+        ],
+        "properties": {
+          "licenseType": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "minSeats": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxSeats": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "allowsExternalSharing": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PricingLadder": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currency",
+          "priceTiers",
+          "upgradeCreditPolicies",
+          "licensePolicies"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string",
+            "const": "USD"
+          },
+          "priceTiers": {
+            "type": "array",
+            "minItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/PriceTier"
+            }
+          },
+          "upgradeCreditPolicies": {
+            "type": "array",
+            "minItems": 3,
+            "items": {
+              "$ref": "#/components/schemas/UpgradeCreditPolicy"
+            }
+          },
+          "licensePolicies": {
+            "type": "array",
+            "minItems": 3,
+            "items": {
+              "$ref": "#/components/schemas/LicensePolicy"
+            }
+          }
+        }
+      },
+      "CheckoutSessionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productCode",
+          "licenseType",
+          "entitlementCode",
+          "buyerEmail",
+          "successUrl",
+          "cancelUrl",
+          "sourceSurface"
+        ],
+        "properties": {
+          "productCode": {
+            "$ref": "#/components/schemas/ProductCode"
+          },
+          "licenseType": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "entitlementCode": {
+            "$ref": "#/components/schemas/EntitlementCode"
+          },
+          "buyerEmail": {
+            "type": "string",
+            "format": "email"
+          },
+          "successUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "cancelUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "sourceSurface": {
+            "type": "string",
+            "enum": [
+              "product-detail",
+              "catalog",
+              "upsell-card",
+              "library"
+            ]
+          },
+          "upgradePath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CheckoutSessionReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "checkoutSessionId",
+          "productCode",
+          "licenseType",
+          "redirectUrl",
+          "fulfillmentStatus"
+        ],
+        "properties": {
+          "checkoutSessionId": {
+            "type": "string",
+            "pattern": "^cs_[A-Za-z0-9_]+$"
+          },
+          "productCode": {
+            "$ref": "#/components/schemas/ProductCode"
+          },
+          "licenseType": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "redirectUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "fulfillmentStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed",
+              "delayed"
+            ]
+          }
+        }
+      },
+      "WebhookEntitlementAction": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "entitlementCode"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "grant_parent_entitlement",
+              "grant_direct_entitlement",
+              "project_child_access"
+            ]
+          },
+          "entitlementCode": {
+            "$ref": "#/components/schemas/EntitlementCode"
+          }
+        }
+      },
+      "WebhookFulfillmentEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventType",
+          "checkoutSessionId",
+          "productCode",
+          "licenseType",
+          "entitlementCode",
+          "buyerEmail",
+          "orderId",
+          "fulfillmentKey",
+          "idempotencyPassed",
+          "entitlementActions",
+          "confirmationEmailQueued",
+          "loggedAt"
+        ],
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "checkout.session.completed",
+              "payment_intent.succeeded",
+              "checkout.session.expired",
+              "charge.refunded"
+            ]
+          },
+          "checkoutSessionId": {
+            "type": "string"
+          },
+          "productCode": {
+            "$ref": "#/components/schemas/ProductCode"
+          },
+          "licenseType": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "entitlementCode": {
+            "$ref": "#/components/schemas/EntitlementCode"
+          },
+          "buyerEmail": {
+            "type": "string",
+            "format": "email"
+          },
+          "orderId": {
+            "type": "string",
+            "pattern": "^ord_[A-Za-z0-9_-]{6,80}$"
+          },
+          "fulfillmentKey": {
+            "type": "string"
+          },
+          "idempotencyPassed": {
+            "type": "boolean"
+          },
+          "entitlementActions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/WebhookEntitlementAction"
+            }
+          },
+          "confirmationEmailQueued": {
+            "type": "boolean"
+          },
+          "loggedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FulfillmentOutcome": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "orderCreated",
+          "buyerLinked",
+          "entitlementsGranted",
+          "emailQueued",
+          "logWritten"
+        ],
+        "properties": {
+          "orderCreated": {
+            "type": "boolean"
+          },
+          "buyerLinked": {
+            "type": "boolean"
+          },
+          "entitlementsGranted": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntitlementCode"
+            }
+          },
+          "emailQueued": {
+            "type": "boolean"
+          },
+          "logWritten": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OrderRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "orderId",
+          "buyerId",
+          "productCode",
+          "licenseType",
+          "amountSnapshotUsd",
+          "checkoutSessionId",
+          "status",
+          "purchasedAt",
+          "entitlementIds"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "pattern": "^ord_[A-Za-z0-9_-]{6,80}$"
+          },
+          "buyerId": {
+            "type": "string",
+            "pattern": "^buyer_[A-Za-z0-9_-]{6,80}$"
+          },
+          "productCode": {
+            "$ref": "#/components/schemas/ProductCode"
+          },
+          "licenseType": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "amountSnapshotUsd": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "checkoutSessionId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "paid",
+              "refunded",
+              "disputed",
+              "expired"
+            ]
+          },
+          "purchasedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entitlementIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "EntitlementRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entitlementId",
+          "buyerId",
+          "productCode",
+          "licenseType",
+          "orderId",
+          "grantedAt",
+          "accessStatus",
+          "updateWindowEnd",
+          "entitlementCode",
+          "versionScope"
+        ],
+        "properties": {
+          "entitlementId": {
+            "type": "string",
+            "pattern": "^ent_[A-Za-z0-9_-]{6,80}$"
+          },
+          "buyerId": {
+            "type": "string",
+            "pattern": "^buyer_[A-Za-z0-9_-]{6,80}$"
+          },
+          "productCode": {
+            "$ref": "#/components/schemas/ProductCode"
+          },
+          "licenseType": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "grantedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "accessStatus": {
+            "$ref": "#/components/schemas/AccessStatus"
+          },
+          "updateWindowEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entitlementCode": {
+            "$ref": "#/components/schemas/EntitlementCode"
+          },
+          "versionScope": {
+            "$ref": "#/components/schemas/VersionScope"
+          }
+        }
+      },
+      "LibraryItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "productCode",
+          "name",
+          "currentVersion",
+          "purchasedDate",
+          "licenseType",
+          "updateStatus",
+          "actions"
+        ],
+        "properties": {
+          "productCode": {
+            "$ref": "#/components/schemas/ProductCode"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currentVersion": {
+            "type": "string"
+          },
+          "purchasedDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "licenseType": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "updateStatus": {
+            "$ref": "#/components/schemas/UpdateStatus"
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "view",
+                "download",
+                "updates"
+              ]
+            }
+          }
+        }
+      },
+      "LibraryView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "buyerId",
+          "items",
+          "recommendations",
+          "routeSet"
+        ],
+        "properties": {
+          "buyerId": {
+            "type": "string",
+            "pattern": "^buyer_[A-Za-z0-9_-]{6,80}$"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryItem"
+            }
+          },
+          "recommendations": {
+            "$ref": "#/components/schemas/RecommendationResult"
+          },
+          "routeSet": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "RecommendationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "purchasedProducts",
+          "licenseType",
+          "lastPurchaseDate",
+          "sourceSurface"
+        ],
+        "properties": {
+          "purchasedProducts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/ProductCode"
+            }
+          },
+          "licenseType": {
+            "$ref": "#/components/schemas/LicenseType"
+          },
+          "lastPurchaseDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "roleTag": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "builder",
+              "team",
+              "institution"
+            ]
+          },
+          "sourceSurface": {
+            "type": "string",
+            "enum": [
+              "product-detail",
+              "checkout-success",
+              "library-home"
+            ]
+          }
+        }
+      },
+      "RecommendationResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nextProductPrimary"
+        ],
+        "properties": {
+          "nextProductPrimary": {
+            "type": "string"
+          },
+          "nextProductSecondary": {
+            "type": "string"
+          },
+          "upgradeLicenseOffer": {
+            "type": "string"
+          },
+          "ruleRef": {
+            "type": "string"
+          }
+        }
+      },
+      "KpiDefinition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "category"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "conversion",
+              "revenue",
+              "activation",
+              "support",
+              "risk"
+            ]
+          }
+        }
+      },
+      "LaunchWave": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "waveId",
+          "label",
+          "productCodes"
+        ],
+        "properties": {
+          "waveId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "productCodes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/ProductCode"
+            }
+          }
+        }
+      },
+      "SupportSLA": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstResponseHours",
+          "resolutionHours",
+          "queues"
+        ],
+        "properties": {
+          "firstResponseHours": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "resolutionHours": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "queues": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Team3SurfaceContract": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "routes",
+          "requiredComponents",
+          "productPageSections",
+          "uiStates",
+          "integrationCheckpoints"
+        ],
+        "properties": {
+          "routes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiredComponents": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "productPageSections": {
+            "type": "array",
+            "minItems": 12,
+            "items": {
+              "type": "string"
+            }
+          },
+          "uiStates": {
+            "type": "array",
+            "minItems": 4,
+            "items": {
+              "type": "string"
+            }
+          },
+          "integrationCheckpoints": {
+            "type": "array",
+            "minItems": 3,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Team4OperationsContract": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "launchWaves",
+          "kpis",
+          "supportSla",
+          "guardrails",
+          "runbooks"
+        ],
+        "properties": {
+          "launchWaves": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/LaunchWave"
+            }
+          },
+          "kpis": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "supportSla": {
+            "$ref": "#/components/schemas/SupportSLA"
+          },
+          "guardrails": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "runbooks": {
+            "type": "array",
+            "minItems": 4,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

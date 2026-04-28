@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-04-28T11:43:48.191Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-24",
+  "evidencePath": "docs/reports/teamd/TRANHATAM_COM_PAYMENT_ACTIVATION_EVIDENCE_2026-04-24.json",
+  "gatePath": "docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-04-24.md",
+  "activationEvidenceComplete": false,
+  "checks": [
+    {
+      "name": "evidence_json_object",
+      "pass": true,
+      "details": "Evidence is a JSON object."
+    },
+    {
+      "name": "domain_locked_to_tranhatam",
+      "pass": true,
+      "details": "Domain is locked to tranhatam.com."
+    },
+    {
+      "name": "intake_row_locked",
+      "pass": true,
+      "details": "Intake row is SITE-INTAKE-100."
+    },
+    {
+      "name": "required_mailboxes_present",
+      "pass": true,
+      "details": "All required tranhatam.com mailbox identities are represented."
+    },
+    {
+      "name": "sender_policy_locked",
+      "pass": true,
+      "details": "Sender policy must keep receipts on pay@, billing/refund/failure on billing@, reply-to on support@, and forbid noreply as payment sender."
+    },
+    {
+      "name": "international_gateway_locked",
+      "pass": true,
+      "details": "International gateway lock must keep tranhatam.com dual-rail mapping and id_country currency policy."
+    },
+    {
+      "name": "runtime_bindings_represented",
+      "pass": true,
+      "details": "All required runtime bindings are represented."
+    },
+    {
+      "name": "payment_proof_fields_represented",
+      "pass": true,
+      "details": "All required payment proof fields are represented."
+    },
+    {
+      "name": "no_ready_for_live_while_gate_locked_or_evidence_missing",
+      "pass": true,
+      "details": "Evidence does not claim live readiness before gate and evidence are complete."
+    }
+  ],
+  "liveClaimBlocked": true,
+  "mailboxEvidenceComplete": false,
+  "overallPass": true,
+  "paymentEvidenceComplete": true,
+  "payGateLocked": true,
+  "payGateState": "LOCK_RETAINED_WITH_REASON",
+  "runtimeEvidenceComplete": false,
+  "status": "PROOF_CHAIN_COMPLETE_GATE_LOCKED"
+}

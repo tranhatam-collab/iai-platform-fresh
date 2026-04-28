@@ -1,0 +1,111 @@
+name: iai-mail-internal-first
+
+services:
+  mail-api:
+    container_name: iai-mail-api-internal
+    image: node:22-alpine
+    working_dir: /workspace
+    command: ["node", "apps/mail-api/dist/index.js"]
+    restart: unless-stopped
+    environment:
+      NODE_ENV: "production"
+      PORT: "8787"
+      API_FLOW_BIND_ADDRESS: "0.0.0.0"
+      MAIL_DB_URL: "sqlite:/data/iai-mail-flow.sqlite"
+      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN}"
+    volumes:
+      - type: bind
+        source: ${MAIL_REPO_ROOT}
+        target: /workspace
+        read_only: true
+      - type: bind
+        source: ${MAIL_API_DATA_ROOT}
+        target: /data
+    ports:
+      - "127.0.0.1:${MAIL_API_HOST_PORT:-8787}:8787"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8787/health').then((r)=>{if(!r.ok) process.exit(1)}).catch(()=>process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    stop_grace_period: 10s
+    networks:
+      - mail_internal
+
+  mail-smtp:
+    container_name: iai-mail-smtp-internal
+    image: node:22-alpine
+    working_dir: /workspace
+    command: ["node", "apps/mail-smtp/dist/index.js"]
+    restart: unless-stopped
+    depends_on:
+      mail-api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: "production"
+      LOG_LEVEL: "${LOG_LEVEL:-info}"
+      MAIL_DB_URL: "sqlite:/data/iai-mail-smtp.sqlite"
+      MAIL_SMTP_BIND_ADDRESS: "0.0.0.0"
+      MAIL_SMTP_PORT: "1587"
+      MAIL_SMTP_HOSTNAME: "${MAIL_SMTP_HOSTNAME}"
+      MAIL_SMTP_BANNER: "${MAIL_SMTP_BANNER}"
+      MAIL_SMTP_STARTTLS_REQUIRED: "true"
+      MAIL_SMTP_REQUIRE_TLS_BEFORE_AUTH: "true"
+      MAIL_SMTP_TLS_MIN_VERSION: "TLSv1.2"
+      MAIL_SMTP_TLS_REJECT_UNAUTHORIZED: "true"
+      MAIL_SMTP_TLS_CERT_PATH: "/certs/cert.pem"
+      MAIL_SMTP_TLS_KEY_PATH: "/certs/key.pem"
+      MAIL_SMTP_HEALTH_BIND_ADDRESS: "0.0.0.0"
+      MAIL_SMTP_HEALTH_PORT: "9091"
+      MAIL_SMTP_METRICS_ENABLED: "false"
+      MAIL_SMTP_BACKEND_MODE: "remote"
+      MAIL_SMTP_REMOTE_BASE_URL: "${MAIL_SMTP_REMOTE_BASE_URL}"
+      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN}"
+      MAIL_API_HEALTH_URL: "http://mail-api:8787/health"
+      MAIL_API_DEPENDENCIES_HEALTH_URL: "http://mail-api:8787/v1/health/dependencies"
+      MAIL_SMTP_QUEUE_URL: "${MAIL_SMTP_QUEUE_URL:-redis://placeholder:6379/0}"
+      MAIL_SMTP_QUEUE_NAME: "${MAIL_SMTP_QUEUE_NAME:-mail-smtp-submit}"
+      MAIL_SMTP_PRIMARY_ROUTE: "${MAIL_SMTP_PRIMARY_ROUTE:-transactional_primary}"
+      MAIL_SMTP_BACKUP_ROUTE: "${MAIL_SMTP_BACKUP_ROUTE:-transactional_backup}"
+      MAIL_PROVIDER_DEFAULT: "${MAIL_PROVIDER_DEFAULT:-selfhosted}"
+    volumes:
+      - type: bind
+        source: ${MAIL_REPO_ROOT}
+        target: /workspace
+        read_only: true
+      - type: bind
+        source: ${MAIL_SMTP_DATA_ROOT}
+        target: /data
+      - type: bind
+        source: ${MAIL_TLS_CERTS_PATH}
+        target: /certs
+        read_only: true
+    ports:
+      - "127.0.0.1:${MAIL_SMTP_PRIVATE_PORT:-1587}:1587"
+      - "127.0.0.1:${MAIL_SMTP_HEALTH_HOST_PORT:-9091}:9091"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:9091/health').then((r)=>{if(!r.ok) process.exit(1)}).catch(()=>process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    stop_grace_period: 10s
+    networks:
+      - mail_internal
+
+networks:
+  mail_internal:
+    name: iai-mail-internal

@@ -1,0 +1,108 @@
+{
+  "generatedAt": "2026-04-23T06:59:07.458Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-23",
+  "timeoutMs": 60000,
+  "paths": {
+    "ciosRoot": "../cios.iai.one",
+    "packetPath": "docs/release-evidence/cios.iai.one/CIOS_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+    "runtimeProofPath": "docs/release-evidence/cios.iai.one/CIOS_IAI_ONE_RUNTIME_CONTRACT_PROOF_2026-04-21.md"
+  },
+  "smokeReadiness": {
+    "hasWorkersJwtSecret": true,
+    "hasDirectToken": false,
+    "hasSessionAuth": true,
+    "hasWorkersApiUrl": true,
+    "ready": true,
+    "workersJwtLooksPlaceholder": false,
+    "workersJwtSource": ".env(jwt_secret)",
+    "directTokenSource": "missing",
+    "sessionAuthSource": "default(demo123456)",
+    "workersApiUrlSource": ".env",
+    "workersApiUrl": "https://cios-workers-api.tranhatam66.workers.dev"
+  },
+  "screenshotChecks": [
+    {
+      "label": "Root landing",
+      "route": "https://cios.iai.one/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/root.png",
+      "present": true
+    },
+    {
+      "label": "CIOS hub",
+      "route": "https://cios.iai.one/cios/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/hub.png",
+      "present": true
+    },
+    {
+      "label": "CIOS app",
+      "route": "https://cios.iai.one/cios/app/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/app.png",
+      "present": true
+    },
+    {
+      "label": "CIOS pricing",
+      "route": "https://cios.iai.one/cios/pricing/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/pricing.png",
+      "present": true
+    },
+    {
+      "label": "CIOS demo",
+      "route": "https://cios.iai.one/cios/demo/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/demo.png",
+      "present": true
+    }
+  ],
+  "commands": {
+    "workspaceEvidenceGuard": {
+      "command": "node --test tests/integration/cios-release-evidence.test.mjs",
+      "result": "PASS",
+      "ok": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "error": null,
+      "durationMs": 129,
+      "stdout": "✔ cios sibling workspace exposes release-critical route shells (3.02875ms)\n✔ cios sibling workspace exposes runtime contract and rollback proof (4.643417ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 68.081208",
+      "stderr": ""
+    },
+    "upstreamVitest": {
+      "command": "node node_modules/vitest/vitest.mjs run --reporter=verbose --maxWorkers=1 --configLoader runner",
+      "result": "PASS",
+      "ok": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "error": null,
+      "durationMs": 3951,
+      "stdout": "RUN  v4.1.1 /Users/tranhatam/Documents/Devnewproject/cios.iai.one\n\nstdout | tests/sprint-v1.test.ts\n[dotenv@17.3.1] injecting env (1) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }\n\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > registers and creates auth session, then returns member plans 210ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > protects secured endpoints without JWT 1ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns crm list/detail and governance snapshots 4ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns auth audit trail for compliance role 2ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > evaluates sensitive action with CEE-lite 11ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > creates and updates flow runs for realtime flow.updated path 6ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns persisted realtime events since event id fallback endpoint 5ms\nstdout | tests/phase1-integration.test.ts\n[dotenv@17.3.1] injecting env (1) from .env -- tip: ⚙️  override existing env vars with { override: true }\n\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces auth on realtime replay endpoint 2ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces permission matrix for realtime replay endpoint 1ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > replays only events after a given event id 7ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces permission matrix for flow dispatch 1ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > rejects flow callback when signature is missing or invalid 7ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > accepts flow callback with valid signature 7ms\nstdout | tests/sse-reconnect.test.ts\n[dotenv@17.3.1] injecting env (1) from .env -- tip: ⚡️ secrets for agents: https://dotenvx...",
+      "stderr": ""
+    },
+    "strictSmoke": {
+      "command": "node scripts/teamc-cios-strict-smoke-capture.mjs",
+      "result": "PASS",
+      "ok": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "error": null,
+      "durationMs": 5514,
+      "stdout": "docs/release-evidence/cios.iai.one/artifacts/CIOS_IAI_ONE_STRICT_SMOKE_2026-04-23.md\ndocs/release-evidence/cios.iai.one/artifacts/CIOS_IAI_ONE_STRICT_SMOKE_2026-04-23.json",
+      "stderr": "",
+      "skipped": false
+    }
+  },
+  "checks": {
+    "ciosWorkspacePresent": true,
+    "packetPresent": true,
+    "runtimeProofPresent": true,
+    "screenshotPackPresent": true,
+    "workspaceEvidenceGuardPass": true,
+    "upstreamVitestPass": true,
+    "strictSmokeReady": true,
+    "strictSmokePass": true
+  },
+  "unmetChecks": [],
+  "reviewClosureReady": true,
+  "nextActions": []
+}

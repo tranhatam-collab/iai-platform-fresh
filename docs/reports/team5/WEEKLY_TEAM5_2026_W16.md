@@ -1,0 +1,42 @@
+# WEEKLY_TEAM5_2026_W16
+- Team: Team 5 web.iai.one
+- Owner: Team 5 Web Lead
+- Goals committed:
+  - finalize web onboarding + Flow/API integration contract
+  - lock KPI baseline and experiment registry
+  - align auth/billing vocabulary with Team 1 + Team 2
+- Goals delivered:
+  - onboarding context synchronized with mission-map and release authority
+  - KPI baseline and release gates drafted
+  - experiment registry drafted
+  - minimal `apps/web` onboarding surface built on shared Flow/API contracts
+  - onboarding smoke test passed against shared Team 2 contract reads and shared-auth redirect
+  - Team 2 canonical auth/billing/deep-link targets now consumed from shared onboarding contract endpoint
+  - full P0 analytics baseline instrumentation wired and smoke-tested (`/events`, `/events/baseline`, `POST /events/track`)
+  - optional persistent proof sink added via `WEB_EVENT_SINK_PATH`
+  - daily KPI snapshot automation delivered (`pnpm report:team5-web-kpi`)
+  - daily KPI smoke feed delivered (`pnpm smoke:team5-web-kpi`) and baseline coverage observed at `100%` (`12/12`)
+  - NOOS entitlement schema drift guard upgraded to auto-check new OpenAPI entitlement fields
+  - 2026-04-18 stability checkpoint passed (`test:web`, `test:noos-commerce-contracts`, `report:lane`)
+  - preview release packet attached for Team 1 review
+  - bilingual route QA packet attached for Team 1 review
+  - Team 5 gate reopen request submitted to Team 1 reviewer lane
+- KPI snapshot:
+  - visitor -> signup conversion: baseline pending (pilot traffic chua live)
+  - signup -> first action activation: baseline pending (instrumentation da co, dang cho pilot traffic)
+  - first action -> retained user: baseline pending
+  - campaign -> qualified pipeline: baseline pending
+  - revenue-assist conversions: baseline pending
+  - guardrails: onboarding smoke green, Team 2 auth/billing contract closure CLOSED theo Control Tower (2026-04-15), packet blocker đã được clear
+- Major blockers and resolutions:
+  - blocker da giai quyet: preview release packet + bilingual route QA packet da attach
+  - Team 1 reviewer decision for preview reopen: CLOSED (Control Tower 2026-04-17)
+- Carry-over:
+  - replace synthetic smoke event batch with pilot traffic event batch
+- Next-week plan:
+  - run pilot traffic with instrumented onboarding
+  - launch first approved landing experiment
+  - keep reviewer path monitor-only and submit deltas only if Team 1 requests
+- Decisions needed from Team 1:
+  - confirm pilot KPI governance review window with Team 4 once first event batch lands
+  - confirm mission-boundary language for growth onboarding (monitor checkpoint)

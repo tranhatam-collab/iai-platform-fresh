@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-04-27T03:08:35.759Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "requestedDate": "2026-04-27",
+  "date": "2026-04-22",
+  "source": {
+    "controlTowerPath": "docs/reports/team1/CONTROL_TOWER_AUTOMATION_STATUS_2026-04-22.json"
+  },
+  "status": "NOT_READY_FOR_SYNCHRONIZED_LIVE",
+  "gates": {
+    "governanceReady": {
+      "pass": true,
+      "releaseControlState": "READY"
+    },
+    "noGoOwnersDone": {
+      "pass": true,
+      "pendingOwnerSignoffDomains": []
+    },
+    "payProductionGateDone": {
+      "pass": false,
+      "unmetSignals": [
+        "auth_key_present",
+        "checkout_url_non_null",
+        "payment_link_id_non_null",
+        "no_214",
+        "production_gate_green",
+        "shared_read_model_ready_for_shared_only",
+        "shared_upstream_active_read_mode_shared_contract",
+        "shared_upstream_release_gate_ready"
+      ]
+    },
+    "releaseClaimUnlocked": {
+      "pass": false,
+      "releaseClaimState": "LOCK_RETAINED",
+      "releaseClaimEligible": false
+    }
+  },
+  "blockers": [
+    "Pay production gate chưa pass: auth_key_present, checkout_url_non_null, payment_link_id_non_null, no_214, production_gate_green, shared_read_model_ready_for_shared_only, shared_upstream_active_read_mode_shared_contract, shared_upstream_release_gate_ready",
+    "Release-claim state chưa thoát LOCK_RETAINED."
+  ]
+}

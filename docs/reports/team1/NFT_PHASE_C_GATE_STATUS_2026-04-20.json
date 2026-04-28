@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-04-20T06:57:01.737Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-20",
+  "overallPass": true,
+  "verdict": "GO",
+  "checks": {
+    "requiredFiles": {
+      "pass": true,
+      "items": [
+        {
+          "file": "docs/runtime/TEAM2_NFT_LIVE_EVIDENCE_PACKET_2026.md",
+          "present": true
+        },
+        {
+          "file": "docs/reports/team4/TEAM4_NFT_PARTNER_OPS_EVIDENCE_PACKET_2026.md",
+          "present": true
+        },
+        {
+          "file": "docs/reports/team1/NFT_PHASE_C_TEAM1_INTAKE_REVIEW_QUEUE_2026-04-17.md",
+          "present": true
+        },
+        {
+          "file": "docs/reports/team1/NFT_TEAM1_READINESS_SYNC_2026-04-17.md",
+          "present": true
+        }
+      ]
+    },
+    "packets": {
+      "team2Status": "READY_FOR_TEAM1_REVIEW",
+      "team4Status": "READY_FOR_TEAM1_REVIEW",
+      "preconditionPass": true
+    },
+    "team2Evidence": {
+      "pass": true,
+      "missingCount": 0,
+      "failCount": 0,
+      "rawUrlPass": true
+    },
+    "team4OpsTrace": {
+      "pass": true,
+      "hasWrongAssetTrace": true,
+      "hasDenyMismatchTrace": true
+    },
+    "queueConsistency": {
+      "slotA": {
+        "packetStatus": "`READY_FOR_TEAM1_REVIEW`",
+        "intakeStatus": "RECEIVED_READY"
+      },
+      "slotB": {
+        "packetStatus": "`READY_FOR_TEAM1_REVIEW`",
+        "intakeStatus": "RECEIVED_READY"
+      }
+    }
+  },
+  "actionItems": [
+    "No blocking action items."
+  ]
+}

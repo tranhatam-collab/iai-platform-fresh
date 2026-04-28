@@ -1,0 +1,35 @@
+{
+  "scope": "team-b-cdn-flows",
+  "date": "2026-04-23",
+  "status": "EXTERNAL_PRODUCTION_EVIDENCE_PENDING",
+  "cdn": {
+    "domain": "cdn.iai.one",
+    "baseline_packet_ref": "docs/release-evidence/cdn.iai.one/CDN_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+    "delta_evidence_ref": "docs/release-evidence/cdn.iai.one/CDN_IAI_ONE_DELTA_EVIDENCE_2026-04-22.md",
+    "deploy_log_ref": "",
+    "rule_snapshot_ref": "",
+    "cache_header_proof_ref": "",
+    "purge_rollback_note_ref": "",
+    "asset_header_proof_ref": "",
+    "evidence_note": "INFERRED_BY_TEAM_NOVA_OPS_AWAITING_OWNER_CONFIRMATION",
+    "runtime_reachability": {
+      "dns_resolves": false,
+      "last_check_date": "2026-04-22",
+      "note": "curl: (6) Could not resolve host: cdn.iai.one"
+    }
+  },
+  "flows": {
+    "domain": "flows.iai.one",
+    "baseline_packet_ref": "docs/release-evidence/flows.iai.one/FLOWS_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+    "delta_evidence_ref": "docs/release-evidence/flows.iai.one/FLOWS_IAI_ONE_DELTA_EVIDENCE_2026-04-22.md",
+    "local_route_proof_ref": "docs/release-evidence/flows.iai.one/artifacts/FLOWS_IAI_ONE_LOCAL_ROUTE_PROOF_2026-04-22.json",
+    "ts5083_status": "CLOSED_LOCAL_EVIDENCE_ATTACHED",
+    "route_map_production_ref": "",
+    "runtime_production_ref": "",
+    "screenshot_production_ref": "",
+    "evidence_note": "INFERRED_BY_TEAM_NOVA_OPS_AWAITING_OWNER_CONFIRMATION"
+  },
+  "claim_policy": {
+    "release_ready_forbidden_until_both_domains_complete": true
+  }
+}

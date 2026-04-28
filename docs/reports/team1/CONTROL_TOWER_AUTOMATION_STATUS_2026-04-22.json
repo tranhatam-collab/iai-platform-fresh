@@ -1,0 +1,64 @@
+{
+  "generatedAt": "2026-04-22T15:49:59.654Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-22",
+  "controlReady": true,
+  "releaseControlState": "READY",
+  "releaseClaimEligible": false,
+  "releaseClaimState": "LOCK_RETAINED",
+  "checks": {
+    "laneProtocol": {
+      "pass": true,
+      "unresolvedOwnershipRows": 0,
+      "dailyReportsPass": true,
+      "dailyReportsPresencePass": true,
+      "dailyReportsFormatPass": true,
+      "dailyFormatFailTeams": [],
+      "crossTeamReportsPass": true,
+      "crossTeamReportsPresencePass": true,
+      "crossTeamReportsFormatPass": true,
+      "crossTeamReportsFailTeams": [],
+      "missionMapPass": true
+    },
+    "languageCompliance": {
+      "pass": true,
+      "team1ScopeLanguagePass": true,
+      "multilingualReadinessPass": true,
+      "violationCount": 0
+    },
+    "noGoPacketTracker": {
+      "available": true,
+      "pass": true,
+      "blockingDomains": [],
+      "todoCleared": true,
+      "pendingOwnerSignoffDomains": []
+    },
+    "payProductionGate": {
+      "available": true,
+      "pass": false,
+      "unmetSignals": [
+        "auth_key_present",
+        "checkout_url_non_null",
+        "payment_link_id_non_null",
+        "no_214",
+        "production_gate_green",
+        "shared_read_model_ready_for_shared_only",
+        "shared_upstream_active_read_mode_shared_contract",
+        "shared_upstream_release_gate_ready"
+      ]
+    },
+    "nftPhaseC": {
+      "pass": true,
+      "verdict": "GO",
+      "team2Status": "READY_FOR_TEAM1_REVIEW",
+      "team4Status": "READY_FOR_TEAM1_REVIEW",
+      "team2Missing": 0,
+      "team2Fail": 0,
+      "team2RawUrlPass": true,
+      "team4OpsTracePass": true
+    }
+  },
+  "actionItems": [
+    "Pay production gate chưa đạt: auth_key_present, checkout_url_non_null, payment_link_id_non_null, no_214, production_gate_green, shared_read_model_ready_for_shared_only, shared_upstream_active_read_mode_shared_contract, shared_upstream_release_gate_ready."
+  ]
+}

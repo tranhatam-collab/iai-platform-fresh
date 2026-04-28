@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-04-22T04:05:31.153Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "dateTag": "2026-04-22",
+  "results": [
+    {
+      "bytes": 244741,
+      "file": "docs/release-evidence/cios.iai.one/artifacts/screenshots/root.png",
+      "route": "https://cios.iai.one/",
+      "source": "../cios.iai.one/site/index.html"
+    },
+    {
+      "bytes": 126124,
+      "file": "docs/release-evidence/cios.iai.one/artifacts/screenshots/cios-hub.png",
+      "route": "https://cios.iai.one/cios/",
+      "source": "../cios.iai.one/site/cios/index.html"
+    },
+    {
+      "bytes": 207960,
+      "file": "docs/release-evidence/cios.iai.one/artifacts/screenshots/cios-app.png",
+      "route": "https://cios.iai.one/cios/app/",
+      "source": "../cios.iai.one/site/cios/app/index.html"
+    },
+    {
+      "bytes": 194277,
+      "file": "docs/release-evidence/cios.iai.one/artifacts/screenshots/cios-pricing.png",
+      "route": "https://cios.iai.one/cios/pricing/",
+      "source": "../cios.iai.one/site/cios/pricing/index.html"
+    },
+    {
+      "bytes": 208048,
+      "file": "docs/release-evidence/cios.iai.one/artifacts/screenshots/cios-demo.png",
+      "route": "https://cios.iai.one/cios/demo/",
+      "source": "../cios.iai.one/site/cios/demo/index.html"
+    }
+  ]
+}

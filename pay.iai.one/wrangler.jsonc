@@ -1,0 +1,147 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "pay-iai-one",
+  "account_id": "f3f9e76222dcb488d5e303e29e8ba192",
+  "workers_dev": true,
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "persist": true
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "vars": {
+    "PAY_ENV": "development",
+    "PAY_API_BASE_URL": "http://127.0.0.1:8787"
+  },
+  "secrets": {
+    "required": [
+      "SMTP_HOST",
+      "SMTP_PORT",
+      "SMTP_SECURE_TRANSPORT",
+      "SMTP_AUTH_MODE",
+      "SMTP_USERNAME",
+      "SMTP_PASSWORD",
+      "SMTP_HELO_DOMAIN",
+      "EMAIL_FROM_PAY",
+      "EMAIL_FROM_BILLING",
+      "EMAIL_REPLY_TO_SUPPORT",
+      "TURNSTILE_SECRET",
+      "PAY_IAI_ONE_WEBHOOK_SECRET",
+      "PAYOS_CLIENT_ID",
+      "PAYOS_API_KEY",
+      "PAYOS_CHECKSUM_KEY"
+    ]
+  },
+
+  // Queue bindings stay commented until async receipt and retry consumers are live.
+  // "queues": {
+  //   "producers": [
+  //     {
+  //       "binding": "PAYMENT_EVENTS_QUEUE",
+  //       "queue": "pay-iai-one-events",
+  //       "remote": true
+  //     }
+  //   ],
+  //   "consumers": [
+  //     {
+  //       "queue": "pay-iai-one-events",
+  //       "type": "worker",
+  //       "max_batch_size": 10,
+  //       "max_batch_timeout": 5,
+  //       "max_retries": 3,
+  //       "dead_letter_queue": "pay-iai-one-events-dlq"
+  //     }
+  //   ]
+  // },
+  "env": {
+    "staging": {
+      "name": "pay-iai-one-staging",
+      "vars": {
+        "PAY_ENV": "staging",
+        "PAY_API_BASE_URL": "https://staging.pay.iai.one"
+      },
+      "d1_databases": [
+        {
+          "binding": "PAYMENTS_DB",
+          "database_name": "pay-iai-one-staging",
+          "database_id": "21a899ba-527d-40b9-bc0e-ba49755d015c",
+          "migrations_dir": "./database",
+          "remote": true
+        }
+      ],
+      "secrets": {
+        "required": [
+          "SMTP_HOST",
+          "SMTP_PORT",
+          "SMTP_SECURE_TRANSPORT",
+          "SMTP_AUTH_MODE",
+          "SMTP_USERNAME",
+          "SMTP_PASSWORD",
+          "SMTP_HELO_DOMAIN",
+          "EMAIL_FROM_PAY",
+          "EMAIL_FROM_BILLING",
+          "EMAIL_REPLY_TO_SUPPORT",
+          "TURNSTILE_SECRET",
+          "PAY_IAI_ONE_WEBHOOK_SECRET",
+          "PAYOS_CLIENT_ID",
+          "PAYOS_API_KEY",
+          "PAYOS_CHECKSUM_KEY"
+        ]
+      }
+    },
+    "production": {
+      "name": "pay-iai-one",
+      "vars": {
+        "PAY_ENV": "production",
+        "PAY_API_BASE_URL": "https://pay.iai.one"
+      },
+      "routes": [
+        {
+          "pattern": "pay.iai.one",
+          "custom_domain": true
+        },
+        {
+          "pattern": "www.pay.iai.one",
+          "custom_domain": true
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "PAYMENTS_DB",
+          "database_name": "pay-iai-one-prod",
+          "database_id": "e3cbc281-365d-4733-bde1-a84b304ac320",
+          "migrations_dir": "./database",
+          "remote": true
+        }
+      ],
+      "secrets": {
+        "required": [
+          "SMTP_HOST",
+          "SMTP_PORT",
+          "SMTP_SECURE_TRANSPORT",
+          "SMTP_AUTH_MODE",
+          "SMTP_USERNAME",
+          "SMTP_PASSWORD",
+          "SMTP_HELO_DOMAIN",
+          "EMAIL_FROM_PAY",
+          "EMAIL_FROM_BILLING",
+          "EMAIL_REPLY_TO_SUPPORT",
+          "TURNSTILE_SECRET",
+          "PAY_IAI_ONE_WEBHOOK_SECRET",
+          "PAYOS_CLIENT_ID",
+          "PAYOS_API_KEY",
+          "PAYOS_CHECKSUM_KEY"
+        ]
+      }
+    }
+  }
+}

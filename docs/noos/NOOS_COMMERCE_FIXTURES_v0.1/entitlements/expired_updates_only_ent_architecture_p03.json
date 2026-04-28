@@ -1,0 +1,12 @@
+{
+  "entitlementId": "ent_architecture_009",
+  "buyerId": "buyer_arch009",
+  "productCode": "P03",
+  "licenseType": "Individual",
+  "orderId": "ord_20251001_architecture_009",
+  "grantedAt": "2025-10-01T08:30:00Z",
+  "accessStatus": "expired_updates_only",
+  "updateWindowEnd": "2026-04-01T08:30:00Z",
+  "entitlementCode": "ENT_ARCHITECTURE",
+  "versionScope": "current_plus_minor_updates"
+}

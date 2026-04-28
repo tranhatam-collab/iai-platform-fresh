@@ -1,0 +1,407 @@
+{
+  "generatedAt": "2026-04-21T12:29:53.085Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-21",
+  "overallPass": true,
+  "checks": {
+    "filePresence": [
+      {
+        "file": "docs/PAY_IAI_ONE_DOCS_PACK_INDEX_FINAL_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_MASTER_PROJECT_INDEX_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_CANONICAL_DOCS_INDEX_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_TEAM_DEV_STARTER_MAP_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_DOCS_USAGE_PROTOCOL_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_REPO_DOCS_INTEGRATION_CHECKLIST_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_WEEKLY_STATUS_TEMPLATE_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_DECISION_LOG_TEMPLATE_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_RELEASE_EVIDENCE_PACKET_TEMPLATE_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_EXECUTION_BOARD_TEMPLATE_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_RISK_REGISTER_TEMPLATE_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/PAY_IAI_ONE_THREE_TEAM_EXECUTION_PLAN_2026.md",
+        "present": true
+      },
+      {
+        "file": "docs/README.md",
+        "present": true
+      }
+    ],
+    "readmeHierarchy": {
+      "pass": true,
+      "results": [
+        {
+          "name": "payLaneHeading",
+          "pass": true
+        },
+        {
+          "name": "requiredFirstReadHeading",
+          "pass": true
+        },
+        {
+          "name": "coreBuildPackHeading",
+          "pass": true
+        },
+        {
+          "name": "governancePackHeading",
+          "pass": true
+        },
+        {
+          "name": "executionAndRiskHeading",
+          "pass": true
+        },
+        {
+          "name": "docsUsageProtocolHeading",
+          "pass": true
+        },
+        {
+          "name": "repoIntegrationChecklistHeading",
+          "pass": true
+        },
+        {
+          "name": "acceleratedOverlayHeading",
+          "pass": true
+        },
+        {
+          "name": "pendingLockedDependenciesHeading",
+          "pass": true
+        },
+        {
+          "name": "readmeLinksPackIndex",
+          "pass": true
+        },
+        {
+          "name": "readmeLinksMasterIndex",
+          "pass": true
+        },
+        {
+          "name": "readmeLinksChecklist",
+          "pass": true
+        },
+        {
+          "name": "readmeMentionsVerifierCommand",
+          "pass": true
+        }
+      ]
+    },
+    "packHierarchy": {
+      "pass": true,
+      "sections": {
+        "packIndex": {
+          "pass": true,
+          "results": [
+            {
+              "name": "packIndexCallsItselfNavigationShell",
+              "pass": true
+            },
+            {
+              "name": "packIndexIncludesUsageProtocolAndChecklistLayer",
+              "pass": true
+            },
+            {
+              "name": "packIndexRegistersChecklistFile",
+              "pass": true
+            },
+            {
+              "name": "packIndexMentionsVerifierCommand",
+              "pass": true
+            }
+          ]
+        },
+        "masterIndex": {
+          "pass": true,
+          "results": [
+            {
+              "name": "masterIndexLinksPackIndex",
+              "pass": true
+            },
+            {
+              "name": "masterIndexLinksUsageProtocol",
+              "pass": true
+            },
+            {
+              "name": "masterIndexStatesActualEntryPoint",
+              "pass": true
+            }
+          ]
+        },
+        "canonicalIndex": {
+          "pass": true,
+          "results": [
+            {
+              "name": "canonicalIndexLinksPackIndex",
+              "pass": true
+            },
+            {
+              "name": "canonicalIndexStatesDownstreamPack",
+              "pass": true
+            },
+            {
+              "name": "canonicalIndexSaysDoesNotOverrideMaster",
+              "pass": true
+            }
+          ]
+        },
+        "starterMap": {
+          "pass": true,
+          "results": [
+            {
+              "name": "starterMapLinksPackIndex",
+              "pass": true
+            },
+            {
+              "name": "starterMapStatesNotEntryPoint",
+              "pass": true
+            },
+            {
+              "name": "starterMapRequiresMasterPreread",
+              "pass": true
+            }
+          ]
+        }
+      }
+    },
+    "usageDiscipline": {
+      "pass": true,
+      "results": [
+        {
+          "name": "protocolListsChecklistInRequiredSet",
+          "pass": true
+        },
+        {
+          "name": "protocolHasMandatoryStartingSequence",
+          "pass": true
+        },
+        {
+          "name": "protocolUsesDocsPackIndexFirst",
+          "pass": true
+        },
+        {
+          "name": "protocolUsesMasterBeforeDownstream",
+          "pass": true
+        },
+        {
+          "name": "protocolExplainsExecutionBoardAndRiskRegister",
+          "pass": true
+        },
+        {
+          "name": "protocolExplainsPendingDependencies",
+          "pass": true
+        },
+        {
+          "name": "protocolRequiresChecklistForRepoDocsChanges",
+          "pass": true
+        },
+        {
+          "name": "protocolMentionsAutomationCommand",
+          "pass": true
+        }
+      ]
+    },
+    "linkIntegrity": {
+      "pass": true,
+      "checks": [
+        {
+          "file": "docs/README.md",
+          "absoluteLocalDocLinks": [],
+          "relativeDocLinks": [
+            "PAY_IAI_ONE_DOCS_PACK_INDEX_FINAL_2026.md",
+            "PAY_IAI_ONE_MASTER_PROJECT_INDEX_2026.md",
+            "PAY_IAI_ONE_CANONICAL_DOCS_INDEX_2026.md",
+            "PAY_IAI_ONE_TEAM_DEV_STARTER_MAP_2026.md",
+            "PAY_IAI_ONE_WEEKLY_STATUS_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_DECISION_LOG_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_RELEASE_EVIDENCE_PACKET_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_EXECUTION_BOARD_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_RISK_REGISTER_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_DOCS_USAGE_PROTOCOL_2026.md",
+            "PAY_IAI_ONE_REPO_DOCS_INTEGRATION_CHECKLIST_2026.md",
+            "PAY_IAI_ONE_THREE_TEAM_EXECUTION_PLAN_2026.md",
+            "PAY_IAI_ONE_DOCS_PACK_INDEX_FINAL_2026.md",
+            "PAY_IAI_ONE_MASTER_PROJECT_INDEX_2026.md",
+            "PAY_IAI_ONE_DOCS_USAGE_PROTOCOL_2026.md",
+            "PAY_IAI_ONE_REPO_DOCS_INTEGRATION_CHECKLIST_2026.md",
+            "PAY_IAI_ONE_THREE_TEAM_EXECUTION_PLAN_2026.md"
+          ],
+          "pass": true
+        },
+        {
+          "file": "docs/PAY_IAI_ONE_MASTER_PROJECT_INDEX_2026.md",
+          "absoluteLocalDocLinks": [],
+          "relativeDocLinks": [
+            "PAY_IAI_ONE_DOCS_PACK_INDEX_FINAL_2026.md",
+            "PAY_IAI_ONE_DOCS_USAGE_PROTOCOL_2026.md"
+          ],
+          "pass": true
+        },
+        {
+          "file": "docs/PAY_IAI_ONE_CANONICAL_DOCS_INDEX_2026.md",
+          "absoluteLocalDocLinks": [],
+          "relativeDocLinks": [
+            "PAY_IAI_ONE_DOCS_PACK_INDEX_FINAL_2026.md",
+            "PAY_IAI_ONE_MASTER_PROJECT_INDEX_2026.md",
+            "PAY_IAI_ONE_DOCS_USAGE_PROTOCOL_2026.md",
+            "PAY_IAI_ONE_THREE_TEAM_EXECUTION_PLAN_2026.md",
+            "PAY_IAI_ONE_WEEKLY_STATUS_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_DECISION_LOG_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_RELEASE_EVIDENCE_PACKET_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_EXECUTION_BOARD_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_RISK_REGISTER_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_DOCS_PACK_INDEX_FINAL_2026.md",
+            "PAY_IAI_ONE_MASTER_PROJECT_INDEX_2026.md",
+            "PAY_IAI_ONE_WALLET_AND_SETTLEMENT_PHASE_PLAN_2026.md",
+            "PAY_IAI_ONE_INTERNAL_CONTROL_PLANE_ARCHITECTURE_2026.md",
+            "PAY_IAI_ONE_REVENUE_SPLIT_AND_PAYOUT_RULES_V1.md",
+            "BILLING_AND_USAGE_SYSTEM_SPEC.md",
+            "PAY_IAI_ONE_WEBHOOK_AND_RECONCILIATION_PROTOCOL_V1.md",
+            "DOMAIN_RELEASE_EVIDENCE_PACKET_TEMPLATE.md",
+            "PAY_IAI_ONE_SERVICE_LAYER_AND_TRANSACTION_ORCHESTRATION_V1.md",
+            "PAY_IAI_ONE_ADMIN_ROLE_PERMISSION_MATRIX_V1.md",
+            "PAY_IAI_ONE_QUEUE_AND_ASYNC_JOB_SPEC_V1.md",
+            "PAY_IAI_ONE_RECONCILIATION_EXCEPTION_PLAYBOOK_V1.md",
+            "PAY_IAI_ONE_ADMIN_OPS_DASHBOARD_SPEC_V1.md",
+            "PAY_IAI_ONE_INTERNAL_CHECKOUT_UI_FLOW_V1.md",
+            "PAY_IAI_ONE_HOSTED_CHECKOUT_UI_COPY_REGISTRY_V1.md",
+            "PAY_IAI_ONE_TEST_MATRIX_AND_GO_LIVE_ACCEPTANCE_V1.md",
+            "IAI_MASTER_DOMAIN_MISSION_MAP.md",
+            "IAI_DEPENDENCY_CRITICAL_PATH_2026.md",
+            "MASTER_DEV_EXECUTION_PROTOCOL_2026.md",
+            "TEAM1_DEFINITION_OF_DONE_2026.md",
+            "TEAM2_DEFINITION_OF_DONE_2026.md",
+            "TEAM3_DEFINITION_OF_DONE_2026.md",
+            "TEAM4_DEFINITION_OF_DONE_2026.md",
+            "TEAM5_DEFINITION_OF_DONE_2026.md"
+          ],
+          "pass": true
+        },
+        {
+          "file": "docs/PAY_IAI_ONE_TEAM_DEV_STARTER_MAP_2026.md",
+          "absoluteLocalDocLinks": [],
+          "relativeDocLinks": [
+            "PAY_IAI_ONE_DOCS_PACK_INDEX_FINAL_2026.md",
+            "PAY_IAI_ONE_MASTER_PROJECT_INDEX_2026.md",
+            "PAY_IAI_ONE_EXECUTION_BOARD_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_RISK_REGISTER_TEMPLATE_2026.md",
+            "PAY_IAI_ONE_DOCS_USAGE_PROTOCOL_2026.md",
+            "PAY_IAI_ONE_THREE_TEAM_EXECUTION_PLAN_2026.md",
+            "PAY_IAI_ONE_INTERNAL_CONTROL_PLANE_ARCHITECTURE_2026.md",
+            "PAY_IAI_ONE_WEBHOOK_AND_RECONCILIATION_PROTOCOL_V1.md",
+            "PAY_IAI_ONE_SERVICE_LAYER_AND_TRANSACTION_ORCHESTRATION_V1.md",
+            "PAY_IAI_ONE_ADMIN_ROLE_PERMISSION_MATRIX_V1.md",
+            "PAY_IAI_ONE_QUEUE_AND_ASYNC_JOB_SPEC_V1.md",
+            "PAY_IAI_ONE_RECONCILIATION_EXCEPTION_PLAYBOOK_V1.md",
+            "PAY_IAI_ONE_TEST_MATRIX_AND_GO_LIVE_ACCEPTANCE_V1.md",
+            "IAI_DEPENDENCY_CRITICAL_PATH_2026.md",
+            "PAY_IAI_ONE_INTERNAL_CONTROL_PLANE_ARCHITECTURE_2026.md",
+            "PAY_IAI_ONE_REVENUE_SPLIT_AND_PAYOUT_RULES_V1.md",
+            "PAY_IAI_ONE_WEBHOOK_AND_RECONCILIATION_PROTOCOL_V1.md",
+            "PAY_IAI_ONE_SERVICE_LAYER_AND_TRANSACTION_ORCHESTRATION_V1.md",
+            "PAY_IAI_ONE_ADMIN_ROLE_PERMISSION_MATRIX_V1.md",
+            "PAY_IAI_ONE_QUEUE_AND_ASYNC_JOB_SPEC_V1.md",
+            "PAY_IAI_ONE_RECONCILIATION_EXCEPTION_PLAYBOOK_V1.md",
+            "PAY_IAI_ONE_TEST_MATRIX_AND_GO_LIVE_ACCEPTANCE_V1.md",
+            "PAY_IAI_ONE_INTERNAL_CHECKOUT_UI_FLOW_V1.md",
+            "PAY_IAI_ONE_HOSTED_CHECKOUT_UI_COPY_REGISTRY_V1.md",
+            "PAY_IAI_ONE_ADMIN_OPS_DASHBOARD_SPEC_V1.md",
+            "PAY_IAI_ONE_TEST_MATRIX_AND_GO_LIVE_ACCEPTANCE_V1.md",
+            "PAY_IAI_ONE_WEBHOOK_AND_RECONCILIATION_PROTOCOL_V1.md",
+            "PAY_IAI_ONE_SERVICE_LAYER_AND_TRANSACTION_ORCHESTRATION_V1.md",
+            "PAY_IAI_ONE_ADMIN_ROLE_PERMISSION_MATRIX_V1.md",
+            "PAY_IAI_ONE_ADMIN_OPS_DASHBOARD_SPEC_V1.md",
+            "PAY_IAI_ONE_REVENUE_SPLIT_AND_PAYOUT_RULES_V1.md",
+            "PAY_IAI_ONE_QUEUE_AND_ASYNC_JOB_SPEC_V1.md",
+            "PAY_IAI_ONE_RECONCILIATION_EXCEPTION_PLAYBOOK_V1.md",
+            "PAY_IAI_ONE_TEST_MATRIX_AND_GO_LIVE_ACCEPTANCE_V1.md",
+            "PAY_IAI_ONE_INTERNAL_CONTROL_PLANE_ARCHITECTURE_2026.md",
+            "PAY_IAI_ONE_INTERNAL_CHECKOUT_UI_FLOW_V1.md",
+            "PAY_IAI_ONE_HOSTED_CHECKOUT_UI_COPY_REGISTRY_V1.md",
+            "PAY_IAI_ONE_WEBHOOK_AND_RECONCILIATION_PROTOCOL_V1.md",
+            "PAY_IAI_ONE_QUEUE_AND_ASYNC_JOB_SPEC_V1.md",
+            "PAY_IAI_ONE_RECONCILIATION_EXCEPTION_PLAYBOOK_V1.md",
+            "PAY_IAI_ONE_TEST_MATRIX_AND_GO_LIVE_ACCEPTANCE_V1.md"
+          ],
+          "pass": true
+        }
+      ]
+    },
+    "pendingDependencies": [
+      {
+        "name": "PAY_IAI_ONE_DATABASE_SCHEMA_SQL_V1.md",
+        "status": "PENDING_AND_DOCUMENTED",
+        "pass": true,
+        "checks": [
+          {
+            "name": "readmeDocumentsPendingState",
+            "pass": true
+          },
+          {
+            "name": "packIndexDocumentsPendingState",
+            "pass": true
+          },
+          {
+            "name": "protocolDocumentsPendingState",
+            "pass": true
+          },
+          {
+            "name": "checklistDocumentsPendingState",
+            "pass": true
+          }
+        ]
+      },
+      {
+        "name": "PAY_IAI_ONE_API_SPEC_FULL_V1.md",
+        "status": "PENDING_AND_DOCUMENTED",
+        "pass": true,
+        "checks": [
+          {
+            "name": "readmeDocumentsPendingState",
+            "pass": true
+          },
+          {
+            "name": "packIndexDocumentsPendingState",
+            "pass": true
+          },
+          {
+            "name": "protocolDocumentsPendingState",
+            "pass": true
+          },
+          {
+            "name": "checklistDocumentsPendingState",
+            "pass": true
+          }
+        ]
+      }
+    ]
+  }
+}

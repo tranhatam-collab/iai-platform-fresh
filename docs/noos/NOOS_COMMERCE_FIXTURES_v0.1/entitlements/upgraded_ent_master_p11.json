@@ -1,0 +1,12 @@
+{
+  "entitlementId": "ent_master_014",
+  "buyerId": "buyer_team014",
+  "productCode": "P11",
+  "licenseType": "Individual",
+  "orderId": "ord_20260201_master_014",
+  "grantedAt": "2026-02-01T09:00:00Z",
+  "accessStatus": "upgraded",
+  "updateWindowEnd": "2027-02-01T09:00:00Z",
+  "entitlementCode": "ENT_MASTER",
+  "versionScope": "full_bundle_window"
+}

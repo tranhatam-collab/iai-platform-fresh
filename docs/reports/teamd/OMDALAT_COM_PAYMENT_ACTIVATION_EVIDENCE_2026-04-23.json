@@ -1,0 +1,107 @@
+{
+  "domain": "omdalat.com",
+  "intake_id": "SITE-INTAKE-104",
+  "legal_owner": "Công ty TNHH SX - TM - DV Thai Lam",
+  "owner_type": "company",
+  "status": "EXTERNAL_STEPS_PENDING",
+  "receiver_assignment": {
+    "assignment_status": "ACTIVE_NOW",
+    "primary_vnd_receiver_id": "recv_vnd_thailam_acb",
+    "currency": "VND",
+    "legal_name_visible": "CONG TY TNHH SX - TM - DV THAI LAM",
+    "bank_name": "Ngân hàng TMCP Á Châu (ACB)",
+    "account_number": "43545878"
+  },
+  "pay_gate_rule": {
+    "ready_for_live_forbidden_while_locked": true,
+    "current_pay_gate_state": "LOCK_RETAINED"
+  },
+  "mailboxes": [
+    {
+      "address": "pay@omdalat.com",
+      "purpose": "payment_receipt_sender",
+      "binding_status": "CONFIRMED",
+      "binding_type": "alias",
+      "route_to": "support@omdalat.com",
+      "inbound_routing_status": "CONFIRMED",
+      "inbox_proof_ref": "docs/iai-mail-platform/OMDALAT_COM_TEAM_EMAIL_SMTP_MAILBOX_INBOUND_PROOF_2026-04-23.md#3-inbound-route-proof"
+    },
+    {
+      "address": "billing@omdalat.com",
+      "purpose": "billing_failed_refund_sender",
+      "binding_status": "CONFIRMED",
+      "binding_type": "alias",
+      "route_to": "support@omdalat.com",
+      "inbound_routing_status": "CONFIRMED",
+      "inbox_proof_ref": "docs/iai-mail-platform/OMDALAT_COM_TEAM_EMAIL_SMTP_MAILBOX_INBOUND_PROOF_2026-04-23.md#3-inbound-route-proof"
+    },
+    {
+      "address": "support@omdalat.com",
+      "purpose": "reply_to_support",
+      "binding_status": "CONFIRMED",
+      "binding_type": "mailbox",
+      "route_to": "support@omdalat.com",
+      "inbound_routing_status": "CONFIRMED",
+      "inbox_proof_ref": "docs/iai-mail-platform/OMDALAT_COM_TEAM_EMAIL_SMTP_MAILBOX_INBOUND_PROOF_2026-04-23.md#3-inbound-route-proof"
+    },
+    {
+      "address": "noreply@omdalat.com",
+      "purpose": "reserved_not_payment_sender",
+      "binding_status": "CONFIRMED",
+      "binding_type": "mailbox",
+      "route_to": "noreply@omdalat.com",
+      "inbound_routing_status": "CONFIRMED",
+      "inbox_proof_ref": "docs/iai-mail-platform/OMDALAT_COM_TEAM_EMAIL_SMTP_MAILBOX_INBOUND_PROOF_2026-04-23.md#3-inbound-route-proof"
+    }
+  ],
+  "sender_policy": {
+    "payment_receipt": "pay@omdalat.com",
+    "checkout_status_update": "billing@omdalat.com",
+    "payment_failed_notice": "billing@omdalat.com",
+    "refund_notice": "billing@omdalat.com",
+    "reply_to": "support@omdalat.com",
+    "noreply_payment_sender_allowed": false
+  },
+  "runtime_bindings": {
+    "MAIL_API_BASE_URL": {
+      "required": true,
+      "secret": false,
+      "status": "PENDING",
+      "value_ref": "https://api.mail.iai.one/v1"
+    },
+    "MAIL_API_KEY": {
+      "required": true,
+      "secret": true,
+      "status": "PENDING",
+      "value_ref": "secure_channel_required"
+    },
+    "MAIL_API_WORKSPACE_ID": {
+      "required": true,
+      "secret": false,
+      "status": "PENDING",
+      "value_ref": ""
+    },
+    "PAY_EMAIL_ADAPTER_INTERNAL_KEY": {
+      "required": true,
+      "secret": true,
+      "status": "PENDING",
+      "value_ref": "secure_channel_required"
+    }
+  },
+  "payment_proof": {
+    "flow_type": "sandbox_or_live_TBD",
+    "provider_ref": "",
+    "checkout_or_payment_session_ref": "",
+    "mail_message_id": "",
+    "d1_or_canonical_row_ref": "",
+    "inbox_proof_ref": ""
+  },
+  "evidence_refs": {
+    "packet": "docs/reports/teamd/OMDALAT_COM_P0_PAYMENT_ACTIVATION_PACKET_2026-04-23.md",
+    "board": "docs/PAY_IAI_ONE_SITE_PAYMENT_ACTIVATION_INTAKE_BOARD_2026.md",
+    "receiver_registry": "docs/PAY_IAI_ONE_RECEIVER_ACCOUNTS_MASTER_REGISTRY_2026.md",
+    "payment_routing": "apps/pay/src/payment-routing.ts",
+    "adapter_contract": "docs/PAY_IAI_ONE_PAYMENT_EMAIL_OUTBOUND_ADAPTER_CONTRACT_2026.md",
+    "email_smtp_mailbox_inbound_proof": "docs/iai-mail-platform/OMDALAT_COM_TEAM_EMAIL_SMTP_MAILBOX_INBOUND_PROOF_2026-04-23.md"
+  }
+}

@@ -1,0 +1,1267 @@
+From 00230500e42335ac97fd50aa1dd93436d2adf53d Mon Sep 17 00:00:00 2001
+From: Tran Ha Tam <tranhatam@gmail.com>
+Date: Tue, 28 Apr 2026 18:56:09 +0700
+Subject: [PATCH] =?UTF-8?q?ops(pay-gate=20+=20trust-state):=20refresh=20lo?=
+ =?UTF-8?q?g=20=E2=80=94=20owner=20unblock=20still=20pending?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Re-ran the pay production gate loop ~10 hours after the morning packet
+landed. Result is byte-identical: runtime_probe_checkout_status=401,
+shared_health_contract_shape=legacy_or_unknown, bundle_status=
+BLOCKED_PRECHECK, all 8 unmet signals unchanged.
+
+The duplicated reading is itself the proof that the lock is *not*
+transient — owner still has not bound TEAM2_PAY_GATE_API_KEY nor
+deployed the new pay /health shared contract. Logged the second run
+in the existing TEAM1_OWNER_PING packet so the next escalation has
+two timestamped data points. No code touched, no key fabricated, no
+pay deploy attempted.
+
+Trust-state regenerated as a side-effect of the build-commit pin.
+Module-1 counts hold: verified=13, declared=5 — invoice.iai.one drop
+remains sticky.
+---
+ ..._OWNER_PING_PAY_GATE_UNBLOCK_2026-04-28.md |  62 ++++++
+ .../docs/verification-log.md                  |  23 ++-
+ .../public/data/trust-state.json              | 183 ++++++++----------
+ .../src/data/trust-state.json                 | 183 ++++++++----------
+ 4 files changed, 235 insertions(+), 216 deletions(-)
+ create mode 100644 docs/reports/team1/TEAM1_OWNER_PING_PAY_GATE_UNBLOCK_2026-04-28.md
+
+diff --git a/docs/reports/team1/TEAM1_OWNER_PING_PAY_GATE_UNBLOCK_2026-04-28.md b/docs/reports/team1/TEAM1_OWNER_PING_PAY_GATE_UNBLOCK_2026-04-28.md
+new file mode 100644
+index 0000000..8f8a8c6
+--- /dev/null
++++ b/docs/reports/team1/TEAM1_OWNER_PING_PAY_GATE_UNBLOCK_2026-04-28.md
+@@ -0,0 +1,62 @@
++# TEAM1_OWNER_PING_PAY_GATE_UNBLOCK_2026-04-28
++- Date: 2026-04-28 (ICT)
++- Audience: Owner provider / Owner ha tang pay.iai.one
++- Status: `LOCK_RETAINED_WITH_REASON` (Team 1 gate)
++- Source packet: `docs/reports/team1/TEAM1_OWNER_PROVIDER_PAY_GATE_UNBLOCK_PACKET_2026-04-28.md`
++
++## Owner ping (chat-ready, 5 dong)
++
++```
++Pay production gate van LOCK. Can owner xac nhan 2 nhom de Team 2 rerun mo flip:
++1) Cap key probe noi bo: bind TEAM2_PAY_GATE_API_KEY (header x-api-key) cho pay.iai.one.
++2) Deploy /health phien ban moi: phai co data.shared_read_model va data.shared_upstream_runtime
++   (rolloutReadyForSharedOnly=true, activeReadMode=shared_contract, releaseGate.ready=true).
++Khoa canonical: TEAM2_PAY_GATE_TENANT_CODE=vetuonglai, TEAM2_PAY_GATE_SITE_CODE=vetuonglai-member, PROVIDER=payos.
++Tra loi theo template trong packet o tren. Owner ack xong, Team 2 rerun ngay.
++```
++
++## Email/short-form ping
++
++```
++Subject: [Pay gate unblock] need owner ack on probe key + /health shared contract
++
++Pay production gate hien LOCK. Khong phai loi code, la 2 dieu kien runtime:
++- TEAM2_PAY_GATE_API_KEY chua bind -> probe noi bo nhan 401 API_KEY_REQUIRED.
++- pay.iai.one /health van shape cu (thieu shared_read_model va shared_upstream_runtime).
++  Code da co contract day du, can deploy ban moi.
++
++De rerun, vui long xac nhan:
++- Auth: x-api-key TEAM2_PAY_GATE_API_KEY (canonical) hoac x-site-key TEAM2_PAY_GATE_SITE_KEY (legacy).
++- /health: data.shared_read_model.rolloutReadyForSharedOnly=true,
++  data.shared_upstream_runtime.activeReadMode=shared_contract,
++  data.shared_upstream_runtime.releaseGate.ready=true.
++- Canonical: tenant=vetuonglai, site=vetuonglai-member, provider=payos.
++
++Sau khi owner ack, Team 2 chay:
++  node scripts/team1-pay-gate-loop.mjs
++```
++
++## Tham chieu
++
++- `docs/reports/team1/TEAM1_OWNER_PROVIDER_PAY_GATE_UNBLOCK_PACKET_2026-04-28.md`
++- `docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-04-28.json`
++- `docs/reports/team2/TEAM2_PAY_SHARED_RUNTIME_PROBE_2026-04-28.json`
++- `docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-04-28.json`
++
++## Refresh log
++
++| Lan re-run | Gio (UTC) | runtime_probe_checkout_status | shared_health_contract_shape | bundle_status | Ket luan |
++|---|---|---|---|---|---|
++| Lan 1 (sang) | 2026-04-28T~02:00Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Phat hanh packet goc + ping |
++| Lan 2 (chieu) | 2026-04-28T11:51Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Khong thay doi -> owner chua ack/deploy |
++
++Hai lan re-run cach nhau ~10 gio van cho ket qua giong nhau:
++`auth_key_present=false`, `production_gate_green=false`,
++`shared_*` tat ca van fail. Day la _bang chung khoa_ rang khoi
++khong phai van de transient hay timing — chinh xac la chua co owner
++action (cap key + deploy lai pay shared `/health` contract).
++
++Hanh dong tiep theo (trong khi cho owner):
++- Mai sang re-run them 1 lan -> neu van khong doi, escalate cho founder.
++- Khong tu y tao API key thay vi owner.
++- Khong tu y deploy pay shared contract — co the gay regression cho prod traffic.
+diff --git a/trust-iai-one-starter/docs/verification-log.md b/trust-iai-one-starter/docs/verification-log.md
+index a992e6e..07e8025 100644
+--- a/trust-iai-one-starter/docs/verification-log.md
++++ b/trust-iai-one-starter/docs/verification-log.md
+@@ -1,30 +1,29 @@
+ # verification-log.md
+ 
+-Last build: 2026-04-26T18:05:22.530Z
+-Build commit: 33c9fe3
++Last build: 2026-04-28T11:52:20.325Z
++Build commit: e1ae171
+ Probe method: dig + curl HEAD
+ Stale after: 30 days
+ Status enum: verified | declared | unverified
+ 
+ ## Module 1 — Official Domains
+ 
+-Counts: verified=13, declared=6
++Counts: verified=13, declared=5
+ 
+-- iai.one | status: verified | role: constitutional root | owner: founder | http: 200 | dns: 104.21.8.122, 172.67.139.112
++- iai.one | status: verified | role: constitutional root | owner: founder | http: 200 | dns: 172.67.139.112, 104.21.8.122
+ - home.iai.one | status: verified | role: routing portal | owner: trust-pmo | http: 200 | dns: 104.21.8.122, 172.67.139.112
+-- trust.iai.one | status: verified | role: operational trust surface | owner: trust-pmo | http: 200 | dns: 172.67.139.112, 104.21.8.122
++- trust.iai.one | status: verified | role: operational trust surface | owner: trust-pmo | http: 200 | dns: 104.21.8.122, 172.67.139.112
+ - dash.iai.one | status: verified | role: operator surface | owner: team-2 | http: 200 | dns: 172.67.139.112, 104.21.8.122
+-- noos.iai.one | status: verified | role: commerce surface | owner: team-3 | http: 200 | dns: 104.21.8.122, 172.67.139.112
++- noos.iai.one | status: verified | role: commerce surface | owner: team-3 | http: 200 | dns: 172.67.139.112, 104.21.8.122
+ - nft.iai.one | status: verified | role: verifiable asset surface | owner: trust-pmo | http: 200 | dns: 104.21.8.122, 172.67.139.112
+ - flow.iai.one | status: verified | role: orchestration surface | owner: team-flow | http: 200 | dns: 104.21.8.122, 172.67.139.112
+-- app.iai.one | status: verified | role: authenticated app surface | owner: team-app | http: 200 | dns: 172.67.139.112, 104.21.8.122
++- app.iai.one | status: verified | role: authenticated app surface | owner: team-app | http: 200 | dns: 104.21.8.122, 172.67.139.112
+ - developer.iai.one | status: verified | role: developer onboarding | owner: team-a | http: 200 | dns: 172.67.139.112, 104.21.8.122
+-- docs.iai.one | status: verified | role: documentation | owner: team-a | http: 200 | dns: 104.21.8.122, 172.67.139.112
+-- api.flow.iai.one | status: declared | role: developer api | owner: team-a | http: 404 | dns: 104.21.8.122, 172.67.139.112
++- docs.iai.one | status: verified | role: documentation | owner: team-a | http: 200 | dns: 172.67.139.112, 104.21.8.122
++- api.flow.iai.one | status: declared | role: developer api | owner: team-a | http: 404 | dns: 172.67.139.112, 104.21.8.122
+ - cios.iai.one | status: verified | role: internal operations system | owner: team-c | http: 200 | dns: 104.21.8.122, 172.67.139.112
+-- pay.iai.one | status: verified | role: payment control plane | owner: pay-email | http: 200 | dns: 172.67.139.112, 104.21.8.122
++- pay.iai.one | status: verified | role: payment control plane | owner: pay-email | http: 200 | dns: 104.21.8.122, 172.67.139.112
+ - mail.iai.one | status: verified | role: mail control plane | owner: pay-email | http: 200 | dns: 89.167.116.167
+-- invoice.iai.one | status: declared | role: invoice control plane | owner: pay-email | http: — | dns: —
+ - cdn.iai.one | status: declared | role: cdn edge | owner: team-b-cdn | http: — | dns: —
+ - flows.iai.one | status: declared | role: automation surface | owner: team-b-flows | http: — | dns: —
+ - web.iai.one | status: declared | role: web surface | owner: team-5 | http: — | dns: —
+@@ -34,7 +33,7 @@ Counts: verified=13, declared=6
+ 
+ - founder | status: declared | scope: scope, escalation, role boundary approval
+ - trust-pmo | status: declared | scope: domain registry, ownership registry, mismatch review, stale review
+-- pay-email | status: declared | scope: pay.iai.one, mail.iai.one, invoice.iai.one, payment activation, email evidence
++- pay-email | status: declared | scope: pay.iai.one, mail.iai.one, payment activation, email evidence
+ - team-2 | status: declared | scope: dash.iai.one, runtime probe, shared platform contract verification
+ - team-3 | status: declared | scope: noos.iai.one commerce metadata, contract enforcement
+ - team-a | status: unverified | scope: developer.iai.one, docs.iai.one, api.flow.iai.one
+diff --git a/trust-iai-one-starter/public/data/trust-state.json b/trust-iai-one-starter/public/data/trust-state.json
+index 5d1834c..1e8812e 100644
+--- a/trust-iai-one-starter/public/data/trust-state.json
++++ b/trust-iai-one-starter/public/data/trust-state.json
+@@ -1,6 +1,6 @@
+ {
+-  "generated_at": "2026-04-26T18:05:22.530Z",
+-  "build_commit": "33c9fe3",
++  "generated_at": "2026-04-28T11:52:20.325Z",
++  "build_commit": "e1ae171",
+   "verification_policy": {
+     "stale_after_days": 30,
+     "phase": "phase_1_static",
+@@ -17,7 +17,7 @@
+     "public_statement_vi": "Trang này có thể có sự hỗ trợ của AI và đã được con người rà soát. Tuyên bố public đi kèm bằng chứng hoặc công bố giới hạn.",
+     "private_session_details_public": false,
+     "hard_coded_model_names_in_public": false,
+-    "last_reviewed_at": "2026-04-26"
++    "last_reviewed_at": "2026-04-28"
+   },
+   "modules": {
+     "official_domains": [
+@@ -30,22 +30,22 @@
+         "legal_lane": "platform charter",
+         "public_evidence": {
+           "dns": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -67,10 +67,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -94,22 +94,22 @@
+         "legal_lane": "trust disclosures",
+         "public_evidence": {
+           "dns": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -131,10 +131,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -158,22 +158,22 @@
+         "legal_lane": "commerce, payment via pay.iai.one",
+         "public_evidence": {
+           "dns": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -195,10 +195,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -227,10 +227,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -254,22 +254,22 @@
+         "legal_lane": "user app",
+         "public_evidence": {
+           "dns": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -291,10 +291,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -318,22 +318,22 @@
+         "legal_lane": "documentation",
+         "public_evidence": {
+           "dns": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -350,14 +350,14 @@
+         "legal_lane": "developer api",
+         "public_evidence": null,
+         "disclosure": "DNS resolves but expected content was not confirmed at build time.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 404,
+           "probe_method": "dig+curl HEAD"
+@@ -379,10 +379,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -406,22 +406,22 @@
+         "legal_lane": "payment processing",
+         "public_evidence": {
+           "dns": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -442,10 +442,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -459,27 +459,6 @@
+         "stale_days": 0,
+         "stale": false
+       },
+-      {
+-        "domain": "invoice.iai.one",
+-        "role": "invoice control plane",
+-        "status": "declared",
+-        "canonical": true,
+-        "owner_team": "pay-email",
+-        "legal_lane": "billing/invoice",
+-        "public_evidence": null,
+-        "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
+-        "stale_after_days": 30,
+-        "public_visibility": "public",
+-        "probe": {
+-          "dns_resolved": false,
+-          "ip_records": [],
+-          "http_status": 0,
+-          "probe_method": "dig+curl HEAD"
+-        },
+-        "stale_days": 0,
+-        "stale": false
+-      },
+       {
+         "domain": "cdn.iai.one",
+         "role": "cdn edge",
+@@ -489,7 +468,7 @@
+         "legal_lane": "cdn delivery",
+         "public_evidence": null,
+         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -510,7 +489,7 @@
+         "legal_lane": "automation runs",
+         "public_evidence": null,
+         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -531,7 +510,7 @@
+         "legal_lane": "web product",
+         "public_evidence": null,
+         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -552,7 +531,7 @@
+         "legal_lane": "root navigation",
+         "public_evidence": null,
+         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -574,7 +553,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Trần Hà Tâm",
+         "disclosure": "Single-founder authority. Public contact via official trust mailbox.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -588,7 +567,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Trust PMO (founder-led in Phase 1)",
+         "disclosure": "Phase 1: PMO duties operated under founder oversight. Standalone PMO seat is roadmap.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -597,12 +576,12 @@
+       {
+         "team_id": "pay-email",
+         "team_name": "Pay + Email Lane",
+-        "surface_scope": "pay.iai.one, mail.iai.one, invoice.iai.one, payment activation, email evidence",
++        "surface_scope": "pay.iai.one, mail.iai.one, payment activation, email evidence",
+         "status": "declared",
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "AI-assisted, human-reviewed lane",
+         "disclosure": "Operational team behind payment + email control plane. Public contact routed via trust mailbox.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -616,7 +595,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "AI-assisted, human-reviewed lane",
+         "disclosure": "Operates dashboard surface and platform probes. Internal scope summary only.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -630,7 +609,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "AI-assisted, human-reviewed lane",
+         "disclosure": "Maintains NOOS commerce contracts. Public boundary only.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -644,7 +623,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Pending team identification (Q-OPEN-1)",
+         "disclosure": "Team identity not yet locked. Treated as Unverified per claim standard §2.3.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -658,7 +637,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Pending team identification (Q-OPEN-4)",
+         "disclosure": "Team identity not yet locked. Public CDN evidence pending.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -672,7 +651,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Pending team identification (Q-OPEN-4)",
+         "disclosure": "Team identity not yet locked. Public Flows evidence pending.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -686,7 +665,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Pending team identification (Q-OPEN-4)",
+         "disclosure": "CIOS closure 8/8 verified internally; public team identity pending.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -700,7 +679,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "AI-assisted, human-reviewed lane",
+         "disclosure": "Maintains web KPI snapshots. Public boundary only.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -717,7 +696,7 @@
+         "use_case": "public reporting path",
+         "public_evidence": null,
+         "disclosure": "Mailbox declared as the single public trust contact. Setup confirmation and SLA evidence pending in Phase 2.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -732,7 +711,7 @@
+         "use_case": "submit a trust report directly from the surface",
+         "public_evidence": "/api/trust/report",
+         "disclosure": "Form posts to a Cloudflare Worker. Phase 1 logs reports for human review; no auto-ticket SLA.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -747,7 +726,7 @@
+         "use_case": "audit what the last build verified",
+         "public_evidence": "docs/verification-log.md",
+         "disclosure": "Regenerated on every build. Reflects probe state at that build only.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -762,7 +741,7 @@
+         "use_case": "third-party verification of trust claims",
+         "public_evidence": "/data/trust-state.json",
+         "disclosure": "Phase 1 is build-time only. No runtime updates between deploys.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -779,7 +758,7 @@
+         "evidence_reference": "scripts/trust-state-builder.mjs (digA)",
+         "limitations": "Build-time only. Does not detect DNS changes after build.",
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -794,7 +773,7 @@
+         "evidence_reference": "scripts/trust-state-builder.mjs (httpProbe)",
+         "limitations": "Confirms an endpoint responds. Does not assert the body or business logic is correct.",
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -809,7 +788,7 @@
+         "evidence_reference": "git log + repository-relative paths in trust-state.json",
+         "limitations": "Some sources stay private when exposing them would create new risk.",
+         "disclosure": "Internal-only sources downgrade public claims to Declared per claim standard §2.2.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -824,7 +803,7 @@
+         "evidence_reference": "trust-state.json team_id field",
+         "limitations": "Does not prove individual operator identity. Public mode lists team scope only.",
+         "disclosure": "Phase 1 lists team scope and contact, not private operator identities.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -839,7 +818,7 @@
+         "evidence_reference": null,
+         "limitations": "Phase 1 does not run content audits. Roadmap for Phase 2.",
+         "disclosure": "Phase 1 cannot assert content correctness. Claims about a domain's content are Declared at most.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -907,7 +886,7 @@
+         ],
+         "public_contact": "trust@iai.one",
+         "disclosure": "This is the trust surface itself. Phase 1 is static-first and reflects build-time state.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+diff --git a/trust-iai-one-starter/src/data/trust-state.json b/trust-iai-one-starter/src/data/trust-state.json
+index 5d1834c..1e8812e 100644
+--- a/trust-iai-one-starter/src/data/trust-state.json
++++ b/trust-iai-one-starter/src/data/trust-state.json
+@@ -1,6 +1,6 @@
+ {
+-  "generated_at": "2026-04-26T18:05:22.530Z",
+-  "build_commit": "33c9fe3",
++  "generated_at": "2026-04-28T11:52:20.325Z",
++  "build_commit": "e1ae171",
+   "verification_policy": {
+     "stale_after_days": 30,
+     "phase": "phase_1_static",
+@@ -17,7 +17,7 @@
+     "public_statement_vi": "Trang này có thể có sự hỗ trợ của AI và đã được con người rà soát. Tuyên bố public đi kèm bằng chứng hoặc công bố giới hạn.",
+     "private_session_details_public": false,
+     "hard_coded_model_names_in_public": false,
+-    "last_reviewed_at": "2026-04-26"
++    "last_reviewed_at": "2026-04-28"
+   },
+   "modules": {
+     "official_domains": [
+@@ -30,22 +30,22 @@
+         "legal_lane": "platform charter",
+         "public_evidence": {
+           "dns": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -67,10 +67,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -94,22 +94,22 @@
+         "legal_lane": "trust disclosures",
+         "public_evidence": {
+           "dns": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -131,10 +131,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -158,22 +158,22 @@
+         "legal_lane": "commerce, payment via pay.iai.one",
+         "public_evidence": {
+           "dns": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -195,10 +195,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -227,10 +227,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -254,22 +254,22 @@
+         "legal_lane": "user app",
+         "public_evidence": {
+           "dns": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -291,10 +291,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -318,22 +318,22 @@
+         "legal_lane": "documentation",
+         "public_evidence": {
+           "dns": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -350,14 +350,14 @@
+         "legal_lane": "developer api",
+         "public_evidence": null,
+         "disclosure": "DNS resolves but expected content was not confirmed at build time.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "104.21.8.122",
+-            "172.67.139.112"
++            "172.67.139.112",
++            "104.21.8.122"
+           ],
+           "http_status": 404,
+           "probe_method": "dig+curl HEAD"
+@@ -379,10 +379,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -406,22 +406,22 @@
+         "legal_lane": "payment processing",
+         "public_evidence": {
+           "dns": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+           "dns_resolved": true,
+           "ip_records": [
+-            "172.67.139.112",
+-            "104.21.8.122"
++            "104.21.8.122",
++            "172.67.139.112"
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD"
+@@ -442,10 +442,10 @@
+           ],
+           "http_status": 200,
+           "probe_method": "dig+curl HEAD",
+-          "probed_at": "2026-04-26T18:05:22.530Z"
++          "probed_at": "2026-04-28T11:52:20.325Z"
+         },
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -459,27 +459,6 @@
+         "stale_days": 0,
+         "stale": false
+       },
+-      {
+-        "domain": "invoice.iai.one",
+-        "role": "invoice control plane",
+-        "status": "declared",
+-        "canonical": true,
+-        "owner_team": "pay-email",
+-        "legal_lane": "billing/invoice",
+-        "public_evidence": null,
+-        "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
+-        "stale_after_days": 30,
+-        "public_visibility": "public",
+-        "probe": {
+-          "dns_resolved": false,
+-          "ip_records": [],
+-          "http_status": 0,
+-          "probe_method": "dig+curl HEAD"
+-        },
+-        "stale_days": 0,
+-        "stale": false
+-      },
+       {
+         "domain": "cdn.iai.one",
+         "role": "cdn edge",
+@@ -489,7 +468,7 @@
+         "legal_lane": "cdn delivery",
+         "public_evidence": null,
+         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -510,7 +489,7 @@
+         "legal_lane": "automation runs",
+         "public_evidence": null,
+         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -531,7 +510,7 @@
+         "legal_lane": "web product",
+         "public_evidence": null,
+         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -552,7 +531,7 @@
+         "legal_lane": "root navigation",
+         "public_evidence": null,
+         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "stale_after_days": 30,
+         "public_visibility": "public",
+         "probe": {
+@@ -574,7 +553,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Trần Hà Tâm",
+         "disclosure": "Single-founder authority. Public contact via official trust mailbox.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -588,7 +567,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Trust PMO (founder-led in Phase 1)",
+         "disclosure": "Phase 1: PMO duties operated under founder oversight. Standalone PMO seat is roadmap.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -597,12 +576,12 @@
+       {
+         "team_id": "pay-email",
+         "team_name": "Pay + Email Lane",
+-        "surface_scope": "pay.iai.one, mail.iai.one, invoice.iai.one, payment activation, email evidence",
++        "surface_scope": "pay.iai.one, mail.iai.one, payment activation, email evidence",
+         "status": "declared",
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "AI-assisted, human-reviewed lane",
+         "disclosure": "Operational team behind payment + email control plane. Public contact routed via trust mailbox.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -616,7 +595,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "AI-assisted, human-reviewed lane",
+         "disclosure": "Operates dashboard surface and platform probes. Internal scope summary only.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -630,7 +609,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "AI-assisted, human-reviewed lane",
+         "disclosure": "Maintains NOOS commerce contracts. Public boundary only.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -644,7 +623,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Pending team identification (Q-OPEN-1)",
+         "disclosure": "Team identity not yet locked. Treated as Unverified per claim standard §2.3.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -658,7 +637,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Pending team identification (Q-OPEN-4)",
+         "disclosure": "Team identity not yet locked. Public CDN evidence pending.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -672,7 +651,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Pending team identification (Q-OPEN-4)",
+         "disclosure": "Team identity not yet locked. Public Flows evidence pending.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -686,7 +665,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "Pending team identification (Q-OPEN-4)",
+         "disclosure": "CIOS closure 8/8 verified internally; public team identity pending.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -700,7 +679,7 @@
+         "public_contact_reference": "trust@iai.one",
+         "owner_declared": "AI-assisted, human-reviewed lane",
+         "disclosure": "Maintains web KPI snapshots. Public boundary only.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -717,7 +696,7 @@
+         "use_case": "public reporting path",
+         "public_evidence": null,
+         "disclosure": "Mailbox declared as the single public trust contact. Setup confirmation and SLA evidence pending in Phase 2.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -732,7 +711,7 @@
+         "use_case": "submit a trust report directly from the surface",
+         "public_evidence": "/api/trust/report",
+         "disclosure": "Form posts to a Cloudflare Worker. Phase 1 logs reports for human review; no auto-ticket SLA.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -747,7 +726,7 @@
+         "use_case": "audit what the last build verified",
+         "public_evidence": "docs/verification-log.md",
+         "disclosure": "Regenerated on every build. Reflects probe state at that build only.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -762,7 +741,7 @@
+         "use_case": "third-party verification of trust claims",
+         "public_evidence": "/data/trust-state.json",
+         "disclosure": "Phase 1 is build-time only. No runtime updates between deploys.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -779,7 +758,7 @@
+         "evidence_reference": "scripts/trust-state-builder.mjs (digA)",
+         "limitations": "Build-time only. Does not detect DNS changes after build.",
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -794,7 +773,7 @@
+         "evidence_reference": "scripts/trust-state-builder.mjs (httpProbe)",
+         "limitations": "Confirms an endpoint responds. Does not assert the body or business logic is correct.",
+         "disclosure": null,
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -809,7 +788,7 @@
+         "evidence_reference": "git log + repository-relative paths in trust-state.json",
+         "limitations": "Some sources stay private when exposing them would create new risk.",
+         "disclosure": "Internal-only sources downgrade public claims to Declared per claim standard §2.2.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -824,7 +803,7 @@
+         "evidence_reference": "trust-state.json team_id field",
+         "limitations": "Does not prove individual operator identity. Public mode lists team scope only.",
+         "disclosure": "Phase 1 lists team scope and contact, not private operator identities.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -839,7 +818,7 @@
+         "evidence_reference": null,
+         "limitations": "Phase 1 does not run content audits. Roadmap for Phase 2.",
+         "disclosure": "Phase 1 cannot assert content correctness. Claims about a domain's content are Declared at most.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+@@ -907,7 +886,7 @@
+         ],
+         "public_contact": "trust@iai.one",
+         "disclosure": "This is the trust surface itself. Phase 1 is static-first and reflects build-time state.",
+-        "last_reviewed_at": "2026-04-26",
++        "last_reviewed_at": "2026-04-28",
+         "public_visibility": "public",
+         "stale_after_days": 30,
+         "stale_days": 0,
+-- 
+2.50.1 (Apple Git-155)
+

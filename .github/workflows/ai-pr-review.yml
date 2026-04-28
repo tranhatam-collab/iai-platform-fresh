@@ -1,0 +1,42 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Guard AI review
+        run: |
+          if [ "${{ vars.AI_AUTONOMOUS_ENABLED }}" != "true" ]; then
+            echo "AI_AUTONOMOUS_ENABLED is not true. PR review scaffold is present but inactive."
+            exit 0
+          fi
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "OPENAI_API_KEY is missing. PR review scaffold is present but inactive."
+            exit 0
+          fi
+
+      - name: Review Code
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "AI PR review scaffold active."
+          echo "PR number: ${PR_NUMBER}"
+          echo "Run Reviewer AI using docs/AI_TEAM_EXECUTION_SYSTEM.md and docs/PROJECT_CONTEXT_ENGINE.md here."
+

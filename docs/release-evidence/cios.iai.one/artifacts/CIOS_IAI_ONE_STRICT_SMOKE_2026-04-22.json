@@ -1,0 +1,74 @@
+{
+  "generatedAt": "2026-04-22T15:33:20.944Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "dateTag": "2026-04-22",
+  "ciosRoot": "/Users/tranhatam/Documents/Devnewproject/cios.iai.one",
+  "workersApiUrl": "https://cios-workers-api.tranhatam66.workers.dev",
+  "success": false,
+  "attempts": [
+    {
+      "attempt": 1,
+      "success": false,
+      "exitCode": 1,
+      "retryable": true,
+      "durationMs": 50,
+      "tokenMethod": "local_hs256",
+      "error": "fetch failed",
+      "diagnostics": [
+        "auth session error: fetch failed",
+        "fallback to local HS256 token with workers/local secret"
+      ]
+    },
+    {
+      "attempt": 2,
+      "success": false,
+      "exitCode": 1,
+      "retryable": true,
+      "durationMs": 7,
+      "tokenMethod": "local_hs256",
+      "error": "fetch failed",
+      "diagnostics": [
+        "auth session error: fetch failed",
+        "fallback to local HS256 token with workers/local secret"
+      ]
+    },
+    {
+      "attempt": 3,
+      "success": false,
+      "exitCode": 1,
+      "retryable": true,
+      "durationMs": 7,
+      "tokenMethod": "local_hs256",
+      "error": "fetch failed",
+      "diagnostics": [
+        "auth session error: fetch failed",
+        "fallback to local HS256 token with workers/local secret"
+      ]
+    },
+    {
+      "attempt": 4,
+      "success": false,
+      "exitCode": 1,
+      "retryable": true,
+      "durationMs": 8,
+      "tokenMethod": "local_hs256",
+      "error": "fetch failed",
+      "diagnostics": [
+        "auth session error: fetch failed",
+        "fallback to local HS256 token with workers/local secret"
+      ]
+    }
+  ],
+  "finalResult": {
+    "attempt": 4,
+    "exitCode": 1,
+    "durationMs": 8,
+    "tokenMethod": "local_hs256",
+    "error": "fetch failed",
+    "diagnostics": [
+      "auth session error: fetch failed",
+      "fallback to local HS256 token with workers/local secret"
+    ]
+  },
+  "strictSmokePayload": null
+}

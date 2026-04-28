@@ -1,0 +1,16 @@
+{
+  "name": "@iai/mail-smtp",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "bash scripts/mail-smtp-smoke.sh"
+  },
+  "dependencies": {
+    "@iai/config": "workspace:*",
+    "smtp-server": "^3.14.0"
+  }
+}

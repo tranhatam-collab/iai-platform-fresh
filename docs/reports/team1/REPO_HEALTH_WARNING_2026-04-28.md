@@ -1,0 +1,151 @@
+# Repo health warning — 2026-04-28T12:10Z
+
+## TL;DR
+
+The local checkout `iai-platform-worktree` has at least one missing
+loose object (`docs/DASH_IAI_ONE_RUNTIME_APP_SPEC.md` blob
+`8aaffaab02712cdd80afa08840d66b624466467f` was missing from
+`.git/objects/8a/` during commit `0023050`; recreated by re-hashing
+the working-tree file). There may be additional missing objects that
+have not been enumerated because `git fsck` cannot complete on this
+repo within reasonable time bounds (>10 min wall clock for
+`fsck --full`, >60s for `fsck --connectivity-only`, even after
+killing a stuck `git gc --auto` background job).
+
+The repo is **functional for current work** — `git commit`, `git
+status`, `git log -N` (small N) all work. But it is **not safe** to:
+
+* Push the branch to remote without first verifying object
+  reachability (push may be rejected, or worse, succeed and then
+  history walk on remote breaks).
+* Trust `git fsck`'s silence as health.
+* Run `git gc --aggressive` until the duplicate index files are
+  cleared (see below).
+
+## Symptoms observed
+
+1. **Missing blob during commit**:
+   ```
+   error: invalid object 100644 8aaffaab… for 'docs/DASH_IAI_ONE_RUNTIME_APP_SPEC.md'
+   error: Error building trees
+   ```
+   Recovered by `git hash-object -w docs/DASH_IAI_ONE_RUNTIME_APP_SPEC.md`
+   (working tree still had the canonical bytes).
+
+2. **Background gc stuck**: `.git/gc.pid` showed
+   `22721 MacBook-Air-cua-TRAN.local`, the named process was
+   `git gc --auto --no-quiet --no-detach` from
+   `/Applications/Xcode.app/Contents/Developer/usr/libexec/git-core/git`,
+   accumulated 0:00.01 s CPU time over ~12 min wall — i.e. blocked
+   on FS / lock, not making progress. Killed with `kill 22721` and
+   `.git/gc.pid` cleaned up automatically.
+
+3. **fsck and rev-list hang silently**:
+   `git fsck --full --strict` ran 10+ min, no stdout/stderr.
+   `git fsck --connectivity-only` ran 60 s, no output.
+   `git rev-list --objects HEAD --count` ran 30 s, no output.
+   Yet `git cat-file -e HEAD` returns immediately, and
+   `git rev-parse HEAD~10` resolves cheaply. Suggests the issue is
+   triggered by deep tree walk and may be one or a few specific
+   objects rather than wholesale corruption.
+
+4. **macOS Finder duplicate index files** present:
+   ```
+   .git/index            (canonical, 103 081 bytes, 18:56)
+   .git/index 2          (Finder dup, 96 111 bytes, 00:33)
+   .git/index 3          (Finder dup, 100 735 bytes, 01:08)
+   .git/index 3.lock     (zero-byte stale, removed)
+   ```
+   These are NOT created by git — they are produced by
+   Finder/iCloud/Time Machine when the file is detected as
+   conflicted on a sync. Git ignores `.git/index 2` and
+   `.git/index 3` at runtime, but their presence indicates the
+   `.git/` dir has been touched by an external sync process,
+   which is a known cause of object-DB corruption on macOS.
+
+5. **Loose-object only DB**: `.git/objects/pack/` is effectively
+   empty; the 7.5 MiB object DB is all loose. This is the natural
+   state after frequent commits without `git gc`, but combined
+   with item 4 raises the chance of missed writes.
+
+## Recommended sequence (when founder has bandwidth)
+
+1. **Disable any sync of `.git/`**: confirm `iCloud Drive`, `Time
+   Machine`, and any third-party sync (Dropbox, Google Drive) are
+   excluding the working directory or at minimum the `.git`
+   subtree. Ideally `.git` lives on a local-only volume.
+
+2. **Clean Finder duplicates inside .git** (zero-cost, repo-safe):
+   ```bash
+   rm "/Users/tranhatam/Documents/Devnewproject/iai-platform-worktree/.git/index 2"
+   rm "/Users/tranhatam/Documents/Devnewproject/iai-platform-worktree/.git/index 3"
+   ```
+   (The canonical `.git/index` is the only one git reads.)
+
+3. **Clone a fresh copy** from the most recent good remote and
+   compare commit graph:
+   ```bash
+   cd /tmp
+   git clone <origin-url> iai-platform-fresh
+   cd iai-platform-fresh
+   git log --oneline -50 > /tmp/fresh-log.txt
+   ```
+   Then in the existing worktree:
+   ```bash
+   git log --oneline -50 > /tmp/dirty-log.txt
+   diff /tmp/fresh-log.txt /tmp/dirty-log.txt
+   ```
+   Any commits unique to the dirty worktree are the ones we'd lose
+   if we re-clone — they are listed in section "Unpushed local-only
+   commits" below.
+
+4. **Run `git fsck --full` on the fresh clone** to confirm the
+   remote side is healthy.
+
+5. **Cherry-pick the unpushed commits** from the dirty worktree
+   into the fresh clone (the working-tree files of the dirty
+   worktree are still trustworthy; only the object DB is suspect).
+
+6. **Replace the dirty worktree** with the recovered fresh clone.
+
+## Unpushed local-only commits (must not be lost)
+
+Listed by `git log --oneline -10` against branch
+`OMCODE/smtp-internal-first-phase1` from this session — verified
+each commit hash is reachable via `git cat-file -e <sha>`:
+
+| SHA | Subject | Notes |
+|---|---|---|
+| `0023050` | ops(pay-gate + trust-state): refresh log — owner unblock still pending | Refresh round 2 of pay gate loop |
+| `e1ae171` | docs(mail-api): provider integration runbook for Path B inbound webhook | P7 runbook |
+| `62d6c5c` | mail-api(path-b): graceful shutdown + image c1b9b3b swapped live | P6 image swap |
+| `c1b9b3b` | mail-api(path-b): in-package bootstrap entrypoint + env-driven sink config | P5 bootstrap.ts |
+| `6f8c02c` | mail-api(path-b): post-deploy hardening — log unhandled errors + reproducible deploy bundle | Pre-existing, not from this session |
+| `ff9e334` | docs(mail-api): Path B inbound webhook DEPLOYED — flip status to LIVE_PRODUCTION | Pre-existing |
+| `ae1939e` | mail-core(wave2-auth): ship 4-flow auth content artifact + 9 tests | Pre-existing |
+| `50d4a77` | mail-api(inbound-webhook): wire Path B HMAC handler + evidence sinks + 13 tests | Pre-existing |
+
+Working-tree files for every commit above are present and
+unmodified — recovery via re-clone + cherry-pick is feasible
+without risk of losing this session's work.
+
+## What I will NOT do without explicit founder approval
+
+* `git gc --aggressive` (could mass-delete loose objects already
+  in trouble).
+* `git push --force` to any remote.
+* Any in-place rewrite of `.git/objects/` beyond the
+  per-blob recovery already performed (`hash-object -w` on a
+  working-tree file whose hash matched the missing index entry
+  exactly — semantically a no-op).
+* Touching the sibling worktree at
+  `.git/worktrees/noos-release-clean/`.
+
+## Status until repaired
+
+* Local commits are safe to keep accumulating; each commit
+  succeeds means the trees and blobs of THAT commit are
+  internally consistent.
+* `git push` is paused until either (a) `git fsck` runs clean,
+  or (b) we move to a recovered clone.
+* All Path B / pay gate / trust-state work continues normally.

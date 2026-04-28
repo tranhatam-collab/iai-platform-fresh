@@ -1,0 +1,100 @@
+# TEAM_CHANNEL_REMINDER_STATUS_2026-04-24
+- Generated at: 2026-04-23T17:16:51.841Z
+- Timezone: Asia/Ho_Chi_Minh
+- Schedule source: `docs/reports/team1/TEAM_CHANNEL_REMINDER_SCHEDULE_2026-04-24.json`
+- Cadence minutes: `15`
+- Active rows: `10`
+- Overall: PASS
+- App heartbeat: `ACTIVE` (`team-15m-reminder-loop-2`)
+- Dispatch mode: repo-side checker + current-thread heartbeat; external Slack/Teams transport still requires connector/runner attachment.
+- External transport: CONNECTOR_PENDING
+
+## Checks
+
+- PASS `schedule_is_object` — Schedule is a JSON object.
+- PASS `cadence_is_15_minutes` — Reminder cadence is locked to 15 minutes.
+- PASS `status_active_until_complete` — Schedule must remain active until teams are verified complete.
+- PASS `channel_map_present` — Schedule must include at least one team channel mapping.
+- PASS `channel_map_1_team_id_present` — Every row needs team_id.
+- PASS `channel_map_1_team_id_unique` — team_id is unique.
+- PASS `channel_map_1_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_1_owner_present` — Every row needs owner.
+- PASS `channel_map_1_status_present` — Every row needs status.
+- PASS `channel_map_1_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_1_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_2_team_id_present` — Every row needs team_id.
+- PASS `channel_map_2_team_id_unique` — team_id is unique.
+- PASS `channel_map_2_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_2_owner_present` — Every row needs owner.
+- PASS `channel_map_2_status_present` — Every row needs status.
+- PASS `channel_map_2_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_2_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_3_team_id_present` — Every row needs team_id.
+- PASS `channel_map_3_team_id_unique` — team_id is unique.
+- PASS `channel_map_3_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_3_owner_present` — Every row needs owner.
+- PASS `channel_map_3_status_present` — Every row needs status.
+- PASS `channel_map_3_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_3_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_4_team_id_present` — Every row needs team_id.
+- PASS `channel_map_4_team_id_unique` — team_id is unique.
+- PASS `channel_map_4_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_4_owner_present` — Every row needs owner.
+- PASS `channel_map_4_status_present` — Every row needs status.
+- PASS `channel_map_4_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_4_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_5_team_id_present` — Every row needs team_id.
+- PASS `channel_map_5_team_id_unique` — team_id is unique.
+- PASS `channel_map_5_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_5_owner_present` — Every row needs owner.
+- PASS `channel_map_5_status_present` — Every row needs status.
+- PASS `channel_map_5_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_5_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_6_team_id_present` — Every row needs team_id.
+- PASS `channel_map_6_team_id_unique` — team_id is unique.
+- PASS `channel_map_6_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_6_owner_present` — Every row needs owner.
+- PASS `channel_map_6_status_present` — Every row needs status.
+- PASS `channel_map_6_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_6_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_7_team_id_present` — Every row needs team_id.
+- PASS `channel_map_7_team_id_unique` — team_id is unique.
+- PASS `channel_map_7_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_7_owner_present` — Every row needs owner.
+- PASS `channel_map_7_status_present` — Every row needs status.
+- PASS `channel_map_7_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_7_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_8_team_id_present` — Every row needs team_id.
+- PASS `channel_map_8_team_id_unique` — team_id is unique.
+- PASS `channel_map_8_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_8_owner_present` — Every row needs owner.
+- PASS `channel_map_8_status_present` — Every row needs status.
+- PASS `channel_map_8_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_8_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_9_team_id_present` — Every row needs team_id.
+- PASS `channel_map_9_team_id_unique` — team_id is unique.
+- PASS `channel_map_9_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_9_owner_present` — Every row needs owner.
+- PASS `channel_map_9_status_present` — Every row needs status.
+- PASS `channel_map_9_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_9_reminder_command_present` — Every row needs a full reminder_command.
+- PASS `channel_map_10_team_id_present` — Every row needs team_id.
+- PASS `channel_map_10_team_id_unique` — team_id is unique.
+- PASS `channel_map_10_logical_channel_present` — Every row needs logical_channel.
+- PASS `channel_map_10_owner_present` — Every row needs owner.
+- PASS `channel_map_10_status_present` — Every row needs status.
+- PASS `channel_map_10_stop_condition_present` — Every row needs a stop_condition.
+- PASS `channel_map_10_reminder_command_present` — Every row needs a full reminder_command.
+
+## Active Reminder Rows
+
+- `team1-control-tower-public-hold` / `public-surface-release-hold-authority` / status=`ACTIVE`
+- `team-b-infra-dns-cdn-flows` / `dns-cdn-flows-production-proof` / status=`ACTIVE`
+- `team5-web-home-public-links` / `web-home-public-link-integrity` / status=`ACTIVE`
+- `team-c-seo-sitemaps` / `public-sitemap-metadata-repair` / status=`ACTIVE`
+- `team-c-language-bilingual-cleanup` / `universal-bilingual-public-surface-cleanup` / status=`ACTIVE`
+- `team2-api-technical-surface-policy` / `technical-api-indexing-security-policy` / status=`ACTIVE`
+- `team-email-smtp-mail-public-policy` / `mail-public-surface-policy` / status=`ACTIVE`
+- `team-legal-docs-public-entity` / `public-legal-entity-consistency` / status=`ACTIVE`
+- `team-b-dash-indexability` / `dash-public-internal-indexability-decision` / status=`ACTIVE`
+- `team-d-payment-activation` / `team-d-payment-activation` / status=`ACTIVE`

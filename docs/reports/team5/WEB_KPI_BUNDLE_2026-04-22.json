@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-04-22T15:32:40.704Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-22",
+  "compareDate": "2026-04-20",
+  "sources": {
+    "currentSnapshot": "docs/reports/team5/WEB_KPI_SNAPSHOT_2026-04-22.json",
+    "previousSnapshot": "docs/reports/team5/WEB_KPI_SNAPSHOT_2026-04-20.json"
+  },
+  "summary": {
+    "authFailRatePercent": {
+      "current": 25,
+      "previous": 25,
+      "delta": 0,
+      "trend": "không đổi"
+    },
+    "routeFailRatePercent": {
+      "current": 16.67,
+      "previous": 16.67,
+      "delta": 0,
+      "trend": "không đổi"
+    },
+    "baselineCoveragePercent": {
+      "current": 100,
+      "previous": 100,
+      "delta": 0,
+      "trend": "không đổi"
+    },
+    "totalEventsObserved": {
+      "current": 22,
+      "previous": 22,
+      "delta": 0,
+      "trend": "không đổi"
+    }
+  }
+}

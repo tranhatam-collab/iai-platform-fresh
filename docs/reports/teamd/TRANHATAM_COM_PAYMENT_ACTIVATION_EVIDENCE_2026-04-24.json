@@ -1,0 +1,123 @@
+{
+  "domain": "tranhatam.com",
+  "intake_id": "SITE-INTAKE-100",
+  "status": "PROOF_CHAIN_COMPLETE_GATE_LOCKED",
+  "pay_gate_rule": {
+    "ready_for_live_forbidden_while_locked": true,
+    "current_pay_gate_state": "LOCK_RETAINED_WITH_REASON"
+  },
+  "mailboxes": [
+    {
+      "address": "pay@tranhatam.com",
+      "purpose": "payment_receipt_sender",
+      "binding_status": "CONFIRMED",
+      "inbound_routing_status": "CONFIRMED",
+      "inbox_proof_ref": ""
+    },
+    {
+      "address": "billing@tranhatam.com",
+      "purpose": "billing_failed_refund_sender",
+      "binding_status": "CONFIRMED",
+      "inbound_routing_status": "CONFIRMED",
+      "inbox_proof_ref": ""
+    },
+    {
+      "address": "support@tranhatam.com",
+      "purpose": "reply_to_support",
+      "binding_status": "CONFIRMED",
+      "inbound_routing_status": "CONFIRMED",
+      "inbox_proof_ref": "mailbox://support@tranhatam.com/%3Cdccda44b-235a-d9c8-0d14-f4d49cb02d23%40tranhatam.com%3E"
+    },
+    {
+      "address": "noreply@tranhatam.com",
+      "purpose": "reserved_not_payment_sender",
+      "binding_status": "CONFIRMED",
+      "inbound_routing_status": "CONFIRMED",
+      "inbox_proof_ref": ""
+    }
+  ],
+  "sender_policy": {
+    "payment_receipt": "pay@tranhatam.com",
+    "checkout_status_update": "billing@tranhatam.com",
+    "payment_failed_notice": "billing@tranhatam.com",
+    "refund_notice": "billing@tranhatam.com",
+    "reply_to": "support@tranhatam.com",
+    "noreply_payment_sender_allowed": false
+  },
+  "international_gateway": {
+    "vnd_primary_receiver": "recv_vnd_personal_tranhatam_acb",
+    "vnd_fallback_receiver": "recv_vnd_personal_tranhatam_vcb",
+    "usd_primary_receiver": "recv_usd_personal_tranhatam_paypal",
+    "usd_provider": "paypal",
+    "currency_policy_when_id_country_present": {
+      "VN": "VND_REQUIRED",
+      "NON_VN": "USD_REQUIRED"
+    },
+    "live_policy_wiring_status": "PENDING"
+  },
+  "runtime_bindings": {
+    "MAIL_API_BASE_URL": {
+      "required": true,
+      "secret": false,
+      "status": "LOCAL_PROOF_ONLY",
+      "scope": "local_pay_handler_proof_session",
+      "value_ref": "https://api.mail.iai.one/v1"
+    },
+    "MAIL_API_KEY": {
+      "required": true,
+      "secret": true,
+      "status": "LOCAL_PROOF_ONLY",
+      "scope": "local_pay_handler_proof_session",
+      "value_ref": "secure_channel_confirmed"
+    },
+    "MAIL_API_WORKSPACE_ID": {
+      "required": true,
+      "secret": false,
+      "status": "LOCAL_PROOF_ONLY",
+      "scope": "local_pay_handler_proof_session",
+      "value_ref": "ws_pay_tranhatam"
+    },
+    "PAY_EMAIL_ADAPTER_INTERNAL_KEY": {
+      "required": true,
+      "secret": true,
+      "status": "LOCAL_PROOF_ONLY",
+      "scope": "local_pay_handler_proof_session",
+      "value_ref": "secure_channel_confirmed"
+    }
+  },
+  "payment_proof": {
+    "flow_type": "local_pay_handler_to_live_mail_api",
+    "provider_ref": "provider_tranhatam_live_20260424_01",
+    "checkout_or_payment_session_ref": "ps_tranhatam_live_20260424_01",
+    "mail_message_id": "<dccda44b-235a-d9c8-0d14-f4d49cb02d23@tranhatam.com>",
+    "d1_or_canonical_row_ref": "canon_tranhatam_com_provider_tranhatam_live_20260424_01",
+    "inbox_proof_ref": "mailbox://support@tranhatam.com/%3Cdccda44b-235a-d9c8-0d14-f4d49cb02d23%40tranhatam.com%3E"
+  },
+  "payment_event_chain": {
+    "status": "PASS",
+    "order_id": "order_tranhatam_live_20260424_01",
+    "payment_session_id": "ps_tranhatam_live_20260424_01",
+    "provider_event_id": "evt_tranhatam_live_20260424_01",
+    "provider_status": "confirmed",
+    "callback_status": "callback_confirmed",
+    "mail_status": "provider_accepted"
+  },
+  "mail_db_proof": {
+    "workspace_id": "ws_pay_tranhatam",
+    "message_detail_ref": "internal://iai-mail-api/v1/messages/%3Cdccda44b-235a-d9c8-0d14-f4d49cb02d23%40tranhatam.com%3E",
+    "message_events_ref": "internal://iai-mail-api/v1/messages/%3Cdccda44b-235a-d9c8-0d14-f4d49cb02d23%40tranhatam.com%3E/events",
+    "delivery_attempts_ref": "internal://iai-mail-api/sqlite/delivery_attempts/%3Cdccda44b-235a-d9c8-0d14-f4d49cb02d23%40tranhatam.com%3E",
+    "public_readback_route_exposed": false
+  },
+  "log_and_inbox_proof": {
+    "queue_id": "3ACD2677CD",
+    "log_evidence_ref": "postfix://queue/3ACD2677CD",
+    "internal_inbox_proof_ref": "dovecot://support@tranhatam.com/2875c63795d3e869840b0000f400a773"
+  },
+  "evidence_refs": {
+    "packet": "docs/reports/teamd/TRANHATAM_COM_PAYMENT_EVENT_CALLBACK_AND_MAIL_PROOF_2026-04-24.md",
+    "checklist": "docs/reports/teamd/TRANHATAM_COM_PAYMENT_EMAIL_LIVE_CHECKLIST_2026-04-22.md",
+    "board": "docs/PAY_IAI_ONE_SITE_PAYMENT_ACTIVATION_INTAKE_BOARD_2026.md",
+    "adapter_contract": "docs/PAY_IAI_ONE_PAYMENT_EMAIL_OUTBOUND_ADAPTER_CONTRACT_2026.md"
+  }
+}

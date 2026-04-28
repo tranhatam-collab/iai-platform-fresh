@@ -1,0 +1,64 @@
+{
+  "system_name": "iai.one-ai-team-system",
+  "project": "iai.one",
+  "first_activation": "tranhatam.com-payment-activation",
+  "default_branch": "main",
+  "branch_prefix": "OMCODE/",
+  "auto_create_branch": true,
+  "auto_pr": true,
+  "auto_merge": false,
+  "require_human_approval": true,
+  "require_docs_update": true,
+  "require_test_evidence": true,
+  "require_release_evidence": true,
+  "require_report_after_each_session": true,
+  "allow_secret_mutation_by_ai": false,
+  "allow_infra_core_mutation_by_ai": false,
+  "models": {
+    "architect": "gpt-5.4",
+    "builder": "gpt-5.3-codex",
+    "debugger": "gpt-5.3-codex",
+    "reviewer": "gpt-5.4",
+    "qa": "gpt-5.4-mini",
+    "docs": "gpt-5.4-mini"
+  },
+  "limits": {
+    "max_turns_per_task": 7,
+    "max_files_per_task": 20,
+    "max_parallel_tracks": 3
+  },
+  "required_inputs": [
+    "task_type",
+    "objective",
+    "scope_in",
+    "scope_out",
+    "acceptance_criteria",
+    "dependencies",
+    "risk_notes"
+  ],
+  "required_outputs": [
+    "plan",
+    "changed_files",
+    "test_steps",
+    "test_result",
+    "risk_notes",
+    "next_action",
+    "docs_update"
+  ],
+  "session_reporting": {
+    "required": true,
+    "standard_file": "docs/AI_TEAM_KICKOFF_AND_SESSION_REPORTING_STANDARD.md",
+    "kickoff_file": "docs/reports/team1/AI_TEAM_SYSTEM_KICKOFF_TRANHATAM_COM_2026-04-24.md",
+    "required_fields": [
+      "team",
+      "date",
+      "lane",
+      "objective_for_this_session",
+      "done",
+      "verification",
+      "blockers",
+      "next_action",
+      "current_state"
+    ]
+  }
+}

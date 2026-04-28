@@ -1,0 +1,114 @@
+{
+  "generatedAt": "2026-04-22T15:33:20.963Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-22",
+  "timeoutMs": 20000,
+  "paths": {
+    "ciosRoot": "../cios.iai.one",
+    "packetPath": "docs/release-evidence/cios.iai.one/CIOS_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+    "runtimeProofPath": "docs/release-evidence/cios.iai.one/CIOS_IAI_ONE_RUNTIME_CONTRACT_PROOF_2026-04-21.md"
+  },
+  "smokeReadiness": {
+    "hasWorkersJwtSecret": true,
+    "hasDirectToken": false,
+    "hasSessionAuth": true,
+    "hasWorkersApiUrl": true,
+    "ready": true,
+    "workersJwtLooksPlaceholder": false,
+    "workersJwtSource": ".env(jwt_secret)",
+    "directTokenSource": "missing",
+    "sessionAuthSource": "default(demo123456)",
+    "workersApiUrlSource": ".env",
+    "workersApiUrl": "https://cios-workers-api.tranhatam66.workers.dev"
+  },
+  "screenshotChecks": [
+    {
+      "label": "Root landing",
+      "route": "https://cios.iai.one/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/root.png",
+      "present": true
+    },
+    {
+      "label": "CIOS hub",
+      "route": "https://cios.iai.one/cios/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/hub.png",
+      "present": true
+    },
+    {
+      "label": "CIOS app",
+      "route": "https://cios.iai.one/cios/app/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/app.png",
+      "present": true
+    },
+    {
+      "label": "CIOS pricing",
+      "route": "https://cios.iai.one/cios/pricing/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/pricing.png",
+      "present": true
+    },
+    {
+      "label": "CIOS demo",
+      "route": "https://cios.iai.one/cios/demo/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/demo.png",
+      "present": true
+    }
+  ],
+  "commands": {
+    "workspaceEvidenceGuard": {
+      "command": "node --test tests/integration/cios-release-evidence.test.mjs",
+      "result": "PASS",
+      "ok": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "error": null,
+      "durationMs": 5517,
+      "stdout": "✔ cios sibling workspace exposes release-critical route shells (3009.320125ms)\n✔ cios sibling workspace exposes runtime contract and rollback proof (2405.940209ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 5476.0915",
+      "stderr": ""
+    },
+    "upstreamVitest": {
+      "command": "node node_modules/vitest/vitest.mjs run --reporter=verbose --maxWorkers=1 --configLoader runner",
+      "result": "TIMEOUT",
+      "ok": false,
+      "exitCode": null,
+      "signal": "SIGTERM",
+      "timedOut": true,
+      "error": null,
+      "durationMs": 20011,
+      "stdout": "",
+      "stderr": ""
+    },
+    "strictSmoke": {
+      "command": "node scripts/teamc-cios-strict-smoke-capture.mjs",
+      "result": "FAIL_EXIT_1",
+      "ok": false,
+      "exitCode": 1,
+      "signal": null,
+      "timedOut": false,
+      "error": null,
+      "durationMs": 10187,
+      "stdout": "docs/release-evidence/cios.iai.one/artifacts/CIOS_IAI_ONE_STRICT_SMOKE_2026-04-22.md\ndocs/release-evidence/cios.iai.one/artifacts/CIOS_IAI_ONE_STRICT_SMOKE_2026-04-22.json",
+      "stderr": "",
+      "skipped": false
+    }
+  },
+  "checks": {
+    "ciosWorkspacePresent": true,
+    "packetPresent": true,
+    "runtimeProofPresent": true,
+    "screenshotPackPresent": true,
+    "workspaceEvidenceGuardPass": true,
+    "upstreamVitestPass": false,
+    "strictSmokeReady": true,
+    "strictSmokePass": false
+  },
+  "unmetChecks": [
+    "upstreamVitestPass",
+    "strictSmokePass"
+  ],
+  "reviewClosureReady": false,
+  "nextActions": [
+    "Điều tra `npm test` của ../cios.iai.one trong môi trường có DB/toolchain đúng hoặc thêm harness test phù hợp trước khi Team 1 dùng upstream suite làm proof.",
+    "Rerun `node scripts/teamc-cios-strict-smoke-capture.mjs` và xử lý lỗi runtime theo artifact strict smoke mới."
+  ]
+}

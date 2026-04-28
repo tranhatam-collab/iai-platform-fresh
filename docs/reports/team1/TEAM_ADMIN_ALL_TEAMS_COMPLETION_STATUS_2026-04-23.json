@@ -1,0 +1,256 @@
+{
+  "generatedAt": "2026-04-23T07:00:38.693Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "requestedDate": "2026-04-23",
+  "gateState": "BLOCKED_ON_PAY_PRODUCTION_GATE",
+  "completion": {
+    "percent": 74,
+    "remainingPercent": 26,
+    "band": "IN_PROGRESS",
+    "model": [
+      {
+        "key": "governanceReady",
+        "weight": 35,
+        "progress": 1
+      },
+      {
+        "key": "noGoOwnersDone",
+        "weight": 35,
+        "progress": 1
+      },
+      {
+        "key": "payProductionGateSignals",
+        "weight": 20,
+        "progress": 0.2
+      },
+      {
+        "key": "releaseClaimUnlocked",
+        "weight": 5,
+        "progress": 0
+      },
+      {
+        "key": "liveSyncReady",
+        "weight": 5,
+        "progress": 0
+      }
+    ]
+  },
+  "readiness": {
+    "batchReadyToStage": true,
+    "batchReadyToCommit": false,
+    "commitScopeLocked": false
+  },
+  "checks": {
+    "governanceReady": true,
+    "noGoOwnersDone": true,
+    "payProductionGateDone": false,
+    "releaseClaimUnlocked": false,
+    "liveSyncReady": false,
+    "paySignals": {
+      "source": "team1-pay-prod-gate-status",
+      "passed": 2,
+      "total": 10,
+      "unmetSignals": [
+        "auth_key_present",
+        "checkout_url_non_null",
+        "payment_link_id_non_null",
+        "no_214",
+        "production_gate_green",
+        "shared_read_model_ready_for_shared_only",
+        "shared_upstream_active_read_mode_shared_contract",
+        "shared_upstream_release_gate_ready"
+      ],
+      "runtimeProbeSourcePresent": true,
+      "sharedRuntimeProbeSourcePresent": true
+    },
+    "team2RerunBundle": {
+      "status": "BLOCKED_PRECHECK",
+      "preflightReady": false
+    },
+    "team1FullRerunReviewStatus": "REVIEW_BLOCKED_PRECHECK",
+    "teamEmailSmtp": {
+      "statusLabel": "PARTIAL CLOSEOUT, DEV LANE OPEN, LIVE CLAIM EVIDENCE-LOCKED",
+      "mailboxAliasTruthDone": false,
+      "inboundRoutingTruthDone": false,
+      "gmailProofDone": false,
+      "outlookProofDone": false,
+      "internalInboxProofDone": false,
+      "wave1CloseoutReady": false
+    },
+    "teamChannelReminder": {
+      "available": true,
+      "cadenceIs15": true,
+      "activeRows": 9,
+      "overallPass": true,
+      "scheduleStatus": "ACTIVE_UNTIL_VERIFIED_COMPLETE"
+    },
+    "teamDState": {
+      "available": true,
+      "status": "EXTERNAL_STEPS_PENDING",
+      "activationEvidenceComplete": false,
+      "liveClaimBlocked": true
+    },
+    "teamBCdnFlowsState": {
+      "available": true,
+      "status": "EXTERNAL_PRODUCTION_EVIDENCE_PENDING",
+      "overallPass": true,
+      "productionEvidenceComplete": false,
+      "cdnEvidenceComplete": false,
+      "flowsEvidenceComplete": false,
+      "cdnMissingRefs": [
+        "deploy_log_ref",
+        "rule_snapshot_ref",
+        "cache_header_proof_ref",
+        "purge_rollback_note_ref",
+        "asset_header_proof_ref"
+      ],
+      "flowsMissingRefs": [
+        "route_map_production_ref",
+        "runtime_production_ref",
+        "screenshot_production_ref"
+      ]
+    },
+    "bilingualLiveReady": false,
+    "bilingualPendingSurfaces": [
+      "pay",
+      "dash"
+    ],
+    "ciosReviewClosureReady": true,
+    "docsPackIntegrated": true,
+    "cdnEvidenceState": {
+      "deltaSubmitted": true,
+      "deltaDnsUnresolved": true,
+      "deltaPendingUnchanged": true,
+      "packetPendingOwnerEvidence": true,
+      "deployRuleCacheProofClosed": false
+    },
+    "domainVerdicts": {
+      "developerReopenApproved": true,
+      "cdnPendingOwnerEvidence": true,
+      "flowsPendingRouteRuntimeProof": true,
+      "flowsTs5083Cleared": true,
+      "ciosEvidenceReviewPending": true
+    },
+    "ciosIssueState": {
+      "vitestEnvOpen": false,
+      "freshScreenshotOpen": false,
+      "strictSmokeOpen": false,
+      "openCount": 0
+    }
+  },
+  "reminderInsights": {
+    "teamBCdnMissingEvidence": true,
+    "teamBFlowsBlockedByTs5083": true,
+    "teamCOpenRuntimeIssues": true
+  },
+  "sources": {
+    "controlTower": {
+      "date": "2026-04-22",
+      "path": "docs/reports/team1/CONTROL_TOWER_AUTOMATION_STATUS_2026-04-22.json"
+    },
+    "payGateStatus": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-04-23.json"
+    },
+    "team1FullRerunReview": {
+      "date": "2026-04-22",
+      "path": "docs/reports/team1/TEAM1_PAY_FULL_RERUN_REVIEW_STATUS_2026-04-22.json"
+    },
+    "team2Probe": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-04-23.json"
+    },
+    "team2SharedProbe": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team2/TEAM2_PAY_SHARED_RUNTIME_PROBE_2026-04-23.json"
+    },
+    "team2RerunBundle": {
+      "date": "2026-04-22",
+      "path": "docs/reports/team2/TEAM2_PAY_PROD_RERUN_BUNDLE_STATUS_2026-04-22.json"
+    },
+    "team5Readiness": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team5/TEAM5_LIVE_SYNC_READINESS_2026-04-23.json"
+    },
+    "teamDEvidenceStatus": {
+      "date": "2026-04-23",
+      "path": "docs/reports/teamd/TRANHATAM_COM_PAYMENT_ACTIVATION_EVIDENCE_STATUS_2026-04-23.json"
+    },
+    "teamBCdnFlowsEvidenceStatus": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team1/TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_STATUS_2026-04-23.json"
+    },
+    "channelReminderSchedule": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team1/TEAM_CHANNEL_REMINDER_SCHEDULE_2026-04-23.json"
+    },
+    "channelReminderStatus": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team1/TEAM_CHANNEL_REMINDER_STATUS_2026-04-23.md"
+    },
+    "docsIntegration": {
+      "date": "2026-04-22",
+      "path": "docs/reports/team1/PAY_IAI_ONE_REPO_DOCS_INTEGRATION_STATUS_2026-04-22.json"
+    },
+    "languageAudit": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team1/UNIVERSAL_BILINGUAL_LANGUAGE_REBUILD_AUDIT_2026-04-23.json"
+    },
+    "ciosClosure": {
+      "date": "2026-04-23",
+      "path": "docs/reports/team1/TEAMC_CIOS_REVIEW_CLOSURE_STATUS_2026-04-23.json"
+    },
+    "mailLaneStatus": {
+      "date": "2026-04-22",
+      "path": "docs/iai-mail-platform/MAIL_IAI_ONE_TEAM_EMAIL_SMTP_LANE_STATUS_2026-04-22.md"
+    },
+    "reminder": {
+      "date": "2026-04-22",
+      "path": "docs/reports/team1/TEAM_ADMIN_ALL_TEAMS_COMPLETION_REMINDER_2026-04-22.md"
+    },
+    "domainVerdicts": {
+      "date": "2026-04-22",
+      "path": "docs/reports/team1/TEAM1_DOMAIN_REOPEN_VERDICTS_2026-04-22.md"
+    },
+    "ciosPacket": {
+      "date": "2026-04-20",
+      "path": "docs/release-evidence/cios.iai.one/CIOS_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md"
+    },
+    "cdnPacket": {
+      "date": "2026-04-20",
+      "path": "docs/release-evidence/cdn.iai.one/CDN_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md"
+    },
+    "cdnDelta": {
+      "date": "2026-04-22",
+      "path": "docs/release-evidence/cdn.iai.one/CDN_IAI_ONE_DELTA_EVIDENCE_2026-04-22.md"
+    }
+  },
+  "gitScopeStatus": {
+    "available": true,
+    "dirtyFiles": 633,
+    "outOfScopeFiles": 379,
+    "outOfScopeExamples": [
+      ".gitignore",
+      "apps/dash/src/i18n.ts",
+      "apps/dash/src/render.ts",
+      "apps/nft/src/i18n.ts",
+      "apps/nft/src/render.ts",
+      "apps/nft/src/server.ts",
+      "apps/noos-web/src/data.ts",
+      "apps/noos-web/src/i18n.ts"
+    ],
+    "commitScopeLocked": false
+  },
+  "remainingActions": [
+    "Team 1 must secure final provider/live owner confirmation for pay.iai.one and update the owner note checkpoint.",
+    "Team 2 must rerun production probe + pay gate after owner confirmation and close unmet signals.",
+    "Team 2 must clear rerun precheck before full rerun bundle (missing: auth_key_present).",
+    "Team 1 must keep lock until full rerun review checker reaches READY_FOR_TEAM1_FLIP_REVIEW (current: REVIEW_BLOCKED_PRECHECK).",
+    "Team B CDN/Flows must submit domain-specific production evidence (CDN missing: deploy_log_ref, rule_snapshot_ref, cache_header_proof_ref, purge_rollback_note_ref, asset_header_proof_ref; Flows missing: route_map_production_ref, runtime_production_ref, screenshot_production_ref).",
+    "Team 1 must accept or reject the Team C CIOS closure packet; checker is PASS, Team C stays monitor-only until the verdict is recorded.",
+    "Team Email SMTP must close 5 evidence clusters before live-close: mailbox/alias truth, inbound routing truth, Gmail proof, Outlook proof, internal inbox proof.",
+    "Team 1 ops must keep channel reminder protocol locked at 15-minute cadence with all required active team channels until COMPLETE_VERIFIED.",
+    "Team D must close tranhatam.com external activation evidence (mailbox/alias, runtime bindings, provider_ref, message_id, D1 row, inbox proof) before any READY_FOR_LIVE claim.",
+    "Team C language lane must remove remaining hard-coded bilingual copy and metadata drift (pending surfaces: pay, dash)."
+  ]
+}

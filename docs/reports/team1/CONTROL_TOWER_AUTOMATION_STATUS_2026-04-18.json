@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-04-18T07:25:27.433Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-18",
+  "controlReady": true,
+  "releaseControlState": "READY",
+  "checks": {
+    "laneProtocol": {
+      "pass": true,
+      "unresolvedOwnershipRows": 0,
+      "dailyReportsPass": true,
+      "missionMapPass": true
+    },
+    "nftPhaseC": {
+      "pass": true,
+      "verdict": "GO",
+      "team2Status": "READY_FOR_TEAM1_REVIEW",
+      "team4Status": "READY_FOR_TEAM1_REVIEW",
+      "team2Missing": 0,
+      "team2Fail": 0,
+      "team2RawUrlPass": true,
+      "team4OpsTracePass": true
+    }
+  },
+  "actionItems": [
+    "No blocking action items."
+  ]
+}

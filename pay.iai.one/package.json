@@ -1,0 +1,16 @@
+{
+  "name": "pay-iai-one",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private payment orchestration service for the IAI ecosystem",
+  "scripts": {
+    "dev": "./node_modules/wrangler/bin/wrangler.js dev --local",
+    "deploy": "./node_modules/wrangler/bin/wrangler.js deploy",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260308.0",
+    "typescript": "^5.4.0",
+    "wrangler": "^4.0.0"
+  }
+}

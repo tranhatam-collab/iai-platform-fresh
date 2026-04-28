@@ -1,0 +1,854 @@
+{
+  "generatedAt": "2026-04-28T12:17:45.365Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-28",
+  "summary": {
+    "totalUrlsAudited": 72,
+    "totalPagesFlagged": 1,
+    "vietnameseIssuesOpen": 1,
+    "englishIssuesOpen": 1,
+    "metadataIssuesOpen": 5,
+    "altTextIssuesOpen": 0,
+    "ctaFormMenuFooterIssuesOpen": 2
+  },
+  "globalFiles": [
+    {
+      "file": "docs/IAI_UNIVERSAL_BILINGUAL_LANGUAGE_REBUILD_COMMAND_2026.md",
+      "present": true
+    },
+    {
+      "file": "docs/IAI_BILINGUAL_SEO_AND_LOCALIZATION_STANDARD_2026.md",
+      "present": true
+    },
+    {
+      "file": "content/iai-language-codex.md",
+      "present": true
+    },
+    {
+      "file": "content/iai-ui-copy-registry.md",
+      "present": true
+    },
+    {
+      "file": "content/iai-ui-text-system.md",
+      "present": true
+    },
+    {
+      "file": "content/vi.json",
+      "present": true
+    },
+    {
+      "file": "content/en.json",
+      "present": true
+    },
+    {
+      "file": "content/seo-registry.csv",
+      "present": true
+    }
+  ],
+  "missingGlobalFiles": [],
+  "lockedLanguageDecisions": [
+    "Tiếng Việt là nguồn chuẩn nội dung của toàn hệ.",
+    "Tiếng Anh là lớp quốc tế thứ hai và không được phép dùng fallback dịch máy.",
+    "Mọi public text phải đi qua shared content source hoặc registry đã khóa.",
+    "Mỗi surface public phải có metadata song ngữ riêng theo locale đang render.",
+    "Không được live page public khi còn hard-coded text, text placeholder hoặc text lẫn ngôn ngữ."
+  ],
+  "surfaceResults": [
+    {
+      "appId": "root",
+      "baseUrl": "https://iai.one",
+      "localizedUrlCount": 4,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://iai.one/?lang=en",
+          "sampleVi": "https://iai.one/"
+        },
+        {
+          "route": "/og.svg",
+          "sampleEn": "https://iai.one/og.svg?lang=en",
+          "sampleVi": "https://iai.one/og.svg"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 10,
+        "navKeys": 20,
+        "footerKeys": 12
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "home",
+      "baseUrl": "https://home.iai.one",
+      "localizedUrlCount": 2,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://home.iai.one/?lang=en",
+          "sampleVi": "https://home.iai.one/"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 8,
+        "navKeys": 4,
+        "footerKeys": 4
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "app",
+      "baseUrl": "https://app.iai.one",
+      "localizedUrlCount": 2,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://app.iai.one/?lang=en",
+          "sampleVi": "https://app.iai.one/"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 4,
+        "navKeys": 4,
+        "footerKeys": 4
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "flow",
+      "baseUrl": "https://flow.iai.one",
+      "localizedUrlCount": 4,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://flow.iai.one/?lang=en",
+          "sampleVi": "https://flow.iai.one/"
+        },
+        {
+          "route": "/sitemap.xml",
+          "sampleEn": "https://flow.iai.one/sitemap.xml?lang=en",
+          "sampleVi": "https://flow.iai.one/sitemap.xml"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 4,
+        "navKeys": 5,
+        "footerKeys": 4
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "docs",
+      "baseUrl": "https://docs.iai.one",
+      "localizedUrlCount": 2,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://docs.iai.one/?lang=en",
+          "sampleVi": "https://docs.iai.one/"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 6,
+        "navKeys": 4,
+        "footerKeys": 4
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "developer",
+      "baseUrl": "https://developer.iai.one",
+      "localizedUrlCount": 18,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://developer.iai.one/?lang=en",
+          "sampleVi": "https://developer.iai.one/"
+        },
+        {
+          "route": "/404",
+          "sampleEn": "https://developer.iai.one/404?lang=en",
+          "sampleVi": "https://developer.iai.one/404"
+        },
+        {
+          "route": "/auth",
+          "sampleEn": "https://developer.iai.one/auth?lang=en",
+          "sampleVi": "https://developer.iai.one/auth"
+        },
+        {
+          "route": "/changelog",
+          "sampleEn": "https://developer.iai.one/changelog?lang=en",
+          "sampleVi": "https://developer.iai.one/changelog"
+        },
+        {
+          "route": "/nodes",
+          "sampleEn": "https://developer.iai.one/nodes?lang=en",
+          "sampleVi": "https://developer.iai.one/nodes"
+        },
+        {
+          "route": "/quickstart",
+          "sampleEn": "https://developer.iai.one/quickstart?lang=en",
+          "sampleVi": "https://developer.iai.one/quickstart"
+        },
+        {
+          "route": "/sdk",
+          "sampleEn": "https://developer.iai.one/sdk?lang=en",
+          "sampleVi": "https://developer.iai.one/sdk"
+        },
+        {
+          "route": "/sitemap.xml",
+          "sampleEn": "https://developer.iai.one/sitemap.xml?lang=en",
+          "sampleVi": "https://developer.iai.one/sitemap.xml"
+        },
+        {
+          "route": "/webhooks",
+          "sampleEn": "https://developer.iai.one/webhooks?lang=en",
+          "sampleVi": "https://developer.iai.one/webhooks"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 13,
+        "navKeys": 16,
+        "footerKeys": 8
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "nft",
+      "baseUrl": "https://nft.iai.one",
+      "localizedUrlCount": 2,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://nft.iai.one/?lang=en",
+          "sampleVi": "https://nft.iai.one/"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 6,
+        "navKeys": 4,
+        "footerKeys": 4
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "pay",
+      "baseUrl": "https://pay.iai.one",
+      "localizedUrlCount": 14,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://pay.iai.one/?lang=en",
+          "sampleVi": "https://pay.iai.one/"
+        },
+        {
+          "route": "/internal/payment-email/send",
+          "sampleEn": "https://pay.iai.one/internal/payment-email/send?lang=en",
+          "sampleVi": "https://pay.iai.one/internal/payment-email/send"
+        },
+        {
+          "route": "/internal/payment-event/callback",
+          "sampleEn": "https://pay.iai.one/internal/payment-event/callback?lang=en",
+          "sampleVi": "https://pay.iai.one/internal/payment-event/callback"
+        },
+        {
+          "route": "/internal/payment-event/evidence",
+          "sampleEn": "https://pay.iai.one/internal/payment-event/evidence?lang=en",
+          "sampleVi": "https://pay.iai.one/internal/payment-event/evidence"
+        },
+        {
+          "route": "/internal/payment-event/proof",
+          "sampleEn": "https://pay.iai.one/internal/payment-event/proof?lang=en",
+          "sampleVi": "https://pay.iai.one/internal/payment-event/proof"
+        },
+        {
+          "route": "/internal/payment-webhook/dispatch",
+          "sampleEn": "https://pay.iai.one/internal/payment-webhook/dispatch?lang=en",
+          "sampleVi": "https://pay.iai.one/internal/payment-webhook/dispatch"
+        },
+        {
+          "route": "/payment-block",
+          "sampleEn": "https://pay.iai.one/payment-block?lang=en",
+          "sampleVi": "https://pay.iai.one/payment-block"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 1,
+        "totalAltAttributes": 1,
+        "localizedAltAttributes": 1
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 7,
+        "navKeys": 8,
+        "footerKeys": 10
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "dash",
+      "baseUrl": "https://dash.iai.one",
+      "localizedUrlCount": 16,
+      "routeInventory": [
+        {
+          "route": "/actions",
+          "sampleEn": "https://dash.iai.one/actions?lang=en",
+          "sampleVi": "https://dash.iai.one/actions"
+        },
+        {
+          "route": "/audit",
+          "sampleEn": "https://dash.iai.one/audit?lang=en",
+          "sampleVi": "https://dash.iai.one/audit"
+        },
+        {
+          "route": "/dashboard",
+          "sampleEn": "https://dash.iai.one/dashboard?lang=en",
+          "sampleVi": "https://dash.iai.one/dashboard"
+        },
+        {
+          "route": "/flows",
+          "sampleEn": "https://dash.iai.one/flows?lang=en",
+          "sampleVi": "https://dash.iai.one/flows"
+        },
+        {
+          "route": "/login",
+          "sampleEn": "https://dash.iai.one/login?lang=en",
+          "sampleVi": "https://dash.iai.one/login"
+        },
+        {
+          "route": "/logout",
+          "sampleEn": "https://dash.iai.one/logout?lang=en",
+          "sampleVi": "https://dash.iai.one/logout"
+        },
+        {
+          "route": "/runtime",
+          "sampleEn": "https://dash.iai.one/runtime?lang=en",
+          "sampleVi": "https://dash.iai.one/runtime"
+        },
+        {
+          "route": "/runtime/executions",
+          "sampleEn": "https://dash.iai.one/runtime/executions?lang=en",
+          "sampleVi": "https://dash.iai.one/runtime/executions"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 1,
+        "navKeys": 1,
+        "footerKeys": 2
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "web",
+      "baseUrl": "https://web.iai.one",
+      "localizedUrlCount": 8,
+      "routeInventory": [
+        {
+          "route": "/",
+          "sampleEn": "https://web.iai.one/?lang=en",
+          "sampleVi": "https://web.iai.one/"
+        },
+        {
+          "route": "/contract-status",
+          "sampleEn": "https://web.iai.one/contract-status?lang=en",
+          "sampleVi": "https://web.iai.one/contract-status"
+        },
+        {
+          "route": "/onboarding",
+          "sampleEn": "https://web.iai.one/onboarding?lang=en",
+          "sampleVi": "https://web.iai.one/onboarding"
+        },
+        {
+          "route": "/shared-auth",
+          "sampleEn": "https://web.iai.one/shared-auth?lang=en",
+          "sampleVi": "https://web.iai.one/shared-auth"
+        }
+      ],
+      "contentSourceChecks": {
+        "usesSharedContentEn": true,
+        "usesSharedContentVi": true,
+        "usesSeoRegistry": true
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": true,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": true,
+        "hasTwitterImage": true
+      },
+      "altStats": {
+        "imageCount": 0,
+        "totalAltAttributes": 0,
+        "localizedAltAttributes": 0
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 1,
+        "navKeys": 1,
+        "footerKeys": 13
+      },
+      "hardcodedCandidates": [],
+      "issueCount": 0,
+      "issues": []
+    },
+    {
+      "appId": "noos-web",
+      "baseUrl": "https://noos.iai.one",
+      "localizedUrlCount": 0,
+      "routeInventory": [],
+      "contentSourceChecks": {
+        "usesSharedContentEn": false,
+        "usesSharedContentVi": false,
+        "usesSeoRegistry": false
+      },
+      "headChecks": {
+        "hasTitle": true,
+        "hasDescription": true,
+        "hasCanonical": true,
+        "hasHreflangVi": true,
+        "hasHreflangEn": true,
+        "hasHreflangXDefault": true,
+        "hasJsonLd": false,
+        "hasOgTitle": true,
+        "hasOgDescription": true,
+        "hasOgUrl": true,
+        "hasOgType": true,
+        "hasTwitterCard": true,
+        "hasTwitterTitle": true,
+        "hasTwitterDescription": true,
+        "hasOgImage": false,
+        "hasTwitterImage": false
+      },
+      "altStats": {
+        "imageCount": 2,
+        "totalAltAttributes": 2,
+        "localizedAltAttributes": 2
+      },
+      "uiSignals": {
+        "formKeys": 0,
+        "placeholderKeys": 0,
+        "buttonKeys": 0,
+        "navKeys": 0,
+        "footerKeys": 0
+      },
+      "hardcodedCandidates": [
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "html-node",
+          "value": "NOOS"
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "A launch wave cannot widen if buyers are falling out before payment completes."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "A newer version is available while the entitlement is still inside the update window, so the buyer can claim selected updates now."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "A spike here freezes campaign expansion until the cause is understood."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Account view giữ buyer, route và support truth thẳng hàng."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Account view keeps buyer, route, and support truth aligned."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Any mismatch between page, checkout, and buyer state is a same-day escalation."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "ASSET_PROXY_SCOPE_INVALID hoặc ASSET_POLICY_DENIED xuất hiện tại access-check."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "ASSET_PROXY_SCOPE_INVALID or ASSET_POLICY_DENIED appears on access-check."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bảo vệ niềm tin sau thanh toán, nhất là khi Wave 1 còn đang dưới launch gate."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bất kỳ lệch nào giữa page, checkout và buyer state đều phải escalated trong ngày."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bề mặt Commerce NOOS"
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bề mặt hoàn tất này giữ sản phẩm vừa mua, tóm tắt license, cửa sổ cập nhật và handoff vào thư viện trong một lần nhìn."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bề mặt này tồn tại để buyer, support và ops thấy cùng một ranh giới sử dụng sau khi mua."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bề mặt thư viện giữ purchase truth, access truth và version truth trong cùng một nơi cho Team 3 và Team 2 tích hợp."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bề mặt vận hành NOOS cho launch waves, KPI contract, support SLA và guardrails liên team."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bộ sưu tập"
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bước kế tiếp"
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Bước kế tiếp đã được map từ thang sản phẩm đã khóa cho sản phẩm này."
+        },
+        {
+          "file": "apps/noos-web/src/render.ts",
+          "kind": "quoted-copy",
+          "value": "Các route investor cũ không thuộc phạm vi NOOS."
+        }
+      ],
+      "issueCount": 7,
+      "issues": [
+        "Thiếu dòng SEO registry cho surface noos-web.",
+        "Không đọc content/vi.json từ lớp i18n.",
+        "Không đọc content/en.json từ lớp i18n.",
+        "Không đọc content/seo-registry.csv từ lớp i18n.",
+        "Thiếu metadata head: hasJsonLd, hasOgImage, hasTwitterImage.",
+        "Còn candidate hard-coded public text trong render source.",
+        "UI copy chưa đi qua đầy đủ key hệ thống cho nav/button/footer."
+      ]
+    }
+  ],
+  "pendingPages": [
+    {
+      "appId": "noos-web",
+      "route": "(surface-root)",
+      "issueCount": 7
+    }
+  ],
+  "finalConfirmation": {
+    "vietnameseReady": false,
+    "englishReady": false,
+    "seoReady": false,
+    "liveReady": false
+  }
+}

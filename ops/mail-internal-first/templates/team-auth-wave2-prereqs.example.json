@@ -1,0 +1,23 @@
+{
+  "credentials": {
+    "smtpCredentialId": "smtpcred_auth_prod",
+    "smtpSender": "security@iai.one",
+    "gmailInboxAddress": "team-auth-smoke@gmail.com",
+    "outlookInboxAddress": "team-auth-smoke@outlook.com"
+  },
+  "trigger": {
+    "appSurface": "app.iai.one",
+    "vpsHost": "vps-auth-prod-01",
+    "command": "node scripts/auth-mail-smoke.mjs --target wave2",
+    "owner": "team-auth-oncall",
+    "nonLocalOnly": true
+  },
+  "ttlPolicy": {
+    "magicLinkMinutes": 15,
+    "resetPasswordMinutes": 30,
+    "emailVerificationMinutes": 60,
+    "securityNoticeMinutes": 0,
+    "sourceOfTruth": "auth-policy-v2026-04-17",
+    "approvedBy": "Team Auth Lead"
+  }
+}

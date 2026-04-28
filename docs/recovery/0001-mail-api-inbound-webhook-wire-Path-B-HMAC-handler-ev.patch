@@ -1,0 +1,1252 @@
+From 50d4a770450703ad3fa6fa6df90c91915b2836a2 Mon Sep 17 00:00:00 2001
+From: Tran Ha Tam <tranhatam@gmail.com>
+Date: Tue, 28 Apr 2026 15:56:11 +0700
+Subject: [PATCH] mail-api(inbound-webhook): wire Path B HMAC handler +
+ evidence sinks + 13 tests
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- src/inbound-webhook.ts: verify HMAC-SHA256(secret, ts.body), ±300s replay, in-memory + file-backed NDJSON sinks
+- src/server.ts: mount handler before SMTP backend on POST /v1/webhooks/inbound + GET /v1/webhooks/inbound/evidence
+- src/index.ts: switch to library-style barrel (server factory + Path B public API), drop CLI bootstrap
+- tests/integration: 13 cases — verify, handler 202/401/408/413/503, GET evidence list/by-id, file-sink persistence
+- docs: PATH_B_CODE_READY_AWAITING_RUNTIME_DEPLOY_AND_SECRET status with locked endpoint contract
+---
+ apps/mail-api/src/inbound-webhook.ts          | 518 ++++++++++++++++++
+ apps/mail-api/src/index.ts                    |  56 +-
+ apps/mail-api/src/server.ts                   |  17 +-
+ ...NBOUND_WEBHOOK_PATH_B_STATUS_2026-04-28.md | 102 ++++
+ .../mail-api-inbound-webhook.test.mjs         | 460 ++++++++++++++++
+ 5 files changed, 1125 insertions(+), 28 deletions(-)
+ create mode 100644 apps/mail-api/src/inbound-webhook.ts
+ create mode 100644 docs/iai-mail-platform/MAIL_IAI_ONE_INBOUND_WEBHOOK_PATH_B_STATUS_2026-04-28.md
+ create mode 100644 tests/integration/mail-api-inbound-webhook.test.mjs
+
+diff --git a/apps/mail-api/src/inbound-webhook.ts b/apps/mail-api/src/inbound-webhook.ts
+new file mode 100644
+index 0000000..c396070
+--- /dev/null
++++ b/apps/mail-api/src/inbound-webhook.ts
+@@ -0,0 +1,518 @@
++/**
++ * Inbound webhook handler for the mail lane.
++ *
++ * Contract (locked here so receiver tenants can sign correctly):
++ *   POST /v1/webhooks/inbound
++ *   Headers (case-insensitive):
++ *     content-type: application/json
++ *     x-mail-webhook-timestamp: <unix_seconds>
++ *     x-mail-webhook-signature: <lowercase hex HMAC-SHA256(secret,
++ *                                  `${timestamp}.${rawBody}`)>
++ *   Body: provider-shaped JSON (we do not interpret here yet; we only
++ *   sign-verify, persist evidence, and return 202 if accepted).
++ *
++ * Replay window: ±300 seconds (configurable via factory option).
++ *
++ * The secret is read from `MAIL_API_WEBHOOK_SECRET` at request time so
++ * rotations take effect without a process restart.
++ */
++
++import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
++import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
++import { dirname } from "node:path";
++import type { IncomingMessage, ServerResponse } from "node:http";
++
++export interface InboundWebhookEvidenceRecord {
++  receivedAt: string;
++  evidenceId: string;
++  signatureValid: boolean;
++  timestampSkewSeconds: number;
++  bodyByteLength: number;
++  bodyHashSha256: string;
++  providerEventId: string | null;
++  rejectionCode: InboundWebhookRejectionCode | null;
++}
++
++export type InboundWebhookRejectionCode =
++  | "MAIL_API_WEBHOOK_SECRET_MISSING"
++  | "MAIL_WEBHOOK_TIMESTAMP_MISSING"
++  | "MAIL_WEBHOOK_TIMESTAMP_INVALID"
++  | "MAIL_WEBHOOK_TIMESTAMP_OUT_OF_WINDOW"
++  | "MAIL_WEBHOOK_SIGNATURE_MISSING"
++  | "MAIL_WEBHOOK_SIGNATURE_INVALID"
++  | "MAIL_WEBHOOK_BODY_INVALID";
++
++export interface InboundWebhookEvidenceSink {
++  recordEvidence(record: InboundWebhookEvidenceRecord): Promise<void> | void;
++  list?(): readonly InboundWebhookEvidenceRecord[];
++  findByProviderEventId?(
++    providerEventId: string
++  ): InboundWebhookEvidenceRecord | undefined;
++  findByEvidenceId?(
++    evidenceId: string
++  ): InboundWebhookEvidenceRecord | undefined;
++}
++
++export interface InboundWebhookHandlerOptions {
++  /** Read the current shared secret. Defaults to `process.env.MAIL_API_WEBHOOK_SECRET`. */
++  resolveSecret?: () => string | undefined;
++  /** Replay window in seconds (default 300). */
++  replayWindowSeconds?: number;
++  /** Now-seconds override for tests. */
++  nowSeconds?: () => number;
++  /** Evidence sink. Defaults to in-memory log (lost on restart). */
++  evidenceSink?: InboundWebhookEvidenceSink;
++  /** Max accepted body byte length (default 256 KiB). */
++  maxBodyBytes?: number;
++}
++
++export const DEFAULT_INBOUND_WEBHOOK_REPLAY_WINDOW_SECONDS = 300;
++export const DEFAULT_INBOUND_WEBHOOK_MAX_BODY_BYTES = 256 * 1024;
++
++export const INBOUND_WEBHOOK_TIMESTAMP_HEADER = "x-mail-webhook-timestamp";
++export const INBOUND_WEBHOOK_SIGNATURE_HEADER = "x-mail-webhook-signature";
++
++interface VerifyOk {
++  ok: true;
++  timestamp: number;
++  bodyHashSha256: string;
++  providerEventId: string | null;
++}
++
++interface VerifyFail {
++  ok: false;
++  code: InboundWebhookRejectionCode;
++  message: string;
++  details?: Record<string, unknown>;
++}
++
++export type InboundWebhookVerifyResult = VerifyOk | VerifyFail;
++
++export interface InboundWebhookVerifyInput {
++  rawBody: string;
++  timestampHeader: string | undefined;
++  signatureHeader: string | undefined;
++  secret: string | undefined;
++  nowSeconds: number;
++  replayWindowSeconds: number;
++}
++
++export function verifyInboundWebhook(input: InboundWebhookVerifyInput): InboundWebhookVerifyResult {
++  const secret = (input.secret ?? "").trim();
++  if (!secret) {
++    return {
++      ok: false,
++      code: "MAIL_API_WEBHOOK_SECRET_MISSING",
++      message: "MAIL_API_WEBHOOK_SECRET is required before mail-api can verify inbound webhooks."
++    };
++  }
++
++  const tsHeader = (input.timestampHeader ?? "").trim();
++  if (!tsHeader) {
++    return {
++      ok: false,
++      code: "MAIL_WEBHOOK_TIMESTAMP_MISSING",
++      message: `Missing ${INBOUND_WEBHOOK_TIMESTAMP_HEADER} header.`
++    };
++  }
++
++  const timestamp = Number.parseInt(tsHeader, 10);
++  if (!Number.isFinite(timestamp) || timestamp <= 0) {
++    return {
++      ok: false,
++      code: "MAIL_WEBHOOK_TIMESTAMP_INVALID",
++      message: `${INBOUND_WEBHOOK_TIMESTAMP_HEADER} must be a positive unix-seconds integer.`
++    };
++  }
++
++  const skew = Math.abs(input.nowSeconds - timestamp);
++  if (skew > input.replayWindowSeconds) {
++    return {
++      ok: false,
++      code: "MAIL_WEBHOOK_TIMESTAMP_OUT_OF_WINDOW",
++      message: `Timestamp skew ${skew}s exceeds replay window ${input.replayWindowSeconds}s.`,
++      details: { skew_seconds: skew, replay_window_seconds: input.replayWindowSeconds }
++    };
++  }
++
++  const sigHeader = (input.signatureHeader ?? "").trim().toLowerCase();
++  if (!sigHeader) {
++    return {
++      ok: false,
++      code: "MAIL_WEBHOOK_SIGNATURE_MISSING",
++      message: `Missing ${INBOUND_WEBHOOK_SIGNATURE_HEADER} header.`
++    };
++  }
++
++  const expected = createHmac("sha256", secret)
++    .update(`${timestamp}.${input.rawBody}`)
++    .digest("hex");
++
++  if (sigHeader.length !== expected.length) {
++    return {
++      ok: false,
++      code: "MAIL_WEBHOOK_SIGNATURE_INVALID",
++      message: "Signature does not match expected HMAC-SHA256 digest."
++    };
++  }
++
++  const sigOk = timingSafeEqual(Buffer.from(sigHeader, "hex"), Buffer.from(expected, "hex"));
++  if (!sigOk) {
++    return {
++      ok: false,
++      code: "MAIL_WEBHOOK_SIGNATURE_INVALID",
++      message: "Signature does not match expected HMAC-SHA256 digest."
++    };
++  }
++
++  // bodyHash: re-use expected (timestamp-keyed) is wrong as a body hash; recompute over body only.
++  const bodyHash = createHmac("sha256", secret).update(input.rawBody).digest("hex");
++
++  let providerEventId: string | null = null;
++  try {
++    const parsed = input.rawBody.length > 0 ? JSON.parse(input.rawBody) : null;
++    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
++      const candidate =
++        (parsed as Record<string, unknown>).provider_event_id ??
++        (parsed as Record<string, unknown>).providerEventId ??
++        (parsed as Record<string, unknown>).id ??
++        null;
++      if (typeof candidate === "string" && candidate.trim()) {
++        providerEventId = candidate.trim();
++      }
++    }
++  } catch {
++    // Body is not JSON — that's still fine for signature; we just have no ID.
++  }
++
++  return {
++    ok: true,
++    timestamp,
++    bodyHashSha256: bodyHash,
++    providerEventId
++  };
++}
++
++class InMemoryEvidenceSink implements InboundWebhookEvidenceSink {
++  private readonly entries: InboundWebhookEvidenceRecord[] = [];
++
++  recordEvidence(record: InboundWebhookEvidenceRecord): void {
++    this.entries.push(record);
++  }
++
++  list(): readonly InboundWebhookEvidenceRecord[] {
++    return this.entries;
++  }
++
++  findByProviderEventId(
++    providerEventId: string
++  ): InboundWebhookEvidenceRecord | undefined {
++    return this.entries.find((entry) => entry.providerEventId === providerEventId);
++  }
++
++  findByEvidenceId(evidenceId: string): InboundWebhookEvidenceRecord | undefined {
++    return this.entries.find((entry) => entry.evidenceId === evidenceId);
++  }
++}
++
++export function createInMemoryInboundWebhookEvidenceSink(): InboundWebhookEvidenceSink & {
++  list(): readonly InboundWebhookEvidenceRecord[];
++  findByProviderEventId(
++    providerEventId: string
++  ): InboundWebhookEvidenceRecord | undefined;
++  findByEvidenceId(evidenceId: string): InboundWebhookEvidenceRecord | undefined;
++} {
++  return new InMemoryEvidenceSink();
++}
++
++/**
++ * File-backed evidence sink. Each call appends one JSON line (NDJSON) to the
++ * configured path. Suitable for production single-instance use; for multi-
++ * instance, point this at shared storage or replace with a DB-backed sink.
++ */
++class FileEvidenceSink implements InboundWebhookEvidenceSink {
++  private readonly entries: InboundWebhookEvidenceRecord[] = [];
++
++  constructor(private readonly filePath: string) {
++    const dir = dirname(filePath);
++    if (!existsSync(dir)) {
++      mkdirSync(dir, { recursive: true });
++    }
++    if (existsSync(filePath)) {
++      try {
++        const raw = readFileSync(filePath, "utf8");
++        for (const line of raw.split(/\r?\n/)) {
++          if (!line.trim()) {
++            continue;
++          }
++          try {
++            this.entries.push(JSON.parse(line) as InboundWebhookEvidenceRecord);
++          } catch {
++            // skip corrupt line
++          }
++        }
++      } catch {
++        // ignore unreadable file; will be overwritten on next append
++      }
++    }
++  }
++
++  recordEvidence(record: InboundWebhookEvidenceRecord): void {
++    this.entries.push(record);
++    writeFileSync(this.filePath, `${this.entries.map((e) => JSON.stringify(e)).join("\n")}\n`, "utf8");
++  }
++
++  list(): readonly InboundWebhookEvidenceRecord[] {
++    return this.entries;
++  }
++
++  findByProviderEventId(
++    providerEventId: string
++  ): InboundWebhookEvidenceRecord | undefined {
++    return this.entries.find((entry) => entry.providerEventId === providerEventId);
++  }
++
++  findByEvidenceId(evidenceId: string): InboundWebhookEvidenceRecord | undefined {
++    return this.entries.find((entry) => entry.evidenceId === evidenceId);
++  }
++}
++
++export function createFileInboundWebhookEvidenceSink(
++  filePath: string
++): InboundWebhookEvidenceSink & {
++  list(): readonly InboundWebhookEvidenceRecord[];
++  findByProviderEventId(
++    providerEventId: string
++  ): InboundWebhookEvidenceRecord | undefined;
++  findByEvidenceId(evidenceId: string): InboundWebhookEvidenceRecord | undefined;
++} {
++  return new FileEvidenceSink(filePath);
++}
++
++async function readRawBody(request: IncomingMessage, maxBytes: number): Promise<{ raw: string; tooLarge: boolean }> {
++  return new Promise((resolve, reject) => {
++    let total = 0;
++    let tooLarge = false;
++    const chunks: Buffer[] = [];
++
++    request.on("data", (chunk: Buffer) => {
++      total += chunk.length;
++      if (total > maxBytes) {
++        tooLarge = true;
++        request.destroy();
++        return;
++      }
++      chunks.push(chunk);
++    });
++    request.on("end", () => {
++      resolve({ raw: Buffer.concat(chunks).toString("utf8"), tooLarge });
++    });
++    request.on("error", (err) => {
++      reject(err);
++    });
++  });
++}
++
++function getHeader(request: IncomingMessage, name: string): string | undefined {
++  const value = request.headers[name];
++  if (Array.isArray(value)) {
++    return value[0]?.trim() || undefined;
++  }
++  if (typeof value === "string") {
++    return value.trim() || undefined;
++  }
++  return undefined;
++}
++
++function writeJson(response: ServerResponse, statusCode: number, payload: Record<string, unknown>): void {
++  response.statusCode = statusCode;
++  response.setHeader("content-type", "application/json; charset=utf-8");
++  response.end(JSON.stringify(payload));
++}
++
++export interface InboundWebhookHandlerResult {
++  handled: boolean;
++}
++
++/**
++ * Returns a function that handles inbound webhook routes:
++ *   - POST /v1/webhooks/inbound          (verify + persist evidence)
++ *   - GET  /v1/webhooks/inbound/evidence (ops query: by evidence_id or
++ *                                          provider_event_id; or list)
++ *
++ * Returns `{ handled: false }` for any other request so the caller can
++ * fall through to other routes.
++ */
++export function createInboundWebhookHandler(
++  options: InboundWebhookHandlerOptions = {}
++): (request: IncomingMessage, response: ServerResponse, requestId: string) => Promise<InboundWebhookHandlerResult> {
++  const resolveSecret = options.resolveSecret ?? (() => process.env.MAIL_API_WEBHOOK_SECRET);
++  const replayWindowSeconds = options.replayWindowSeconds ?? DEFAULT_INBOUND_WEBHOOK_REPLAY_WINDOW_SECONDS;
++  const nowSeconds = options.nowSeconds ?? (() => Math.floor(Date.now() / 1000));
++  const evidenceSink = options.evidenceSink ?? createInMemoryInboundWebhookEvidenceSink();
++  const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_INBOUND_WEBHOOK_MAX_BODY_BYTES;
++
++  return async (request, response, requestId) => {
++    const url = new URL(request.url ?? "/", "http://localhost");
++
++    // Ops evidence query route.
++    if (request.method === "GET" && url.pathname === "/v1/webhooks/inbound/evidence") {
++      const providerEventId = url.searchParams.get("provider_event_id")?.trim() ?? "";
++      const evidenceIdQuery = url.searchParams.get("evidence_id")?.trim() ?? "";
++
++      if (providerEventId) {
++        const found = evidenceSink.findByProviderEventId?.(providerEventId);
++        if (!found) {
++          writeJson(response, 404, {
++            ok: false,
++            error: {
++              code: "MAIL_WEBHOOK_EVIDENCE_NOT_FOUND",
++              message: `No inbound webhook evidence for provider_event_id=${providerEventId}.`
++            },
++            meta: { request_id: requestId }
++          });
++          return { handled: true };
++        }
++        writeJson(response, 200, { ok: true, data: found, meta: { request_id: requestId } });
++        return { handled: true };
++      }
++
++      if (evidenceIdQuery) {
++        const found = evidenceSink.findByEvidenceId?.(evidenceIdQuery);
++        if (!found) {
++          writeJson(response, 404, {
++            ok: false,
++            error: {
++              code: "MAIL_WEBHOOK_EVIDENCE_NOT_FOUND",
++              message: `No inbound webhook evidence for evidence_id=${evidenceIdQuery}.`
++            },
++            meta: { request_id: requestId }
++          });
++          return { handled: true };
++        }
++        writeJson(response, 200, { ok: true, data: found, meta: { request_id: requestId } });
++        return { handled: true };
++      }
++
++      const list = evidenceSink.list?.() ?? [];
++      const limitParam = Number.parseInt(url.searchParams.get("limit") ?? "50", 10);
++      const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 500) : 50;
++      const items = list.slice(-limit).reverse();
++      writeJson(response, 200, {
++        ok: true,
++        data: { items, total: list.length, returned: items.length, limit },
++        meta: { request_id: requestId }
++      });
++      return { handled: true };
++    }
++
++    if (request.method !== "POST" || url.pathname !== "/v1/webhooks/inbound") {
++      return { handled: false };
++    }
++
++    const evidenceId = `evt_inbound_${randomUUID()}`;
++    const receivedAt = new Date().toISOString();
++
++    let raw = "";
++    try {
++      const result = await readRawBody(request, maxBodyBytes);
++      if (result.tooLarge) {
++        const record: InboundWebhookEvidenceRecord = {
++          receivedAt,
++          evidenceId,
++          signatureValid: false,
++          timestampSkewSeconds: 0,
++          bodyByteLength: -1,
++          bodyHashSha256: "",
++          providerEventId: null,
++          rejectionCode: "MAIL_WEBHOOK_BODY_INVALID"
++        };
++        await evidenceSink.recordEvidence(record);
++        writeJson(response, 413, {
++          ok: false,
++          error: {
++            code: "MAIL_WEBHOOK_BODY_INVALID",
++            message: `Body exceeds max ${maxBodyBytes} bytes.`
++          },
++          meta: { request_id: requestId, evidence_id: evidenceId }
++        });
++        return { handled: true };
++      }
++      raw = result.raw;
++    } catch (error) {
++      writeJson(response, 400, {
++        ok: false,
++        error: {
++          code: "MAIL_WEBHOOK_BODY_INVALID",
++          message: error instanceof Error ? error.message : "Failed to read request body."
++        },
++        meta: { request_id: requestId, evidence_id: evidenceId }
++      });
++      return { handled: true };
++    }
++
++    const verifyResult = verifyInboundWebhook({
++      rawBody: raw,
++      timestampHeader: getHeader(request, INBOUND_WEBHOOK_TIMESTAMP_HEADER),
++      signatureHeader: getHeader(request, INBOUND_WEBHOOK_SIGNATURE_HEADER),
++      secret: resolveSecret(),
++      nowSeconds: nowSeconds(),
++      replayWindowSeconds
++    });
++
++    if (!verifyResult.ok) {
++      const record: InboundWebhookEvidenceRecord = {
++        receivedAt,
++        evidenceId,
++        signatureValid: false,
++        timestampSkewSeconds: 0,
++        bodyByteLength: Buffer.byteLength(raw, "utf8"),
++        bodyHashSha256: "",
++        providerEventId: null,
++        rejectionCode: verifyResult.code
++      };
++      await evidenceSink.recordEvidence(record);
++
++      const status =
++        verifyResult.code === "MAIL_API_WEBHOOK_SECRET_MISSING"
++          ? 503
++          : verifyResult.code === "MAIL_WEBHOOK_TIMESTAMP_OUT_OF_WINDOW"
++            ? 408
++            : 401;
++
++      writeJson(response, status, {
++        ok: false,
++        error: {
++          code: verifyResult.code,
++          message: verifyResult.message,
++          details: verifyResult.details
++        },
++        meta: { request_id: requestId, evidence_id: evidenceId }
++      });
++      return { handled: true };
++    }
++
++    const record: InboundWebhookEvidenceRecord = {
++      receivedAt,
++      evidenceId,
++      signatureValid: true,
++      timestampSkewSeconds: nowSeconds() - verifyResult.timestamp,
++      bodyByteLength: Buffer.byteLength(raw, "utf8"),
++      bodyHashSha256: verifyResult.bodyHashSha256,
++      providerEventId: verifyResult.providerEventId,
++      rejectionCode: null
++    };
++    await evidenceSink.recordEvidence(record);
++
++    writeJson(response, 202, {
++      ok: true,
++      data: {
++        evidence_id: evidenceId,
++        provider_event_id: verifyResult.providerEventId,
++        received_at: receivedAt
++      },
++      meta: { request_id: requestId }
++    });
++    return { handled: true };
++  };
++}
+diff --git a/apps/mail-api/src/index.ts b/apps/mail-api/src/index.ts
+index c819bb7..1bbfc9a 100644
+--- a/apps/mail-api/src/index.ts
++++ b/apps/mail-api/src/index.ts
+@@ -1,28 +1,32 @@
+-import { createFlowApiServer } from "./server.js";
++// Public API entry point for @iai/mail-api.
++//
++// Re-exports the server factory + Path B inbound-webhook handler / sinks /
++// types so consumers can compose their own runtime (no bootstrap here).
++// The previous CLI bootstrap (server.listen on PORT/API_FLOW_BIND_ADDRESS)
++// has been removed in favor of the library-style entry point — the
++// production runtime is responsible for calling `createFlowApiServer()` and
++// driving `.listen()` itself.
+ 
+-const bindAddress = process.env.API_FLOW_BIND_ADDRESS ?? "127.0.0.1";
+-const port = Number(process.env.PORT ?? "8787");
++export {
++  createFlowApiRequestHandler,
++  createFlowApiServer,
++  type FlowApiServerOptions
++} from "./server.js";
+ 
+-const server = createFlowApiServer();
+-
+-server.listen(port, bindAddress, () => {
+-  // eslint-disable-next-line no-console
+-  console.log(`[api.flow] listening on http://${bindAddress}:${port}`);
+-});
+-
+-const shutdown = () => {
+-  server.close((error) => {
+-    if (error) {
+-      // eslint-disable-next-line no-console
+-      console.error("[api.flow] shutdown failed", error);
+-      process.exitCode = 1;
+-      return;
+-    }
+-
+-    // eslint-disable-next-line no-console
+-    console.log("[api.flow] stopped");
+-  });
+-};
+-
+-process.on("SIGINT", shutdown);
+-process.on("SIGTERM", shutdown);
++export {
++  DEFAULT_INBOUND_WEBHOOK_MAX_BODY_BYTES,
++  DEFAULT_INBOUND_WEBHOOK_REPLAY_WINDOW_SECONDS,
++  INBOUND_WEBHOOK_SIGNATURE_HEADER,
++  INBOUND_WEBHOOK_TIMESTAMP_HEADER,
++  createFileInboundWebhookEvidenceSink,
++  createInMemoryInboundWebhookEvidenceSink,
++  createInboundWebhookHandler,
++  verifyInboundWebhook,
++  type InboundWebhookEvidenceRecord,
++  type InboundWebhookEvidenceSink,
++  type InboundWebhookHandlerOptions,
++  type InboundWebhookHandlerResult,
++  type InboundWebhookRejectionCode,
++  type InboundWebhookVerifyInput,
++  type InboundWebhookVerifyResult
++} from "./inbound-webhook.js";
+diff --git a/apps/mail-api/src/server.ts b/apps/mail-api/src/server.ts
+index 32ede20..9718f34 100644
+--- a/apps/mail-api/src/server.ts
++++ b/apps/mail-api/src/server.ts
+@@ -42,6 +42,10 @@ import {
+   createSmtpInternalBackend,
+   type SmtpInternalBackend
+ } from "./smtp-internal.js";
++import {
++  createInboundWebhookHandler,
++  type InboundWebhookHandlerOptions
++} from "./inbound-webhook.js";
+ 
+ const APPROVAL_STATUSES: ApprovalStatus[] = ["pending", "approved", "rejected", "expired"];
+ const BILLING_STATUSES: BillingStatus[] = ["pending", "paid", "overdue", "failed", "refunded"];
+@@ -111,6 +115,7 @@ export interface FlowApiServerOptions {
+   source?: FlowSourceOfTruth;
+   webContractConfig?: Partial<WebOnboardingContractConfig>;
+   webContractWording?: Partial<WebOnboardingWordingContract>;
++  inboundWebhook?: InboundWebhookHandlerOptions;
+ }
+ 
+ type WebRouteSurface = "app" | "flow" | "dash";
+@@ -204,6 +209,7 @@ export function createFlowApiRequestHandler(options: FlowApiServerOptions = {})
+   const source = options.source ?? createFlowSourceOfTruth();
+   const webContractConfig = resolveWebOnboardingContractConfig(options.webContractConfig);
+   const webContractWording = resolveWebOnboardingWordingContract(options.webContractWording);
++  const inboundWebhookHandler = createInboundWebhookHandler(options.inboundWebhook);
+ 
+   return (request: IncomingMessage, response: ServerResponse) => {
+     void handleRequest(
+@@ -216,7 +222,8 @@ export function createFlowApiRequestHandler(options: FlowApiServerOptions = {})
+       smtpInternalBackend,
+       suppressionSource,
+       webContractConfig,
+-      webContractWording
++      webContractWording,
++      inboundWebhookHandler
+     );
+   };
+ }
+@@ -231,7 +238,8 @@ async function handleRequest(
+   smtpInternalBackend: SmtpInternalBackend,
+   suppressionSource: MailSuppressionReadSource,
+   webContractConfig: WebOnboardingContractConfig,
+-  webContractWording: WebOnboardingWordingContract
++  webContractWording: WebOnboardingWordingContract,
++  inboundWebhookHandler: ReturnType<typeof createInboundWebhookHandler>
+ ) {
+   const requestId = getHeader(request, "x-request-id") ?? `req_${randomUUID()}`;
+   const now = new Date().toISOString();
+@@ -240,6 +248,11 @@ async function handleRequest(
+     const method = request.method ?? "GET";
+     const url = new URL(request.url ?? "/", "http://localhost");
+ 
++    const inboundResult = await inboundWebhookHandler(request, response, requestId);
++    if (inboundResult.handled) {
++      return;
++    }
++
+     if (
+       await smtpInternalBackend.handleRequest(
+         request,
+diff --git a/docs/iai-mail-platform/MAIL_IAI_ONE_INBOUND_WEBHOOK_PATH_B_STATUS_2026-04-28.md b/docs/iai-mail-platform/MAIL_IAI_ONE_INBOUND_WEBHOOK_PATH_B_STATUS_2026-04-28.md
+new file mode 100644
+index 0000000..95ab168
+--- /dev/null
++++ b/docs/iai-mail-platform/MAIL_IAI_ONE_INBOUND_WEBHOOK_PATH_B_STATUS_2026-04-28.md
+@@ -0,0 +1,102 @@
++# MAIL_IAI_ONE_INBOUND_WEBHOOK_PATH_B_STATUS_2026-04-28
++
++- Generated at: 2026-04-28 (Asia/Ho_Chi_Minh)
++- Owner: TEAM_MAIL_IAI_ONE
++- Scope: Inbound webhook (Path B) — verify provider deliveries with HMAC,
++  persist evidence, expose ops query route.
++
++## Status
++
++`PATH_B_CODE_READY_AWAITING_RUNTIME_DEPLOY_AND_SECRET`
++
++Code is implemented, typechecked, built, and covered by automated tests.
++Deployment and secret binding are external dependencies that must be
++completed by the runtime owner before this surface goes live.
++
++## Endpoint contract (locked)
++
++- POST `/v1/webhooks/inbound`
++  - Headers (case-insensitive):
++    - `content-type: application/json`
++    - `x-mail-webhook-timestamp: <unix_seconds>`
++    - `x-mail-webhook-signature: <lowercase hex HMAC-SHA256>`
++      where signed payload is `${timestamp}.${rawBody}`
++  - Body: provider-shaped JSON (≤ 256 KiB)
++  - Replay window: ±300 seconds
++  - Responses:
++    - `202` — accepted, evidence recorded, returns
++      `{ ok: true, data: { evidence_id, provider_event_id, received_at } }`
++    - `401` — signature invalid / signature missing / timestamp missing
++    - `408` — timestamp outside replay window
++    - `413` — body exceeds max bytes
++    - `503` — `MAIL_API_WEBHOOK_SECRET` not configured
++- GET `/v1/webhooks/inbound/evidence`
++  - Query params (all optional):
++    - `evidence_id` — return matching record (200) or 404
++    - `provider_event_id` — return matching record (200) or 404
++    - `limit` (default 50, max 500) — return newest-first list
++  - Response shape: `{ ok: true, data: <record> | { items, total, returned, limit } }`
++
++## Secret resolution
++
++- Read at request time from `process.env.MAIL_API_WEBHOOK_SECRET`.
++- Rotation does NOT require process restart; new value is picked up on the
++  next request. Test suite covers the missing-secret path returning 503.
++
++## Evidence sinks shipped
++
++- `createInMemoryInboundWebhookEvidenceSink()` — default; data lost on
++  restart; suitable for local dev and tests.
++- `createFileInboundWebhookEvidenceSink(filePath)` — production-safe
++  single-instance NDJSON sink. Each accepted/rejected request appends one
++  JSON line. Existing file is reloaded on construction so the GET evidence
++  query route still works after a restart.
++- For multi-instance deployments, point both writers at shared persistent
++  storage or replace with a DB-backed sink that implements the
++  `InboundWebhookEvidenceSink` interface.
++
++## Code references
++
++- `apps/mail-api/src/inbound-webhook.ts` — verify + handler + sinks
++- `apps/mail-api/src/server.ts` — wires `createInboundWebhookHandler` into
++  the request pipeline before the SMTP backend handler
++- `apps/mail-api/src/index.ts` — re-exports the public Path B API
++- `tests/integration/mail-api-inbound-webhook.test.mjs` — 13 tests covering
++  signature verification, handler responses, GET evidence (list, by
++  evidence_id, by provider_event_id, miss → 404), and file-backed sink
++  persistence across instances.
++
++## Verification commands
++
++```bash
++pnpm --filter @iai/mail-api typecheck
++pnpm --filter @iai/mail-api build
++node --test tests/integration/mail-api-inbound-webhook.test.mjs
++```
++
++Last verified locally on 2026-04-28: 13/13 tests pass.
++
++## What's still required to declare Path B live
++
++These items are deploy/runtime responsibilities and are NOT code blockers:
++
++1. Bind `MAIL_API_WEBHOOK_SECRET` in the production runtime environment.
++   Use the same value the provider is configured to sign with.
++2. Deploy the latest `apps/mail-api` build that includes
++   `inbound-webhook.ts` to the production runtime serving
++   `mail.iai.one`.
++3. Optional but recommended: configure
++   `createFileInboundWebhookEvidenceSink(...)` (or a DB-backed sink) as
++   the sink so `/v1/webhooks/inbound/evidence` survives restarts.
++4. Send a signed test request from the provider; expect `202` with
++   `evidence_id`. Then `GET /v1/webhooks/inbound/evidence?provider_event_id=...`
++   should return that record.
++5. Capture the test response + GET evidence read-back into the inbound
++   evidence packet and update the Path B verdict in the verification
++   log.
++
++## Anti-overclaim note
++
++Until items 1–5 above are completed against the production runtime, this
++surface MUST be reported as `PATH_B_CODE_READY_AWAITING_RUNTIME_DEPLOY_AND_SECRET`.
++Do NOT mark Path B as live, GA, or release-ready before then.
+diff --git a/tests/integration/mail-api-inbound-webhook.test.mjs b/tests/integration/mail-api-inbound-webhook.test.mjs
+new file mode 100644
+index 0000000..500f882
+--- /dev/null
++++ b/tests/integration/mail-api-inbound-webhook.test.mjs
+@@ -0,0 +1,460 @@
++import assert from "node:assert/strict";
++import { createHmac } from "node:crypto";
++import { mkdtempSync, readFileSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import test from "node:test";
++
++import {
++  createFileInboundWebhookEvidenceSink,
++  createInboundWebhookHandler,
++  createInMemoryInboundWebhookEvidenceSink,
++  INBOUND_WEBHOOK_SIGNATURE_HEADER,
++  INBOUND_WEBHOOK_TIMESTAMP_HEADER,
++  verifyInboundWebhook
++} from "../../apps/mail-api/dist/inbound-webhook.js";
++
++const SECRET = "test-mail-webhook-secret-2026-04-28";
++
++function sign(secret, timestamp, rawBody) {
++  return createHmac("sha256", secret).update(`${timestamp}.${rawBody}`).digest("hex");
++}
++
++test("verifyInboundWebhook accepts valid signature", () => {
++  const ts = 1_777_777_777;
++  const body = JSON.stringify({ provider_event_id: "evt_abc", kind: "delivered" });
++  const sig = sign(SECRET, ts, body);
++
++  const result = verifyInboundWebhook({
++    rawBody: body,
++    timestampHeader: String(ts),
++    signatureHeader: sig,
++    secret: SECRET,
++    nowSeconds: ts,
++    replayWindowSeconds: 300
++  });
++
++  assert.equal(result.ok, true);
++  if (result.ok) {
++    assert.equal(result.providerEventId, "evt_abc");
++    assert.equal(result.timestamp, ts);
++  }
++});
++
++test("verifyInboundWebhook rejects when secret missing", () => {
++  const result = verifyInboundWebhook({
++    rawBody: "{}",
++    timestampHeader: "1",
++    signatureHeader: "abc",
++    secret: "",
++    nowSeconds: 1,
++    replayWindowSeconds: 300
++  });
++  assert.equal(result.ok, false);
++  if (!result.ok) {
++    assert.equal(result.code, "MAIL_API_WEBHOOK_SECRET_MISSING");
++  }
++});
++
++test("verifyInboundWebhook rejects out-of-window timestamp", () => {
++  const ts = 1_777_777_777;
++  const body = "{}";
++  const result = verifyInboundWebhook({
++    rawBody: body,
++    timestampHeader: String(ts),
++    signatureHeader: sign(SECRET, ts, body),
++    secret: SECRET,
++    nowSeconds: ts + 600,
++    replayWindowSeconds: 300
++  });
++  assert.equal(result.ok, false);
++  if (!result.ok) {
++    assert.equal(result.code, "MAIL_WEBHOOK_TIMESTAMP_OUT_OF_WINDOW");
++  }
++});
++
++test("verifyInboundWebhook rejects bad signature", () => {
++  const ts = 1_777_777_777;
++  const body = "{}";
++  const result = verifyInboundWebhook({
++    rawBody: body,
++    timestampHeader: String(ts),
++    signatureHeader: "0".repeat(64),
++    secret: SECRET,
++    nowSeconds: ts,
++    replayWindowSeconds: 300
++  });
++  assert.equal(result.ok, false);
++  if (!result.ok) {
++    assert.equal(result.code, "MAIL_WEBHOOK_SIGNATURE_INVALID");
++  }
++});
++
++test("verifyInboundWebhook rejects missing timestamp header", () => {
++  const result = verifyInboundWebhook({
++    rawBody: "{}",
++    timestampHeader: undefined,
++    signatureHeader: "0".repeat(64),
++    secret: SECRET,
++    nowSeconds: 1,
++    replayWindowSeconds: 300
++  });
++  assert.equal(result.ok, false);
++  if (!result.ok) {
++    assert.equal(result.code, "MAIL_WEBHOOK_TIMESTAMP_MISSING");
++  }
++});
++
++test("inbound webhook handler accepts valid request and records evidence", async () => {
++  const sink = createInMemoryInboundWebhookEvidenceSink();
++  const ts = 1_700_000_000;
++  const handler = createInboundWebhookHandler({
++    resolveSecret: () => SECRET,
++    nowSeconds: () => ts,
++    evidenceSink: sink
++  });
++
++  const body = JSON.stringify({ provider_event_id: "evt_xyz" });
++  const sig = sign(SECRET, ts, body);
++
++  const fakeReq = makeFakeRequest({
++    method: "POST",
++    url: "/v1/webhooks/inbound",
++    headers: {
++      [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
++      [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig,
++      "content-type": "application/json"
++    },
++    body
++  });
++  const fakeRes = makeFakeResponse();
++
++  const result = await handler(fakeReq, fakeRes, "req_test_1");
++  assert.equal(result.handled, true);
++  assert.equal(fakeRes.statusCode, 202);
++  const payload = JSON.parse(fakeRes.body);
++  assert.equal(payload.ok, true);
++  assert.equal(payload.data.provider_event_id, "evt_xyz");
++
++  const records = sink.list();
++  assert.equal(records.length, 1);
++  assert.equal(records[0].signatureValid, true);
++  assert.equal(records[0].providerEventId, "evt_xyz");
++  assert.equal(records[0].rejectionCode, null);
++});
++
++test("inbound webhook handler rejects bad signature with 401 and records evidence", async () => {
++  const sink = createInMemoryInboundWebhookEvidenceSink();
++  const ts = 1_700_000_000;
++  const handler = createInboundWebhookHandler({
++    resolveSecret: () => SECRET,
++    nowSeconds: () => ts,
++    evidenceSink: sink
++  });
++
++  const fakeReq = makeFakeRequest({
++    method: "POST",
++    url: "/v1/webhooks/inbound",
++    headers: {
++      [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
++      [INBOUND_WEBHOOK_SIGNATURE_HEADER]: "0".repeat(64),
++      "content-type": "application/json"
++    },
++    body: "{}"
++  });
++  const fakeRes = makeFakeResponse();
++
++  const result = await handler(fakeReq, fakeRes, "req_test_2");
++  assert.equal(result.handled, true);
++  assert.equal(fakeRes.statusCode, 401);
++  const records = sink.list();
++  assert.equal(records.length, 1);
++  assert.equal(records[0].signatureValid, false);
++  assert.equal(records[0].rejectionCode, "MAIL_WEBHOOK_SIGNATURE_INVALID");
++});
++
++test("inbound webhook handler returns 503 when secret missing", async () => {
++  const ts = 1_700_000_000;
++  const handler = createInboundWebhookHandler({
++    resolveSecret: () => undefined,
++    nowSeconds: () => ts
++  });
++
++  const fakeReq = makeFakeRequest({
++    method: "POST",
++    url: "/v1/webhooks/inbound",
++    headers: {
++      [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
++      [INBOUND_WEBHOOK_SIGNATURE_HEADER]: "deadbeef",
++      "content-type": "application/json"
++    },
++    body: "{}"
++  });
++  const fakeRes = makeFakeResponse();
++
++  const result = await handler(fakeReq, fakeRes, "req_test_3");
++  assert.equal(result.handled, true);
++  assert.equal(fakeRes.statusCode, 503);
++});
++
++test("inbound webhook handler ignores non-POST and non-matching paths", async () => {
++  const handler = createInboundWebhookHandler({
++    resolveSecret: () => SECRET,
++    nowSeconds: () => 1
++  });
++  const fakeReq = makeFakeRequest({
++    method: "GET",
++    url: "/v1/webhooks/inbound",
++    headers: {},
++    body: ""
++  });
++  const fakeRes = makeFakeResponse();
++  const result = await handler(fakeReq, fakeRes, "req_test_4");
++  assert.equal(result.handled, false);
++});
++
++test("GET /v1/webhooks/inbound/evidence returns list with newest first", async () => {
++  const sink = createInMemoryInboundWebhookEvidenceSink();
++  const ts = 1_700_000_100;
++  const handler = createInboundWebhookHandler({
++    resolveSecret: () => SECRET,
++    nowSeconds: () => ts,
++    evidenceSink: sink
++  });
++
++  for (const id of ["evt_a", "evt_b", "evt_c"]) {
++    const body = JSON.stringify({ provider_event_id: id });
++    const sig = sign(SECRET, ts, body);
++    const req = makeFakeRequest({
++      method: "POST",
++      url: "/v1/webhooks/inbound",
++      headers: {
++        [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
++        [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig,
++        "content-type": "application/json"
++      },
++      body
++    });
++    await handler(req, makeFakeResponse(), `req_post_${id}`);
++  }
++
++  const listReq = makeFakeRequest({
++    method: "GET",
++    url: "/v1/webhooks/inbound/evidence?limit=10",
++    headers: {},
++    body: ""
++  });
++  const listRes = makeFakeResponse();
++  const result = await handler(listReq, listRes, "req_list");
++  assert.equal(result.handled, true);
++  assert.equal(listRes.statusCode, 200);
++  const payload = JSON.parse(listRes.body);
++  assert.equal(payload.ok, true);
++  assert.equal(payload.data.total, 3);
++  assert.equal(payload.data.returned, 3);
++  assert.deepEqual(
++    payload.data.items.map((entry) => entry.providerEventId),
++    ["evt_c", "evt_b", "evt_a"]
++  );
++});
++
++test("GET evidence by provider_event_id returns 200 or 404", async () => {
++  const sink = createInMemoryInboundWebhookEvidenceSink();
++  const ts = 1_700_000_200;
++  const handler = createInboundWebhookHandler({
++    resolveSecret: () => SECRET,
++    nowSeconds: () => ts,
++    evidenceSink: sink
++  });
++
++  const body = JSON.stringify({ provider_event_id: "evt_target" });
++  const sig = sign(SECRET, ts, body);
++  await handler(
++    makeFakeRequest({
++      method: "POST",
++      url: "/v1/webhooks/inbound",
++      headers: {
++        [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
++        [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig,
++        "content-type": "application/json"
++      },
++      body
++    }),
++    makeFakeResponse(),
++    "req_post"
++  );
++
++  const hitRes = makeFakeResponse();
++  await handler(
++    makeFakeRequest({
++      method: "GET",
++      url: "/v1/webhooks/inbound/evidence?provider_event_id=evt_target",
++      headers: {},
++      body: ""
++    }),
++    hitRes,
++    "req_hit"
++  );
++  assert.equal(hitRes.statusCode, 200);
++  const hitPayload = JSON.parse(hitRes.body);
++  assert.equal(hitPayload.data.providerEventId, "evt_target");
++  assert.equal(hitPayload.data.signatureValid, true);
++
++  const missRes = makeFakeResponse();
++  await handler(
++    makeFakeRequest({
++      method: "GET",
++      url: "/v1/webhooks/inbound/evidence?provider_event_id=evt_missing",
++      headers: {},
++      body: ""
++    }),
++    missRes,
++    "req_miss"
++  );
++  assert.equal(missRes.statusCode, 404);
++  const missPayload = JSON.parse(missRes.body);
++  assert.equal(missPayload.error.code, "MAIL_WEBHOOK_EVIDENCE_NOT_FOUND");
++});
++
++test("GET evidence by evidence_id returns 200 with matching record", async () => {
++  const sink = createInMemoryInboundWebhookEvidenceSink();
++  const ts = 1_700_000_300;
++  const handler = createInboundWebhookHandler({
++    resolveSecret: () => SECRET,
++    nowSeconds: () => ts,
++    evidenceSink: sink
++  });
++
++  const body = JSON.stringify({ provider_event_id: "evt_eid" });
++  const sig = sign(SECRET, ts, body);
++  const postRes = makeFakeResponse();
++  await handler(
++    makeFakeRequest({
++      method: "POST",
++      url: "/v1/webhooks/inbound",
++      headers: {
++        [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
++        [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig,
++        "content-type": "application/json"
++      },
++      body
++    }),
++    postRes,
++    "req_post"
++  );
++  const evidenceId = JSON.parse(postRes.body).data.evidence_id;
++  assert.ok(evidenceId.startsWith("evt_inbound_"));
++
++  const getRes = makeFakeResponse();
++  await handler(
++    makeFakeRequest({
++      method: "GET",
++      url: `/v1/webhooks/inbound/evidence?evidence_id=${encodeURIComponent(evidenceId)}`,
++      headers: {},
++      body: ""
++    }),
++    getRes,
++    "req_get_eid"
++  );
++  assert.equal(getRes.statusCode, 200);
++  const payload = JSON.parse(getRes.body);
++  assert.equal(payload.data.evidenceId, evidenceId);
++  assert.equal(payload.data.providerEventId, "evt_eid");
++});
++
++test("file-backed evidence sink persists records across instances", async () => {
++  const dir = mkdtempSync(join(tmpdir(), "mail-inbound-sink-"));
++  const file = join(dir, "evidence.ndjson");
++  try {
++    const sinkA = createFileInboundWebhookEvidenceSink(file);
++    const ts = 1_700_000_400;
++    const handler = createInboundWebhookHandler({
++      resolveSecret: () => SECRET,
++      nowSeconds: () => ts,
++      evidenceSink: sinkA
++    });
++
++    const body = JSON.stringify({ provider_event_id: "evt_persist" });
++    const sig = sign(SECRET, ts, body);
++    await handler(
++      makeFakeRequest({
++        method: "POST",
++        url: "/v1/webhooks/inbound",
++        headers: {
++          [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
++          [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig,
++          "content-type": "application/json"
++        },
++        body
++      }),
++      makeFakeResponse(),
++      "req_persist"
++    );
++
++    const onDisk = readFileSync(file, "utf8").trim().split("\n");
++    assert.equal(onDisk.length, 1);
++    const parsed = JSON.parse(onDisk[0]);
++    assert.equal(parsed.providerEventId, "evt_persist");
++    assert.equal(parsed.signatureValid, true);
++
++    // Re-open sink: should reload existing record.
++    const sinkB = createFileInboundWebhookEvidenceSink(file);
++    const found = sinkB.findByProviderEventId("evt_persist");
++    assert.ok(found);
++    assert.equal(found.evidenceId, parsed.evidenceId);
++  } finally {
++    rmSync(dir, { recursive: true, force: true });
++  }
++});
++
++// --- helpers --------------------------------------------------------------
++
++function makeFakeRequest({ method, url, headers, body }) {
++  const listeners = new Map();
++  const req = {
++    method,
++    url,
++    headers,
++    on(event, handler) {
++      const list = listeners.get(event) ?? [];
++      list.push(handler);
++      listeners.set(event, list);
++      // Immediately schedule data/end emission for first listener.
++      if (event === "end") {
++        queueMicrotask(() => {
++          const dataListeners = listeners.get("data") ?? [];
++          if (body && body.length > 0) {
++            for (const fn of dataListeners) {
++              fn(Buffer.from(body, "utf8"));
++            }
++          }
++          for (const fn of listeners.get("end") ?? []) {
++            fn();
++          }
++        });
++      }
++      return req;
++    },
++    destroy() {
++      // no-op for tests
++    }
++  };
++  return req;
++}
++
++function makeFakeResponse() {
++  const res = {
++    statusCode: 0,
++    headers: {},
++    body: "",
++    setHeader(name, value) {
++      res.headers[name.toLowerCase()] = value;
++    },
++    end(chunk) {
++      if (chunk) {
++        res.body = typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
++      }
++    }
++  };
++  return res;
++}
+-- 
+2.50.1 (Apple Git-155)
+

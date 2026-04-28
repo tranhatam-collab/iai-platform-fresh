@@ -1,0 +1,109 @@
+{
+  "version": "1.1",
+  "status": "ACTIVE_UNTIL_VERIFIED_COMPLETE",
+  "date": "2026-04-24",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "cadence_minutes": 15,
+  "daily_summary_time": "08:00",
+  "root_rule": "Remind every active team every 15 minutes until that team's assigned production blocker is complete and verified. No team may wait unless its own work is complete and the next blocker owner is explicit.",
+  "delivery_mode": "REPO_SCHEDULE_PLUS_CODEX_THREAD_HEARTBEAT",
+  "blocking_directive": "docs/reports/team1/TEAM_ADMIN_PUBLIC_SURFACE_DNS_SEO_LEGAL_HOLD_2026-04-24.md",
+  "channel_map": [
+    {
+      "team_id": "team1-control-tower-public-hold",
+      "team_name": "Team 1 Control Tower",
+      "logical_channel": "public-surface-release-hold-authority",
+      "owner": "Team 1",
+      "status": "ACTIVE",
+      "stop_condition": "All PUB-001 through PUB-010 blockers in TEAM_ADMIN_PUBLIC_SURFACE_DNS_SEO_LEGAL_HOLD_2026-04-24.md have evidence and Team 1 publishes a release-hold removal verdict.",
+      "reminder_command": "Team 1: keep PRODUCTION_PUBLICATION_HOLD active. Reject any production-complete, synchronized-live, SEO-complete, or public-ready claim until PUB-001 through PUB-010 have owner evidence and a new Team 1 verdict. Update the canonical ledger only after exact-domain live checks are rerun."
+    },
+    {
+      "team_id": "team-b-infra-dns-cdn-flows",
+      "team_name": "Team B Infra CDN and Flows",
+      "logical_channel": "dns-cdn-flows-production-proof",
+      "owner": "Team B Infra",
+      "status": "ACTIVE",
+      "stop_condition": "cdn.iai.one and flows.iai.one either resolve and have production proof, or they are removed from public navigation/docs and marked NOT_PUBLIC_READY.",
+      "reminder_command": "Team B Infra: fix cdn.iai.one and flows.iai.one. Provide DNS proof, deploy/vhost proof, CDN cache/header proof, flows production route/runtime proof, and rollback note. If they are not ready, mark NOT_PUBLIC_READY and remove public navigation references. Do not use packet text as release proof."
+    },
+    {
+      "team_id": "team5-web-home-public-links",
+      "team_name": "Team 5 Web and Home",
+      "logical_channel": "web-home-public-link-integrity",
+      "owner": "Team 5",
+      "status": "ACTIVE",
+      "stop_condition": "web.iai.one resolves or is removed from public-ready claims, home.iai.one no longer links to unresolved cdn.iai.one, and dash/dashboard identity is explicitly resolved.",
+      "reminder_command": "Team 5: stop public-ready claims for web.iai.one while DNS is unresolved. Fix home.iai.one link to cdn.iai.one by hiding it or pointing to a live surface. Resolve dash.iai.one versus dashboard.iai.one naming in docs and routes. Attach live curl/dig evidence."
+    },
+    {
+      "team_id": "team-c-seo-sitemaps",
+      "team_name": "Team C SEO and Metadata",
+      "logical_channel": "public-sitemap-metadata-repair",
+      "owner": "Team C SEO",
+      "status": "ACTIVE",
+      "stop_condition": "flow and developer return valid XML sitemaps after deploy; dash exposes internal noindex/robots policy without HTML sitemap fallback; cios is fixed or explicitly classified; iai, cios, dash, and mail have complete metadata where public.",
+      "reminder_command": "Team C SEO: deploy and verify the repo-side sitemap fixes for flow.iai.one and developer.iai.one so /sitemap.xml returns application/xml, not HTML. Verify dash.iai.one now follows internal/noindex policy and no longer returns HTML for sitemap. Fix cios.iai.one sitemap or classify it internal. Decide mail.iai.one public sitemap vs internal noindex policy. Complete canonical, description, OG image, Twitter image, and search metadata for iai, cios, dash, and mail."
+    },
+    {
+      "team_id": "team-c-language-bilingual-cleanup",
+      "team_name": "Team C Language and Bilingual QA",
+      "logical_channel": "universal-bilingual-public-surface-cleanup",
+      "owner": "Team C Language",
+      "status": "ACTIVE",
+      "stop_condition": "Universal bilingual audit passes for flow, nft, noos, cios, and developer with no mixed-language public metadata or UI blocks.",
+      "reminder_command": "Team C Language: clean mixed Vietnamese/English metadata and public UI on flow.iai.one, nft.iai.one, noos.iai.one, cios.iai.one, and developer.iai.one. Source public copy from content registries, split VI/EN route/meta logic, rerun the Universal Bilingual Language Rebuild audit, and attach the report."
+    },
+    {
+      "team_id": "team2-api-technical-surface-policy",
+      "team_name": "Team 2 Runtime and API",
+      "logical_channel": "technical-api-indexing-security-policy",
+      "owner": "Team 2",
+      "status": "ACTIVE",
+      "stop_condition": "pay.iai.one, api.iai.one, and api.flow.iai.one have explicit public-vs-internal policy, noindex/security headers where internal, and reduced root data exposure where required.",
+      "reminder_command": "Team 2: classify pay.iai.one, api.iai.one, and api.flow.iai.one as public API landing or internal technical endpoints. If internal, add X-Robots-Tag noindex,nofollow, reduce route/data exposure on root, and link public docs to docs.iai.one. If public, add canonical metadata, legal link, and docs link."
+    },
+    {
+      "team_id": "team-email-smtp-mail-public-policy",
+      "team_name": "Team Email SMTP",
+      "logical_channel": "mail-public-surface-policy",
+      "owner": "Team Email SMTP",
+      "status": "ACTIVE",
+      "stop_condition": "mail.iai.one has either public sitemap/meta/legal package or documented internal/noindex policy, while /v1/send remains separately gated.",
+      "reminder_command": "Team Email SMTP: decide mail.iai.one public vs internal. If public, add sitemap, canonical, description, OG/Twitter metadata, and legal entity link. If internal, keep robots disallow and add explicit noindex/internal policy. Do not claim public /v1/send cutover from hostname health proof."
+    },
+    {
+      "team_id": "team-legal-docs-public-entity",
+      "team_name": "Legal and Docs Owners",
+      "logical_channel": "public-legal-entity-consistency",
+      "owner": "Legal/Docs Owners",
+      "status": "ACTIVE",
+      "stop_condition": "Every public surface links to https://docs.iai.one/legal/iai-flow/ and uses Angel Edu Tam Foundation Inc where legal/entity copy is shown.",
+      "reminder_command": "Legal/Docs: standardize public legal references to https://docs.iai.one/legal/iai-flow/ and Angel Edu Tam Foundation Inc across pay, api, mail, dash, cios, developer, and all public *.iai.one surfaces. Surfaces without footer/legal block must be classified internal/noindex or receive legal footer copy."
+    },
+    {
+      "team_id": "team-b-dash-indexability",
+      "team_name": "Team B Dash",
+      "logical_channel": "dash-public-internal-indexability-decision",
+      "owner": "Team B Dash + Team 1",
+      "status": "ACTIVE",
+      "stop_condition": "dash.iai.one internal noindex policy is deployed and Team 1 accepts that Dash is not a public SEO surface, or Team 1 explicitly flips it to public with a full SEO package.",
+      "reminder_command": "Team B Dash: current repo-side decision is internal noindex control surface. Deploy the robots/sitemap policy patch, keep noindex, and remove public-live claims from docs and reports. If Dash must become public, request an explicit Team 1 policy flip and provide sitemap/metadata/legal proof first."
+    },
+    {
+      "team_id": "team-d-payment-activation",
+      "team_name": "Team D Payments Activation and Treasury Ops",
+      "logical_channel": "team-d-payment-activation",
+      "owner": "Team D",
+      "status": "ACTIVE",
+      "stop_condition": "No payment activation row points users to unresolved or non-compliant public surfaces, and pay gate/legal/email evidence is complete before READY_FOR_LIVE.",
+      "reminder_command": "Team D: keep all payment activation rows below READY_FOR_LIVE while pay/public-surface gates are locked. Do not route payment users to unresolved domains or surfaces missing legal/entity/email evidence. Continue collecting receiver, mailbox, provider_ref, messageId, D1/canonical row, and inbox proof."
+    }
+  ],
+  "thread_heartbeat": {
+    "status": "ACTIVE",
+    "automation_id": "team-15m-reminder-loop-2",
+    "dispatch_mode": "repo-side checker + current-thread heartbeat; external Slack/Teams transport still requires connector/runner attachment.",
+    "external_transport": "CONNECTOR_PENDING"
+  }
+}

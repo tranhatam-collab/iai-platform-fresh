@@ -1,0 +1,59 @@
+{
+  "date": "2026-04-18",
+  "generatedAt": "2026-04-19T01:19:38.543Z",
+  "source": {
+    "eventFile": "/Users/tranhatam/Documents/Devnewproject/iai-platform-worktree/runtime/web/events.jsonl",
+    "eventFilePresent": true,
+    "mode": "event_observed"
+  },
+  "timezone": "Asia/Ho_Chi_Minh",
+  "baseline": {
+    "coveragePercent": 100,
+    "missing": [],
+    "seen": [
+      "web_landing_view",
+      "web_role_selected",
+      "web_onboarding_started",
+      "web_auth_handoff_started",
+      "web_auth_handoff_completed",
+      "web_auth_handoff_failed",
+      "web_first_action_completed",
+      "web_flow_handoff_completed",
+      "web_route_handoff_failed",
+      "web_paid_intent_started",
+      "web_revenue_assist_completed",
+      "web_returned_within_7d"
+    ],
+    "totalEvents": 12
+  },
+  "campaignsTracked": [
+    {
+      "campaign": "pilot-alpha",
+      "count": 15
+    }
+  ],
+  "counts": {
+    "web_landing_view": 2,
+    "web_role_selected": 1,
+    "web_onboarding_started": 1,
+    "web_auth_handoff_started": 2,
+    "web_auth_handoff_completed": 2,
+    "web_auth_handoff_failed": 1,
+    "web_first_action_completed": 1,
+    "web_flow_handoff_completed": 1,
+    "web_route_handoff_failed": 1,
+    "web_paid_intent_started": 1,
+    "web_revenue_assist_completed": 1,
+    "web_returned_within_7d": 1
+  },
+  "funnel": {
+    "campaignToQualifiedPipelineRatio": 1,
+    "failedAuthHandoffRatePercent": 50,
+    "firstActionToRetainedRatio": 1,
+    "firstActionWithin24hRatio": 0.5,
+    "brokenRouteHandoffRatePercent": 33.33,
+    "revenueAssistConversionRatio": 1,
+    "visitorToSignupRatio": 1
+  },
+  "totalEventsObserved": 15
+}

@@ -1,0 +1,452 @@
+HTTP/2 301 
+date: Tue, 21 Apr 2026 14:21:02 GMT
+content-type: text/plain;charset=UTF-8
+content-length: 21
+location: /auth/
+access-control-allow-origin: *
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=ktXVtYO8Q8ltaCChUGJkSS37IAwmyZajmCimuFFNzBi2VBjKyzSLzaabD2QD98U7fUKlVOyAvzamasCa6rTsFMbylvFFMEfsb810%2FvI8szlJMpEOktx6lCj5LWolrgWOERnueRdb670vyaSxHdzMugs7jPBgni%2B5W%2Fzma9NyGw%3D%3D"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+cf-ray: 9efd0868bfd70977-HKG
+alt-svc: h3=":443"; ma=86400
+
+HTTP/2 200 
+date: Tue, 21 Apr 2026 14:21:02 GMT
+content-type: text/html; charset=utf-8
+access-control-allow-origin: *
+cache-control: public, max-age=0, must-revalidate
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+x-robots-tag: noindex
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=56m%2BPjnos%2BzyfhrbZwI8e7PYK%2BQo0SiAiUcf4qcxM45CNTqSqSB8dcF2xkUl7g96cWR8yHI%2FMrSPzuH6%2FpAnHrqFup9jAiAU4RXIHjUZG%2FvMAKU%2BbUrXyF5bA%2Bpu3ZhW%2BjJM2ruyX3mUEr0IrbnmPy3P%2B8mN58tSSEixaQneJw%3D%3D"}]}
+server: cloudflare
+cf-ray: 9efd086928300977-HKG
+alt-svc: h3=":443"; ma=86400
+
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auth | IAI Developer — API và tích hợp</title>
+    <meta name="description" content="Bề mặt dành cho developer với API, SDK, auth và tích hợp." />
+    <link rel="canonical" href="https://developer.iai.one/auth" />
+    <link rel="alternate" hreflang="vi" href="https://developer.iai.one/auth" />
+    <link rel="alternate" hreflang="en" href="https://developer.iai.one/auth?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="https://developer.iai.one/auth" />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","description":"Bề mặt dành cho developer với API, SDK, auth và tích hợp.","inLanguage":"vi","name":"Auth | IAI Developer — API và tích hợp","url":"https://developer.iai.one/auth"}</script>
+    <style>
+      :root {
+        --bg: #f1efe9;
+        --panel: rgba(255, 255, 255, 0.84);
+        --ink: #1d222d;
+        --muted: #626a7c;
+        --line: rgba(29, 34, 45, 0.14);
+        --accent: #1f5f5b;
+        --accent-soft: rgba(31, 95, 91, 0.12);
+        --accent-strong: #174542;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "IBM Plex Sans", "Aptos", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(31, 95, 91, 0.16), transparent 26%),
+          radial-gradient(circle at top right, rgba(23, 69, 66, 0.08), transparent 22%),
+          linear-gradient(180deg, #ebe8de 0%, var(--bg) 50%, #f7f5ef 100%);
+      }
+
+      a { color: inherit; text-decoration: none; }
+      code {
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .topbar,
+      .page-shell,
+      .hero,
+      .actions,
+      .surface-grid,
+      .required-grid,
+      .quickstart-grid,
+      .contracts-grid,
+      .boundary-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .topbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(241, 239, 233, 0.9);
+        backdrop-filter: blur(12px);
+      }
+
+      .brand,
+      .topnav,
+      .locale-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .topnav a,
+      .locale-list a {
+        padding: 9px 12px;
+        border-radius: 999px;
+        color: var(--muted);
+      }
+
+      .topnav a:hover,
+      .locale-list a[aria-current="true"] {
+        background: var(--accent-soft);
+        color: var(--ink);
+      }
+
+      .page-shell {
+        padding: 28px 24px 18px;
+      }
+
+      .hero {
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        align-items: stretch;
+      }
+
+      .hero-simple {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-copy,
+      .panel,
+      .surface-card,
+      .contract-card,
+      .step-card,
+      .boundary-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px;
+      }
+
+      .section-head {
+        display: grid;
+        gap: 8px;
+      }
+
+      .eyebrow {
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.11em;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(1.9rem, 4.1vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      h2 {
+        font-size: clamp(1.34rem, 2.5vw, 1.8rem);
+      }
+
+      h3 {
+        font-size: 1.03rem;
+      }
+
+      .lede {
+        font-size: 1.01rem;
+        line-height: 1.6;
+        color: var(--ink);
+      }
+
+      .note,
+      .surface-card p,
+      .step-card p,
+      .contract-card p,
+      .boundary-card p,
+      .section-head p {
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .actions {
+        grid-auto-flow: column;
+        justify-content: start;
+      }
+
+      .actions a {
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+
+      .actions .primary {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+        color: #f4faf9;
+      }
+
+      .actions .secondary {
+        border: 1px solid var(--line);
+        color: var(--ink);
+      }
+
+      .stack-list {
+        margin: 10px 0 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .stack-list li {
+        color: var(--muted);
+      }
+
+      .quickstart-grid,
+      .required-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      }
+
+      .contracts-grid,
+      .surface-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .contract-card,
+      .surface-card {
+        display: grid;
+        gap: 10px;
+      }
+
+      .contract-card a,
+      .surface-card a {
+        justify-self: start;
+        padding: 8px 12px;
+        border-radius: 9px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-weight: 600;
+      }
+
+      .card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .boundary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .footer {
+        border-top: 1px solid var(--line);
+        padding: 16px 24px 24px;
+        color: var(--muted);
+        display: grid;
+        gap: 6px;
+      }
+
+      @media (max-width: 900px) {
+        .topbar {
+          position: static;
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          grid-auto-flow: row;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">developer.iai.one</p>
+          <strong>Auth</strong>
+        </div>
+        <nav class="topnav" aria-label="Primary">
+          <a href="/">Lop xay dung</a>
+          <a href="/quickstart">Quickstart</a>
+          <a href="/auth">Auth</a>
+          <a href="/api/reference">API</a>
+          <a href="/webhooks">Webhooks</a>
+          <a href="/sdk">SDK</a>
+          <a href="/nodes">Nodes</a>
+          <a href="/changelog">Changelog</a>
+          
+    <div class="locale-list" role="list" aria-label="Locales">
+      <a role="listitem" href="/auth" aria-current="true">VI</a><a role="listitem" href="/auth?lang=en" >EN</a>
+    </div>
+  
+        </nav>
+      </header>
+
+      <main class="page-shell">
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Required route</p>
+            <h1>Auth</h1>
+            <p class="lede">Route auth dinh nghia tich hop identity dung shared truth de builder khong fork local auth behavior.</p>
+            <div class="actions">
+              <a class="primary" href="https://app.iai.one/">Mo app auth lane</a>
+              <a class="secondary" href="https://docs.iai.one/">Mo docs</a>
+            </div>
+          </div>
+          <aside class="panel lane-panel">
+            <p class="eyebrow">Route checklist</p>
+            <h2>Execution checklist cho route nay</h2>
+            <ul class="stack-list">
+              <li>Giu session handling dung voi shared contracts.</li>
+              <li>Mo ta ro failure va unauthorized behavior.</li>
+              <li>Chung minh auth examples bang request/response evidence.</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="section-head">
+          <p class="eyebrow">Required routes</p>
+          <h2>Bay route bat buoc cho builder da duoc mo ro rang.</h2>
+          <p>Dung cac route nay de giu quickstart, auth, API, webhook, SDK, nodes va changelog o trang thai co the verify.</p>
+        </section>
+
+        <section class="required-grid">
+          
+    <article class="surface-card">
+      <h3>Quickstart</h3>
+      <p>Diem vao implementation-first cho builder.</p>
+      <div class="card-footer">
+        <code>/quickstart</code>
+        <a href="/quickstart" >Mo route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>Auth</h3>
+      <p>Quy tac tich hop identity va session dung shared truth.</p>
+      <div class="card-footer">
+        <code>/auth</code>
+        <a href="/auth" aria-current="true">Route hien tai</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>API Reference</h3>
+      <p>Endpoint contracts, payload shape va status behavior.</p>
+      <div class="card-footer">
+        <code>/api/reference</code>
+        <a href="/api/reference" >Mo route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>Webhooks</h3>
+      <p>Event matrix, retries va replay-safe behavior.</p>
+      <div class="card-footer">
+        <code>/webhooks</code>
+        <a href="/webhooks" >Mo route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>SDK</h3>
+      <p>SDK examples va compatibility guidance.</p>
+      <div class="card-footer">
+        <code>/sdk</code>
+        <a href="/sdk" >Mo route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>Nodes</h3>
+      <p>Contract cho executable integration nodes.</p>
+      <div class="card-footer">
+        <code>/nodes</code>
+        <a href="/nodes" >Mo route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>Changelog</h3>
+      <p>Contract deltas va migration notes.</p>
+      <div class="card-footer">
+        <code>/changelog</code>
+        <a href="/changelog" >Mo route</a>
+      </div>
+    </article>
+  
+        </section>
+
+        <section class="surface-grid">
+          
+    <article class="surface-card">
+      <h3>Docs</h3>
+      <p>Mo docs cho architecture, standards va boundary language chuan.</p>
+      <div class="card-footer">
+        <code>docs.iai.one</code>
+        <a href="https://docs.iai.one/">Mo docs</a>
+      </div>
+    </article>
+  
+          
+    <article class="surface-card">
+      <h3>Flow</h3>
+      <p>Mo flow cho workflow orchestration va execution-first runtime lanes.</p>
+      <div class="card-footer">
+        <code>flow.iai.one</code>
+        <a href="https://flow.iai.one/">Mo flow</a>
+      </div>
+    </article>
+  
+          
+    <article class="surface-card">
+      <h3>Dash</h3>
+      <p>Mo dash cho approvals, operator actions va runtime governance.</p>
+      <div class="card-footer">
+        <code>dash.iai.one</code>
+        <a href="https://dash.iai.one/">Mo dieu hanh</a>
+      </div>
+    </article>
+  
+          
+    <article class="surface-card">
+      <h3>App</h3>
+      <p>Mo app khi cong viec tro thanh user journey gan con nguoi.</p>
+      <div class="card-footer">
+        <code>app.iai.one</code>
+        <a href="https://app.iai.one/">Mo</a>
+      </div>
+    </article>
+  
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>IAI giu vai tro ro rang de builder di nhanh ma khong vo trust.</p>
+        <p>Khong co evidence thi khong co release claim.</p>
+      </footer>
+    
+  </body>
+</html>

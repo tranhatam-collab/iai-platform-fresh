@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trust IAI</title>
+  <meta name="description" content="Operational Trust Surface for IAI. Every public claim has inline proof or explicit unverified disclosure." />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="shell">
+
+    <header class="hero">
+      <div class="topbar">
+        <strong id="appTitle">Trust IAI</strong>
+        <div class="topbar-right">
+          <a href="#m1" class="ghost ghost-link" id="navJump">Modules</a>
+          <button id="langBtn" class="ghost" type="button">EN</button>
+        </div>
+      </div>
+      <span class="badge" id="phaseBadge">Phase 1 · Static-first</span>
+      <h1 id="heroTitle">Bề mặt vận hành niềm tin</h1>
+      <p id="heroSubtitle">Mỗi tuyên bố trên trang này có bằng chứng inline hoặc công bố rõ "chưa xác minh được".</p>
+      <p class="hero-meta" id="heroMeta">Tạo lúc: — · Build commit: —</p>
+      <nav class="hero-nav" aria-label="Modules">
+        <a href="#m1">1. Official Domains</a>
+        <a href="#m2">2. Official Teams</a>
+        <a href="#m3">3. Official Channels</a>
+        <a href="#m4">4. Verification Methods</a>
+        <a href="#m5">5. /go/* Short Links</a>
+        <a href="#m6">6. Report &amp; Impersonation</a>
+        <a href="#m7">7. Trust Page Builder</a>
+      </nav>
+    </header>
+
+    <!-- Module 1: Official Domains -->
+    <section class="panel" id="m1">
+      <h2 id="m1Title">1. Official Domains</h2>
+      <p id="m1Lead">Trang này hiển thị trạng thái xác minh của hệ thống tại thời điểm build gần nhất. Không phải runtime monitoring.</p>
+      <div class="grid grid-4" id="m1Stats" aria-label="Counts"></div>
+
+      <h3 id="m1RegistryTitle">Domain Registry · verified at build time</h3>
+      <div id="m1Registry" class="list"></div>
+
+      <details class="panel-sub">
+        <summary id="m1OutsideTitle">Outside Phase 1 verified scope</summary>
+        <p class="muted" id="m1OutsideLead">Domain trong roadmap nhưng chưa probe được trong Phase 1. Không hiển thị như đã sẵn.</p>
+        <div id="m1Outside" class="list list-compact"></div>
+      </details>
+
+      <p class="meta" id="m1Note">Probe method: DNS lookup + HTTP HEAD. Phase 1 không khẳng định tính đúng đắn của nội dung từng domain.</p>
+    </section>
+
+    <!-- Module 2: Official Teams -->
+    <section class="panel" id="m2">
+      <h2 id="m2Title">2. Official Teams</h2>
+      <p id="m2Lead">Phase 1 công bố ranh giới trách nhiệm team ở mức public-safe.</p>
+      <div class="list" id="m2List"></div>
+      <p id="m2UnverifiedLead" class="meta">Mục team sẽ giữ trạng thái Declared cho đến khi đủ bằng chứng public.</p>
+    </section>
+
+    <!-- Module 3: Official Channels -->
+    <section class="panel" id="m3">
+      <h2 id="m3Title">3. Official Channels</h2>
+      <p id="m3Lead">Kênh public chính thức phải có scope, use case, status và disclosure rõ ràng.</p>
+      <div class="list" id="m3List"></div>
+      <p class="meta" id="m3Footer">Phase 1 chỉ công bố kênh public-safe; không công bố inbox nội bộ.</p>
+    </section>
+
+    <!-- Module 4: Verification Methods -->
+    <section class="panel" id="m4">
+      <h2 id="m4Title">4. Verification Methods</h2>
+      <p id="m4Lead">Mỗi phương pháp phải ghi rõ phạm vi, giới hạn, và loại bằng chứng.</p>
+      <div class="list" id="m4List"></div>
+      <p class="meta" id="m4Note">Phương pháp thiếu bằng chứng public không được gắn Verified.</p>
+    </section>
+
+    <!-- Module 5: /go/* Short Links -->
+    <section class="panel" id="m5">
+      <h2 id="m5Title">5. /go/* Short Links</h2>
+      <p id="m5Lead">Đã ghi nhận, không che giấu. Mỗi giới hạn có ID, ngày báo, trạng thái.</p>
+      <div id="m5List" class="list"></div>
+      <p class="meta" id="m5Note">Báo giới hạn chưa được công bố qua form ở Module 7. Cam kết phản hồi trong vòng 7 ngày.</p>
+    </section>
+
+    <!-- Module 6: Report & Impersonation -->
+    <section class="panel" id="m6">
+      <h2 id="m6Title">6. Report &amp; Impersonation</h2>
+      <p id="m6Lead">Theo dõi sự cố thật, không tạo sự cố giả.</p>
+      <div id="m6List" class="list"></div>
+      <div id="m6Empty" class="item" hidden>
+        <strong id="m6EmptyTitle">No incident has been disclosed for this surface</strong>
+        <p id="m6EmptyBody" class="muted">No public incidents have been disclosed for this surface as of the last build. This does not mean no issue can exist. It means no incident has been verified and published through this process yet.</p>
+      </div>
+      <p class="meta" id="m6Note">Phase 2 sẽ thêm RSS feed, SLA disclosure target, và webhook subscribe.</p>
+    </section>
+
+    <!-- Module 7: Trust Page Builder -->
+    <section class="panel" id="m7">
+      <h2 id="m7Title">7. Trust Page Builder</h2>
+      <p id="m7Lead">Phase 1 cung cấp form báo lỗi/yêu cầu sửa. API export/delete sẽ có ở Phase 2.</p>
+      <div class="list" id="m7BuilderList"></div>
+
+      <form id="reportForm" class="report-form" novalidate>
+        <label>
+          <span id="m7TypeLabel">Loại vấn đề</span>
+          <select id="reportType">
+            <option value="mismatch">Data mismatch / sai lệch</option>
+            <option value="dark_pattern">Phát hiện dark pattern</option>
+            <option value="unverified_claim">Tuyên bố chưa xác minh</option>
+            <option value="limitation">Giới hạn chưa được công bố</option>
+            <option value="other">Khác</option>
+          </select>
+        </label>
+        <label>
+          <span id="m7AffectedLabel">Trang/module bị ảnh hưởng</span>
+          <input type="text" id="reportAffected" placeholder="ví dụ: Module 1 — Domain Registry" />
+        </label>
+        <label>
+          <span id="m7MsgLabel">Mô tả</span>
+          <textarea id="reportMessage" placeholder="Bạn thấy điều gì không đúng?" required></textarea>
+        </label>
+        <label>
+          <span id="m7ContactLabel">Liên hệ (tuỳ chọn)</span>
+          <input type="email" id="reportContact" placeholder="email để chúng tôi phản hồi" />
+        </label>
+        <p class="muted" id="m7Fallback">Phase 1 chưa có hệ thống ticket backend đầy đủ. Nếu form không gửi được, dùng địa chỉ liên hệ phía dưới.</p>
+        <div class="actions">
+          <button type="submit" id="m7Submit">Send report</button>
+          <a id="m7Mailto" class="secondary" href="mailto:trust@iai.one?subject=Trust%20IAI%20%E2%80%94%20Report&body=Page%3A%20%0AIssue%20type%3A%20%0AWhat%20seems%20incorrect%3A%20%0AContact%3A%20">Email fallback</a>
+        </div>
+        <pre id="reportResult" hidden></pre>
+      </form>
+
+      <div class="item" style="margin-top:16px">
+        <strong id="m7FutureTitle">Phase 2 sẽ thêm</strong>
+        <ul class="bullets">
+          <li id="m7F1">View dữ liệu cá nhân qua API.</li>
+          <li id="m7F2">Export dữ liệu (file).</li>
+          <li id="m7F3">Delete dữ liệu cá nhân.</li>
+          <li id="m7F4">Stop xử lý theo phạm vi.</li>
+        </ul>
+        <p class="muted" id="m7FutureNote">Phase 1 không claim các API trên hoạt động.</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p id="footerDisclosure">This page may be AI-assisted and human-reviewed. Build evidence is available in the verification log.</p>
+      <p class="meta" id="footerBuild">Build: — · Generated: —</p>
+    </footer>
+
+  </main>
+  <script src="/site.js"></script>
+</body>
+</html>

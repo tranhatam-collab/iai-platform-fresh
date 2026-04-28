@@ -1,0 +1,30 @@
+{
+  "date": "2026-04-26",
+  "site": "tranhatam.com",
+  "status": "LIVE_SYNC_BLOCKED",
+  "missing_secrets": {
+    "production": [
+      "PAYMENT_WEBHOOK_SECRET",
+      "MAIL_API_WEBHOOK_SECRET"
+    ],
+    "sandbox": [
+      "PAYMENT_WEBHOOK_SECRET"
+    ]
+  },
+  "missing_live_proof": [
+    "PROVIDER_PAYMENT_PROOF_MISSING",
+    "MESSAGE_ID_PROOF_MISSING",
+    "INBOX_PROOF_MISSING"
+  ],
+  "claim_boundary": {
+    "ready_for_live": false,
+    "live_synchronized": false,
+    "production_complete": false
+  },
+  "required_closeout_packet": [
+    "bound production and sandbox secrets for the missing items",
+    "provider payment proof for the real tranhatam.com flow",
+    "mail message_id proof tied to the same flow",
+    "inbox proof tied to the same flow"
+  ]
+}

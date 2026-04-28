@@ -1,0 +1,27 @@
+{
+  "name": "@iai/developer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:pages": "pnpm build && node scripts/build-static.mjs",
+    "dev": "tsx watch src/index.ts",
+    "deploy:preview": "pnpm build:pages && npx wrangler pages deploy public --project-name iai-developer",
+    "deploy:prod": "pnpm build:pages && npx wrangler pages deploy public --project-name iai-developer --branch main",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

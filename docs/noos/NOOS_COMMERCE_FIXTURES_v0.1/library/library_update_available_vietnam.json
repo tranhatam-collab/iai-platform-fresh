@@ -1,0 +1,30 @@
+{
+  "buyerId": "buyer_vnfield021",
+  "items": [
+    {
+      "productCode": "P07",
+      "name": "Vietnam Sovereign Resilience Profile Pack",
+      "currentVersion": "1.1",
+      "purchasedDate": "2026-03-12T07:40:00Z",
+      "licenseType": "Individual",
+      "updateStatus": "update_available",
+      "actions": [
+        "view",
+        "download",
+        "updates"
+      ]
+    }
+  ],
+  "recommendations": {
+    "nextProductPrimary": "P08",
+    "nextProductSecondary": "P11",
+    "ruleRef": "P07->P08"
+  },
+  "routeSet": [
+    "/library",
+    "/library/product/vietnam-sovereign-resilience-profile-pack",
+    "/library/updates",
+    "/library/licenses",
+    "/library/account"
+  ]
+}

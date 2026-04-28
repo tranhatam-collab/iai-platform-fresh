@@ -1,0 +1,24 @@
+name = "trust-iai-one"
+main = "src/index.js"
+compatibility_date = "2026-04-26"
+account_id = "62d57eaa548617aeecac766e5a1cb98e"
+assets = { directory = "./public", binding = "ASSETS" }
+
+routes = [
+  { pattern = "trust.iai.one", custom_domain = true }
+]
+
+[vars]
+APP_NAME = "trust.iai.one"
+DEFAULT_LOCALE = "vi"
+PUBLIC_STATUS = "Live"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trust_iai_one_db"
+database_id = "9ee14f37-f9ed-444d-b988-c91f3d727495"
+
+# R2 binding deferred to Phase 2 — enable R2 in Cloudflare dashboard before uncommenting.
+# [[r2_buckets]]
+# binding = "EVIDENCE_BUCKET"
+# bucket_name = "trust-iai-one-evidence"

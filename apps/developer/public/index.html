@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IAI Developer — API và tích hợp</title>
+    <meta name="description" content="Bề mặt dành cho developer với API, SDK, auth và tích hợp." />
+    <link rel="canonical" href="https://developer.iai.one/" />
+    <link rel="alternate" hreflang="vi" href="https://developer.iai.one/" />
+    <link rel="alternate" hreflang="en" href="https://developer.iai.one/?lang=en" />
+    <link rel="alternate" hreflang="x-default" href="https://developer.iai.one/" />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","description":"Bề mặt dành cho developer với API, SDK, auth và tích hợp.","inLanguage":"vi","name":"IAI Developer — API và tích hợp","url":"https://developer.iai.one/"}</script>
+    <style>
+      :root {
+        --bg: #f1efe9;
+        --panel: rgba(255, 255, 255, 0.84);
+        --ink: #1d222d;
+        --muted: #626a7c;
+        --line: rgba(29, 34, 45, 0.14);
+        --accent: #1f5f5b;
+        --accent-soft: rgba(31, 95, 91, 0.12);
+        --accent-strong: #174542;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "IBM Plex Sans", "Aptos", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(31, 95, 91, 0.16), transparent 26%),
+          radial-gradient(circle at top right, rgba(23, 69, 66, 0.08), transparent 22%),
+          linear-gradient(180deg, #ebe8de 0%, var(--bg) 50%, #f7f5ef 100%);
+      }
+
+      a { color: inherit; text-decoration: none; }
+      code {
+        font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .topbar,
+      .page-shell,
+      .hero,
+      .actions,
+      .surface-grid,
+      .required-grid,
+      .quickstart-grid,
+      .contracts-grid,
+      .boundary-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .topbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(241, 239, 233, 0.9);
+        backdrop-filter: blur(12px);
+      }
+
+      .brand,
+      .topnav,
+      .locale-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .topnav a,
+      .locale-list a {
+        padding: 9px 12px;
+        border-radius: 999px;
+        color: var(--muted);
+      }
+
+      .topnav a:hover,
+      .locale-list a[aria-current="true"] {
+        background: var(--accent-soft);
+        color: var(--ink);
+      }
+
+      .page-shell {
+        padding: 28px 24px 18px;
+      }
+
+      .hero {
+        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        align-items: stretch;
+      }
+
+      .hero-simple {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-copy,
+      .panel,
+      .surface-card,
+      .contract-card,
+      .step-card,
+      .boundary-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px;
+      }
+
+      .section-head {
+        display: grid;
+        gap: 8px;
+      }
+
+      .eyebrow {
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.11em;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(1.9rem, 4.1vw, 2.75rem);
+        line-height: 1.1;
+      }
+
+      h2 {
+        font-size: clamp(1.34rem, 2.5vw, 1.8rem);
+      }
+
+      h3 {
+        font-size: 1.03rem;
+      }
+
+      .lede {
+        font-size: 1.01rem;
+        line-height: 1.6;
+        color: var(--ink);
+      }
+
+      .note,
+      .surface-card p,
+      .step-card p,
+      .contract-card p,
+      .boundary-card p,
+      .section-head p {
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .actions {
+        grid-auto-flow: column;
+        justify-content: start;
+      }
+
+      .actions a {
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+
+      .actions .primary {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+        color: #f4faf9;
+      }
+
+      .actions .secondary {
+        border: 1px solid var(--line);
+        color: var(--ink);
+      }
+
+      .stack-list {
+        margin: 10px 0 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .stack-list li {
+        color: var(--muted);
+      }
+
+      .quickstart-grid,
+      .required-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      }
+
+      .contracts-grid,
+      .surface-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .contract-card,
+      .surface-card {
+        display: grid;
+        gap: 10px;
+      }
+
+      .contract-card a,
+      .surface-card a {
+        justify-self: start;
+        padding: 8px 12px;
+        border-radius: 9px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-weight: 600;
+      }
+
+      .card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .boundary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .footer {
+        border-top: 1px solid var(--line);
+        padding: 16px 24px 24px;
+        color: var(--muted);
+        display: grid;
+        gap: 6px;
+      }
+
+      @media (max-width: 900px) {
+        .topbar {
+          position: static;
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          grid-auto-flow: row;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">developer.iai.one</p>
+          <strong>Lớp xây dựng</strong>
+        </div>
+        <nav class="topnav" aria-label="Điều hướng chính">
+          <a href="https://iai.one/">Root</a>
+          <a href="https://home.iai.one/">Trang chủ</a>
+          <a href="https://docs.iai.one/">Tài liệu</a>
+          <a href="https://app.iai.one/">Ứng dụng</a>
+          <a href="https://flow.iai.one/">Flow</a>
+          <a href="https://dash.iai.one/">Điều hành</a>
+          
+    <div class="locale-list" role="list" aria-label="Ngôn ngữ">
+      <a role="listitem" href="/" aria-current="true">VI</a><a role="listitem" href="/?lang=en" >EN</a>
+    </div>
+  
+        </nav>
+      </header>
+
+      <main class="page-shell">
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Lớp xây dựng</p>
+            <h1>Lớp xây dựng</h1>
+            <p class="lede">developer.iai.one là lớp xây dựng cho API, auth, webhook và thực thi tích hợp.</p>
+            <p class="note">Mọi khẳng định trên bề mặt này phải truy vết được về tài liệu, bằng chứng runtime và các contract chính sách.</p>
+            <div class="actions">
+              <a class="primary" href="/quickstart">Mở Quickstart</a>
+              <a class="secondary" href="https://docs.iai.one/">Mở tài liệu kiến trúc</a>
+            </div>
+          </div>
+          <aside class="panel lane-panel">
+            <p class="eyebrow">Quickstart</p>
+            <h2>Bắt đầu từ bằng chứng, không từ giả định.</h2>
+            <ul class="stack-list">
+              <li>
+                <strong>Auth và session</strong>
+                <p>Quy tắc tích hợp identity và session phải bám đúng nguồn auth dùng chung.</p>
+              </li>
+              <li>
+                <strong>API contracts</strong>
+                <p>Contract endpoint API, cấu trúc request/response và kỳ vọng xử lý lỗi.</p>
+              </li>
+              <li>
+                <strong>Webhook execution</strong>
+                <p>Ma trận sự kiện webhook, hành vi retry và đường tích hợp an toàn với replay.</p>
+              </li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="section-head">
+          <p class="eyebrow">Route bắt buộc</p>
+          <h2>Bảy route bắt buộc cho builder này đã được làm rõ.</h2>
+          <p>Dùng các route này để giữ quickstart, auth, API, webhook, SDK, nodes và changelog ở trạng thái có thể kiểm chứng.</p>
+        </section>
+
+        <section class="required-grid">
+          
+    <article class="surface-card">
+      <h3>Quickstart</h3>
+      <p>Điểm vào implementation-first cho builder.</p>
+      <div class="card-footer">
+        <code>/quickstart</code>
+        <a href="/quickstart" >Mở route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>Auth</h3>
+      <p>Quy tắc tích hợp identity và session theo shared truth.</p>
+      <div class="card-footer">
+        <code>/auth</code>
+        <a href="/auth" >Mở route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>API Reference</h3>
+      <p>Endpoint contracts, payload shape và hành vi status.</p>
+      <div class="card-footer">
+        <code>/api/reference</code>
+        <a href="/api/reference" >Mở route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>Webhooks</h3>
+      <p>Event matrix, retry và hành vi an toàn với replay.</p>
+      <div class="card-footer">
+        <code>/webhooks</code>
+        <a href="/webhooks" >Mở route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>SDK</h3>
+      <p>Ví dụ SDK và hướng dẫn compatibility.</p>
+      <div class="card-footer">
+        <code>/sdk</code>
+        <a href="/sdk" >Mở route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>Nodes</h3>
+      <p>Contract cho executable integration nodes.</p>
+      <div class="card-footer">
+        <code>/nodes</code>
+        <a href="/nodes" >Mở route</a>
+      </div>
+    </article>
+  
+    <article class="surface-card">
+      <h3>Changelog</h3>
+      <p>Contract deltas và migration notes.</p>
+      <div class="card-footer">
+        <code>/changelog</code>
+        <a href="/changelog" >Mở route</a>
+      </div>
+    </article>
+  
+        </section>
+
+        <section class="section-head">
+          <p class="eyebrow">Quickstart</p>
+          <h2>Bắt đầu từ bằng chứng, không từ giả định.</h2>
+          <p>Quickstart là lộ trình ngắn theo hướng implementation-first: chốt boundary, nối auth, gọi API và xác thực webhook.</p>
+        </section>
+
+        <section class="quickstart-grid">
+          
+    <article class="step-card">
+      <h3>1. Chốt vai trò</h3>
+      <p>Đọc boundary và vai trò contract trước khi viết mã.</p>
+    </article>
+  
+          
+    <article class="step-card">
+      <h3>2. Nối auth</h3>
+      <p>Dùng shared auth/session truth và không fork auth cục bộ.</p>
+    </article>
+  
+          
+    <article class="step-card">
+      <h3>3. Chạy kiểm tra API</h3>
+      <p>Xác thực endpoint shape với API và flow API contracts.</p>
+    </article>
+  
+          
+    <article class="step-card">
+      <h3>4. Xác thực webhook</h3>
+      <p>Xác thực webhook payload, idempotency và replay policy.</p>
+    </article>
+  
+        </section>
+
+        <section class="contracts-grid">
+          <article class="contract-card">
+            <p class="eyebrow">Auth và session</p>
+            <code>app.iai.one</code>
+            <p>Quy tắc tích hợp identity và session phải bám đúng nguồn auth dùng chung.</p>
+            <a href="https://app.iai.one/">Mở</a>
+          </article>
+          <article class="contract-card">
+            <p class="eyebrow">API contracts</p>
+            <code>api.iai.one</code>
+            <p>Contract endpoint API, cấu trúc request/response và kỳ vọng xử lý lỗi.</p>
+            <a href="https://api.iai.one/">Mở runtime</a>
+          </article>
+          <article class="contract-card">
+            <p class="eyebrow">Webhook execution</p>
+            <code>api.flow.iai.one</code>
+            <p>Ma trận sự kiện webhook, hành vi retry và đường tích hợp an toàn với replay.</p>
+            <a href="https://api.flow.iai.one/">Mở runtime</a>
+          </article>
+        </section>
+
+        <section class="section-head">
+          <p class="eyebrow">Bề mặt liên quan</p>
+          <h2>Đi đúng lớp thực thi cho từng tác vụ.</h2>
+          <p>Khi phạm vi công việc vượt quá một tài liệu đơn lẻ, hãy chuyển sang đúng bề mặt liên quan thay vì dồn tất cả vào lớp này.</p>
+        </section>
+
+        <section class="surface-grid">
+          
+    <article class="surface-card">
+      <h3>Root</h3>
+      <p>Mở root cho role map hiến pháp và trust boundaries toàn hệ.</p>
+      <div class="card-footer">
+        <code>iai.one</code>
+        <a href="https://iai.one/">Mở</a>
+      </div>
+    </article>
+  
+          
+    <article class="surface-card">
+      <h3>Trang chủ</h3>
+      <p>Mở home cho điều hướng người dùng và các điểm vào public.</p>
+      <div class="card-footer">
+        <code>home.iai.one</code>
+        <a href="https://home.iai.one/">Mở</a>
+      </div>
+    </article>
+  
+          
+    <article class="surface-card">
+      <h3>Tài liệu</h3>
+      <p>Mở docs cho kiến trúc, tiêu chuẩn và ngôn ngữ ranh giới đã khóa.</p>
+      <div class="card-footer">
+        <code>docs.iai.one</code>
+        <a href="https://docs.iai.one/">Xem tài liệu</a>
+      </div>
+    </article>
+  
+          
+    <article class="surface-card">
+      <h3>Flow</h3>
+      <p>Mở flow cho điều phối workflow và runtime theo hướng execution-first.</p>
+      <div class="card-footer">
+        <code>flow.iai.one</code>
+        <a href="https://flow.iai.one/">Mở flow</a>
+      </div>
+    </article>
+  
+          
+    <article class="surface-card">
+      <h3>Điều hành</h3>
+      <p>Mở dash cho phê duyệt, thao tác vận hành và governance runtime.</p>
+      <div class="card-footer">
+        <code>dash.iai.one</code>
+        <a href="https://dash.iai.one/">Mở điều hành</a>
+      </div>
+    </article>
+  
+          
+    <article class="surface-card">
+      <h3>Ứng dụng</h3>
+      <p>Mở app khi công việc trở thành hành trình người dùng thực.</p>
+      <div class="card-footer">
+        <code>app.iai.one</code>
+        <a href="https://app.iai.one/">Mở</a>
+      </div>
+    </article>
+  
+        </section>
+
+        <section class="boundary-grid">
+          <article class="boundary-card"><p>Developer không phải nơi sao chép tài liệu. Chuẩn và kiến trúc nằm ở docs.</p></article>
+          <article class="boundary-card"><p>Developer không phải control plane runtime. Hành động runtime nằm ở flow và dash.</p></article>
+          <article class="boundary-card"><p>Developer không phải bề mặt người dùng. Hành trình người dùng nằm ở app và home.</p></article>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>IAI.ONE định nghĩa cấu trúc. Các bề mặt triển khai bên trong cấu trúc đó.</p>
+        <p>Không đầu cơ. Chỉ bằng chứng.</p>
+      </footer>
+    
+  </body>
+</html>

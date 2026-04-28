@@ -1,0 +1,80 @@
+{
+  "version": "0.1.0",
+  "fixtureGroups": [
+    {
+      "group": "catalog",
+      "fixtures": [
+        {
+          "id": "product_definitions_all_v1",
+          "path": "catalog/product_definitions_all_v1.json",
+          "purpose": "locked product definitions for catalog and product detail mocking"
+        }
+      ]
+    },
+    {
+      "group": "webhooks",
+      "fixtures": [
+        {
+          "id": "checkout_session_completed_p11",
+          "path": "webhooks/checkout_session_completed_p11.json",
+          "purpose": "happy-path webhook fulfillment for P11"
+        },
+        {
+          "id": "checkout_session_completed_p11_duplicate",
+          "path": "webhooks/checkout_session_completed_p11_duplicate.json",
+          "purpose": "duplicate replay to test idempotency"
+        }
+      ]
+    },
+    {
+      "group": "entitlements",
+      "fixtures": [
+        {
+          "id": "active_ent_master_p11",
+          "path": "entitlements/active_ent_master_p11.json",
+          "purpose": "current active master-pack entitlement"
+        },
+        {
+          "id": "expired_updates_only_ent_architecture_p03",
+          "path": "entitlements/expired_updates_only_ent_architecture_p03.json",
+          "purpose": "entitlement outside update window with retained access"
+        },
+        {
+          "id": "upgraded_ent_master_p11",
+          "path": "entitlements/upgraded_ent_master_p11.json",
+          "purpose": "prior entitlement after mapped upgrade to team bundle"
+        },
+        {
+          "id": "active_update_available_vietnam_p07",
+          "path": "entitlements/active_update_available_vietnam_p07.json",
+          "purpose": "active entitlement still in update window with a newer version available"
+        }
+      ]
+    },
+    {
+      "group": "library",
+      "fixtures": [
+        {
+          "id": "library_active_master",
+          "path": "library/library_active_master.json",
+          "purpose": "current library state with P11 active"
+        },
+        {
+          "id": "library_expired_updates_architecture",
+          "path": "library/library_expired_updates_architecture.json",
+          "purpose": "library state showing expired update window"
+        },
+        {
+          "id": "library_upgraded_master_to_team",
+          "path": "library/library_upgraded_master_to_team.json",
+          "purpose": "library state after P11 to P12 upgrade"
+        },
+        {
+          "id": "library_update_available_vietnam",
+          "path": "library/library_update_available_vietnam.json",
+          "purpose": "library state showing update available inside the active window"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+PAY_ENV=development
+PAY_API_BASE_URL=http://127.0.0.1:8787
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:4321
+
+# Payment email over internal SMTP
+SMTP_HOST=replace-me
+SMTP_PORT=587
+SMTP_SECURE_TRANSPORT=starttls
+SMTP_AUTH_MODE=login
+SMTP_USERNAME=replace-me
+SMTP_PASSWORD=replace-me
+SMTP_HELO_DOMAIN=iai.one
+EMAIL_FROM_PAY=pay@iai.one
+EMAIL_FROM_BILLING=billing@iai.one
+EMAIL_REPLY_TO_SUPPORT=support@iai.one
+
+# Optional non-payment system mail
+RESEND_API_KEY=replace-me
+EMAIL_FROM_SYSTEM=noreply@iai.one
+
+# Human verification
+TURNSTILE_SECRET=replace-me
+
+# Domestic providers
+PAYOS_CLIENT_ID=replace-me
+PAYOS_API_KEY=replace-me
+PAYOS_CHECKSUM_KEY=replace-me
+PAY_IAI_ONE_WEBHOOK_SECRET=replace-me
+VETUONGLAI_PRODUCT_CATALOG_JSON={"annual-access":{"plan_code":"annual_access_2026","amount":1200000,"currency":"VND","description":"Annual access 2026"},"specialist-pack":{"g1":{"pack_code":"g1_2026","amount":350000,"currency":"VND","description":"Specialist pack g1"}}}
+
+MOMO_PARTNER_CODE=replace-me
+MOMO_ACCESS_KEY=replace-me
+MOMO_SECRET_KEY=replace-me
+
+ZALOPAY_APP_ID=replace-me
+ZALOPAY_KEY1=replace-me
+ZALOPAY_KEY2=replace-me
+
+VNPAY_TMN_CODE=replace-me
+VNPAY_HASH_SECRET=replace-me
+
+# International later
+PAYPAL_CLIENT_ID=replace-me
+PAYPAL_CLIENT_SECRET=replace-me
+PAYPAL_WEBHOOK_ID=replace-me
+
+STRIPE_SECRET_KEY=replace-me
+STRIPE_PUBLISHABLE_KEY=replace-me
+STRIPE_WEBHOOK_SECRET=replace-me

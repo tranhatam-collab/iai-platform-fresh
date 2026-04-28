@@ -1,0 +1,19 @@
+{
+  "name": "trust-iai-one",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run trust:build-state && wrangler dev",
+    "deploy": "npm run trust:build-state && wrangler deploy",
+    "trust:build-state": "node scripts/trust-state-builder.mjs",
+    "trust:probe": "node scripts/trust-state-builder.mjs",
+    "db:local": "wrangler d1 migrations apply trust_iai_one_db --local",
+    "db:prod": "wrangler d1 migrations apply trust_iai_one_db --remote",
+    "seed:local": "wrangler d1 execute trust_iai_one_db --local --file=./scripts/seed.sql",
+    "seed:prod": "wrangler d1 execute trust_iai_one_db --remote --file=./scripts/seed.sql"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  }
+}

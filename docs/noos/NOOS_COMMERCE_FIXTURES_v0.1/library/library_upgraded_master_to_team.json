@@ -1,0 +1,43 @@
+{
+  "buyerId": "buyer_team014",
+  "items": [
+    {
+      "productCode": "P11",
+      "name": "Future Civilization Technology Master Pack",
+      "currentVersion": "1.1",
+      "purchasedDate": "2026-02-01T09:00:00Z",
+      "licenseType": "Individual",
+      "updateStatus": "upgraded",
+      "actions": [
+        "view",
+        "updates"
+      ]
+    },
+    {
+      "productCode": "P12",
+      "name": "NOOS Builder Bundle for Teams",
+      "currentVersion": "1.0",
+      "purchasedDate": "2026-02-20T10:15:00Z",
+      "licenseType": "Small Team",
+      "updateStatus": "current",
+      "actions": [
+        "view",
+        "download",
+        "updates"
+      ]
+    }
+  ],
+  "recommendations": {
+    "nextProductPrimary": "Organization Inquiry",
+    "upgradeLicenseOffer": "Organization",
+    "ruleRef": "P12->Organization"
+  },
+  "routeSet": [
+    "/library",
+    "/library/product/future-civilization-technology-master-pack",
+    "/library/product/noos-builder-bundle-for-teams",
+    "/library/updates",
+    "/library/licenses",
+    "/library/account"
+  ]
+}

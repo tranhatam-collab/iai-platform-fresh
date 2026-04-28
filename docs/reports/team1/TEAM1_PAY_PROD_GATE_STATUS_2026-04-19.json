@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-04-19T10:16:34.382Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-19",
+  "sourcePath": "docs/reports/team1/PAY_IAI_ONE_PROD_GATE_STATUS_2026-04-19.md",
+  "sourcePresent": true,
+  "overallPass": false,
+  "unmetSignals": [
+    "checkout_url_non_null",
+    "payment_link_id_non_null",
+    "no_214",
+    "production_gate_green"
+  ],
+  "checks": [
+    {
+      "signal": "attempt_after_2026_04_19",
+      "present": true,
+      "pass": true,
+      "value": "PASS"
+    },
+    {
+      "signal": "checkout_url_non_null",
+      "present": true,
+      "pass": false,
+      "value": "FAIL"
+    },
+    {
+      "signal": "payment_link_id_non_null",
+      "present": true,
+      "pass": false,
+      "value": "FAIL"
+    },
+    {
+      "signal": "no_214",
+      "present": true,
+      "pass": false,
+      "value": "FAIL"
+    },
+    {
+      "signal": "production_gate_green",
+      "present": true,
+      "pass": false,
+      "value": "FAIL"
+    }
+  ]
+}

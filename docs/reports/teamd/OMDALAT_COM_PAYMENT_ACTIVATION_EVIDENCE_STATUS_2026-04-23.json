@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-04-23T06:06:15.659Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-23",
+  "evidencePath": "docs/reports/teamd/OMDALAT_COM_PAYMENT_ACTIVATION_EVIDENCE_2026-04-23.json",
+  "gatePath": "docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-04-23.md",
+  "activationEvidenceComplete": false,
+  "checks": [
+    {
+      "name": "evidence_json_object",
+      "pass": true,
+      "details": "Evidence is a JSON object."
+    },
+    {
+      "name": "domain_locked_to_omdalat",
+      "pass": true,
+      "details": "Evidence domain must be omdalat.com."
+    },
+    {
+      "name": "intake_row_locked",
+      "pass": true,
+      "details": "Evidence must refer to SITE-INTAKE-104."
+    },
+    {
+      "name": "legal_owner_locked_to_thai_lam",
+      "pass": true,
+      "details": "Legal owner must be locked to Công ty TNHH SX - TM - DV Thai Lam."
+    },
+    {
+      "name": "receiver_locked_to_thai_lam_acb",
+      "pass": true,
+      "details": "Receiver assignment must be ACTIVE_NOW with recv_vnd_thailam_acb."
+    },
+    {
+      "name": "required_mailboxes_present",
+      "pass": true,
+      "details": "All required omdalat.com mailbox identities are represented."
+    },
+    {
+      "name": "sender_policy_locked",
+      "pass": true,
+      "details": "Sender policy must use pay@, billing@, support@, and forbid noreply as payment sender."
+    },
+    {
+      "name": "runtime_bindings_represented",
+      "pass": true,
+      "details": "All required runtime bindings are represented."
+    },
+    {
+      "name": "payment_proof_fields_represented",
+      "pass": true,
+      "details": "Provider ref, checkout/session ref, messageId, D1/canonical row, and inbox proof fields must be represented."
+    },
+    {
+      "name": "no_ready_for_live_while_gate_locked_or_evidence_missing",
+      "pass": true,
+      "details": "Evidence does not claim live readiness before gate and evidence are complete."
+    }
+  ],
+  "liveClaimBlocked": true,
+  "mailboxEvidenceComplete": true,
+  "overallPass": true,
+  "paymentEvidenceComplete": false,
+  "payGateLocked": true,
+  "payGateState": "LOCK_RETAINED_WITH_REASON",
+  "runtimeEvidenceComplete": false,
+  "status": "EXTERNAL_STEPS_PENDING"
+}

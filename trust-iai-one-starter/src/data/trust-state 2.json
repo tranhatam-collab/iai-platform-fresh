@@ -1,0 +1,556 @@
+{
+  "generated_at": "2026-04-26T06:37:18.206Z",
+  "build_commit": "33c9fe3",
+  "verification_policy": {
+    "stale_after_days": 30,
+    "phase": "phase_1_static",
+    "allowed_statuses": [
+      "verified",
+      "declared",
+      "unverified"
+    ],
+    "probe_method": "dig + curl HEAD",
+    "content_correctness_asserted": false
+  },
+  "domains": [
+    {
+      "fqdn": "iai.one",
+      "role": "root",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "104.21.8.122",
+          "172.67.139.112"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "home.iai.one",
+      "role": "root portal",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "172.67.139.112",
+          "104.21.8.122"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "dash.iai.one",
+      "role": "operator surface",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "104.21.8.122",
+          "172.67.139.112"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "noos.iai.one",
+      "role": "commerce surface",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "172.67.139.112",
+          "104.21.8.122"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "nft.iai.one",
+      "role": "verifiable asset surface",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "172.67.139.112",
+          "104.21.8.122"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "flow.iai.one",
+      "role": "product surface",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "104.21.8.122",
+          "172.67.139.112"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "app.iai.one",
+      "role": "product surface",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "172.67.139.112",
+          "104.21.8.122"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "developer.iai.one",
+      "role": "developer surface",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "172.67.139.112",
+          "104.21.8.122"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "docs.iai.one",
+      "role": "developer docs",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "104.21.8.122",
+          "172.67.139.112"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "api.flow.iai.one",
+      "role": "developer api",
+      "phase_1_scope": "not_verified",
+      "last_verified": "2026-04-26",
+      "status": "declared",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "Public proof is incomplete at the latest build-time probe. This item must not be presented as fully verified.",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "104.21.8.122",
+          "172.67.139.112"
+        ],
+        "http_status": 404,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "cios.iai.one",
+      "role": "internal operations",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "104.21.8.122",
+          "172.67.139.112"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "pay.iai.one",
+      "role": "payment control plane",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "172.67.139.112",
+          "104.21.8.122"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "mail.iai.one",
+      "role": "mail control plane",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "89.167.116.167"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    },
+    {
+      "fqdn": "trust.iai.one",
+      "role": "trust surface",
+      "phase_1_scope": "verified_public",
+      "last_verified": "2026-04-26",
+      "status": "verified",
+      "owner_team": "Trust PMO",
+      "public_visibility": "public",
+      "disclosure": "",
+      "probe": {
+        "dns_resolved": true,
+        "ip_records": [
+          "104.21.8.122",
+          "172.67.139.112"
+        ],
+        "http_status": 200,
+        "content_checked": false,
+        "stale_days": 0
+      },
+      "proof": {
+        "dns": "available",
+        "http": "available",
+        "source": "build_time_probe"
+      }
+    }
+  ],
+  "ai_disclosure": {
+    "public_statement_en": "This page may be AI-assisted and human-reviewed. Build evidence is available in the verification log.",
+    "public_statement_vi": "Trang này có thể có sự hỗ trợ của AI và đã được con người rà soát. Bằng chứng build được công bố trong nhật ký xác minh.",
+    "private_session_details_public": false,
+    "last_reviewed": "2026-04-26"
+  },
+  "limitations": [
+    {
+      "id": "LIM-001",
+      "title_en": "Build-time data can become stale",
+      "title_vi": "Dữ liệu build có thể trở nên cũ",
+      "first_reported": "2026-04-26",
+      "status": "declared"
+    },
+    {
+      "id": "LIM-002",
+      "title_en": "Phase 1 has no runtime monitoring",
+      "title_vi": "Phase 1 chưa có giám sát runtime",
+      "first_reported": "2026-04-26",
+      "status": "declared"
+    },
+    {
+      "id": "LIM-003",
+      "title_en": "Phase 1 does not yet provide user-level data export or deletion through API",
+      "title_vi": "Phase 1 chưa cung cấp xuất hoặc xoá dữ liệu cấp người dùng qua API",
+      "first_reported": "2026-04-26",
+      "status": "declared"
+    },
+    {
+      "id": "LIM-004",
+      "title_en": "Domain verification depends on last probe time",
+      "title_vi": "Xác minh domain phụ thuộc thời điểm probe gần nhất",
+      "first_reported": "2026-04-26",
+      "status": "declared"
+    },
+    {
+      "id": "LIM-005",
+      "title_en": "Content correctness of each domain is not asserted in Phase 1",
+      "title_vi": "Phase 1 không khẳng định tính đúng đắn của nội dung từng domain",
+      "first_reported": "2026-04-26",
+      "status": "declared"
+    }
+  ],
+  "teams": [
+    {
+      "team_id": "TEAM-TRUST-PMO",
+      "team_name": "Trust PMO",
+      "surface_scope": "trust.iai.one",
+      "responsibility_summary": "Maintains trust labels, disclosure policy, and stale review cadence.",
+      "status": "verified",
+      "public_contact_reference": "mailto:trust@iai.one",
+      "owner_declared": "Founder + Trust PMO",
+      "disclosure": "",
+      "last_reviewed_at": "2026-04-26"
+    },
+    {
+      "team_id": "TEAM-DEV-CORE",
+      "team_name": "Core Product Team",
+      "surface_scope": "app.iai.one, flow.iai.one, developer.iai.one",
+      "responsibility_summary": "Provides factual inputs for trust modules and keeps product claims evidence-aware.",
+      "status": "declared",
+      "public_contact_reference": "mailto:trust@iai.one",
+      "owner_declared": "Declared by Trust PMO",
+      "disclosure": "Cross-surface ownership details are summarized publicly in Phase 1.",
+      "last_reviewed_at": "2026-04-26"
+    }
+  ],
+  "channels": [
+    {
+      "channel_type": "email",
+      "label": "Trust mailbox",
+      "value": "trust@iai.one",
+      "status": "verified",
+      "scope": "Public trust mismatch and impersonation reporting",
+      "use_case": "Primary contact path for trust reports",
+      "public_evidence": "mailto:trust@iai.one",
+      "disclosure": "",
+      "last_reviewed_at": "2026-04-26"
+    },
+    {
+      "channel_type": "form",
+      "label": "Phase 1 trust report form",
+      "value": "/api/trust/report",
+      "status": "declared",
+      "scope": "Public report capture",
+      "use_case": "Fallback form path before full ticketing rollout",
+      "public_evidence": "/api/trust/report",
+      "disclosure": "Phase 1 does not provide full ticket workflow guarantees.",
+      "last_reviewed_at": "2026-04-26"
+    }
+  ],
+  "verification_methods": [
+    {
+      "method_id": "VM-001",
+      "title": "DNS + HTTP build-time probe",
+      "applies_to": "Official Domains",
+      "description": "Checks DNS A records and HTTPS HEAD response code at build time.",
+      "status": "verified",
+      "evidence_reference": "docs/verification-log.md",
+      "limitations": "Does not assert page content correctness.",
+      "disclosure": "",
+      "last_reviewed_at": "2026-04-26"
+    },
+    {
+      "method_id": "VM-002",
+      "title": "Public disclosure downgrade",
+      "applies_to": "All public trust claims",
+      "description": "Downgrades to Declared when proof is internal-only or incomplete.",
+      "status": "declared",
+      "evidence_reference": "docs/TRUST_IAI_ONE_PHASE1_FOUNDATION_FILES_2026-04-26/TRUST_CLAIM_STANDARD.md",
+      "limitations": "Requires manual review discipline by team owners.",
+      "disclosure": "Phase 1 review flow is partially manual.",
+      "last_reviewed_at": "2026-04-26"
+    }
+  ],
+  "go_links": [
+    {
+      "slug": "/go/trust-report",
+      "destination": "mailto:trust@iai.one",
+      "owner_scope": "Trust PMO",
+      "status": "declared",
+      "public_reason": "Stable public short-link governance is being rolled out in phases.",
+      "evidence_reference": "docs/TRUST_IAI_ONE_PHASE1_FOUNDATION_FILES_2026-04-26/TRUST_MODULE_DATA_CONTRACTS.md",
+      "disclosure": "Short-link router behavior is not fully audited in Phase 1.",
+      "last_reviewed_at": "2026-04-26"
+    }
+  ],
+  "reporting_paths": [
+    {
+      "report_type": "mismatch_or_impersonation",
+      "label": "Trust mismatch / impersonation report",
+      "submission_method": "mailto:trust@iai.one fallback or Phase 1 public form",
+      "scope": "Public mismatch, stale claim, impersonation, or trust page builder output issue",
+      "visibility": "public",
+      "status": "declared",
+      "privacy_note": "Do not include secrets or private account credentials in the report."
+    }
+  ],
+  "trust_pages": [
+    {
+      "page_id": "trust-iai-one-main",
+      "subject_type": "domain_surface",
+      "subject_name": "trust.iai.one",
+      "status": "verified",
+      "verification_methods": [
+        "VM-001",
+        "VM-002"
+      ],
+      "official_links": [
+        "https://trust.iai.one",
+        "https://iai.one"
+      ],
+      "public_contact": "trust@iai.one",
+      "disclosure": "",
+      "last_reviewed_at": "2026-04-26"
+    }
+  ],
+  "incidents": [],
+  "outside_phase_1_scope": [
+    {
+      "fqdn": "invoice.iai.one",
+      "role": "invoice control plane",
+      "reason": "dns_not_resolving",
+      "last_checked": "2026-04-26"
+    },
+    {
+      "fqdn": "cdn.iai.one",
+      "role": "cdn edge",
+      "reason": "dns_not_resolving",
+      "last_checked": "2026-04-26"
+    },
+    {
+      "fqdn": "flows.iai.one",
+      "role": "automation surface",
+      "reason": "dns_not_resolving",
+      "last_checked": "2026-04-26"
+    },
+    {
+      "fqdn": "web.iai.one",
+      "role": "web surface",
+      "reason": "dns_not_resolving",
+      "last_checked": "2026-04-26"
+    },
+    {
+      "fqdn": "root.iai.one",
+      "role": "root surface",
+      "reason": "dns_not_resolving",
+      "last_checked": "2026-04-26"
+    }
+  ]
+}

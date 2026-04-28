@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-04-17T16:34:02.809Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-17",
+  "overallPass": false,
+  "verdict": "NO-GO",
+  "checks": {
+    "requiredFiles": {
+      "pass": true,
+      "items": [
+        {
+          "file": "docs/runtime/TEAM2_NFT_LIVE_EVIDENCE_PACKET_2026.md",
+          "present": true
+        },
+        {
+          "file": "docs/reports/team4/TEAM4_NFT_PARTNER_OPS_EVIDENCE_PACKET_2026.md",
+          "present": true
+        },
+        {
+          "file": "docs/reports/team1/NFT_PHASE_C_TEAM1_INTAKE_REVIEW_QUEUE_2026-04-17.md",
+          "present": true
+        },
+        {
+          "file": "docs/reports/team1/NFT_TEAM1_READINESS_SYNC_2026-04-17.md",
+          "present": true
+        }
+      ]
+    },
+    "packets": {
+      "team2Status": "BLOCKED",
+      "team4Status": "READY_FOR_TEAM1_REVIEW",
+      "preconditionPass": false
+    },
+    "team2Evidence": {
+      "pass": false,
+      "missingCount": 7,
+      "failCount": 1,
+      "rawUrlPass": false
+    },
+    "team4OpsTrace": {
+      "pass": true,
+      "hasWrongAssetTrace": true,
+      "hasDenyMismatchTrace": true
+    },
+    "queueConsistency": {
+      "slotA": {
+        "packetStatus": "`BLOCKED`",
+        "intakeStatus": "RECEIVED_BLOCKED"
+      },
+      "slotB": {
+        "packetStatus": "`READY_FOR_TEAM1_REVIEW`",
+        "intakeStatus": "RECEIVED_READY_WAITING_ON_TEAM2"
+      }
+    }
+  },
+  "actionItems": [
+    "Team 2: move packet status to `READY_FOR_TEAM1_REVIEW` only after full proof chain closure.",
+    "Team 2: close checklist gaps (MISSING=7, FAIL=1).",
+    "Team 2: close raw protected URL exposure check to `PASS`."
+  ]
+}

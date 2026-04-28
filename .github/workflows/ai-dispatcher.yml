@@ -1,0 +1,49 @@
+name: AI Dispatcher
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Load AI system config
+        run: |
+          node -e "const fs=require('fs'); const cfg=JSON.parse(fs.readFileSync('docs/AI_AUTONOMOUS_CONFIG.json','utf8')); console.log('system='+cfg.system_name); console.log('first_activation='+cfg.first_activation);"
+
+      - name: Guard autonomous dispatcher
+        run: |
+          if [ "${{ vars.AI_AUTONOMOUS_ENABLED }}" != "true" ]; then
+            echo "AI_AUTONOMOUS_ENABLED is not true. Dispatcher scaffold is present but inactive."
+            exit 0
+          fi
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "OPENAI_API_KEY is missing. Dispatcher scaffold is present but inactive."
+            exit 0
+          fi
+
+      - name: Call AI planner
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          echo "AI dispatcher scaffold active."
+          echo "Issue number: ${ISSUE_NUMBER}"
+          echo "Issue title: ${ISSUE_TITLE}"
+          echo "Use docs/AI_TEAM_EXECUTION_SYSTEM.md + docs/PROJECT_CONTEXT_ENGINE.md + docs/AI_MODEL_ROUTING_POLICY.md here."
+

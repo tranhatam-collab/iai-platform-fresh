@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-04-25T18:07:18.116Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-26",
+  "target": {
+    "baseUrl": "https://pay.iai.one",
+    "endpointPath": "/health",
+    "targetUrl": "https://pay.iai.one/health"
+  },
+  "responses": {
+    "health": {
+      "url": "https://pay.iai.one/health",
+      "method": "GET",
+      "startedAt": "2026-04-25T18:07:17.651Z",
+      "endedAt": "2026-04-25T18:07:18.110Z",
+      "status": 200,
+      "ok": true,
+      "body": {
+        "ok": true,
+        "service": "pay.iai.one",
+        "environment": "production",
+        "api_base_url": "https://pay.iai.one",
+        "db_bound": true,
+        "providers_total": 6,
+        "status": "ok",
+        "mission": "Private payment orchestration for all IAI sites",
+        "priorities": [
+          "Vietnam domestic launch",
+          "Unified API",
+          "Multi-tenant safety"
+        ]
+      }
+    }
+  },
+  "extracted": {
+    "health_contract_shape": "legacy_or_unknown",
+    "shared_read_model_rollout_ready_for_shared_only": false,
+    "shared_upstream_active_read_mode": null,
+    "shared_upstream_release_gate_ready": false,
+    "shared_upstream_release_gate_reasons": null,
+    "shared_read_model_present": false,
+    "shared_upstream_runtime_present": false
+  },
+  "signals": {
+    "health_endpoint_ok": true,
+    "health_contract_exposes_shared_read_model": false,
+    "health_contract_exposes_shared_upstream_runtime": false,
+    "shared_read_model_ready_for_shared_only": false,
+    "shared_upstream_active_read_mode_shared_contract": false,
+    "shared_upstream_release_gate_ready": false
+  },
+  "unmetSignals": [
+    "health_contract_exposes_shared_read_model",
+    "health_contract_exposes_shared_upstream_runtime",
+    "shared_read_model_ready_for_shared_only",
+    "shared_upstream_active_read_mode_shared_contract",
+    "shared_upstream_release_gate_ready"
+  ]
+}

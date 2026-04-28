@@ -1,0 +1,619 @@
+# MASTER_DEV_EXECUTION_PROTOCOL_2026
+## Universal Development Execution Protocol
+## Version 1.0
+## Status: LOCKED
+## Scope: Applies to all projects, all teams, all AI systems, all repositories in this workspace
+## Required by: Founder / Product / PM / Dev / Design / Content / QA / AI / Codex / Automation
+## Canonical source imported from: `/Users/tranhatam/Documents/Devnewproject/MASTER_DEV_EXECUTION_PROTOCOL_2026.md`
+## Adopted into repo docs: 2026-04-18
+
+---
+
+## 0. Non-negotiable statement
+
+This file must be read before any work begins.
+
+No human, AI, agent, Codex session, contractor, or automation is allowed to:
+- skip this file
+- override this file silently
+- invent its own workflow
+- start coding before understanding this file
+- claim progress without following this file
+
+If any instruction, prototype, code change, design change, content change, or release plan conflicts with this file, this file wins.
+
+---
+
+## 1. Core purpose
+
+This protocol exists to:
+- reduce chaos
+- reduce repeated mistakes
+- reduce founder overload
+- reduce hidden assumptions
+- reduce shallow reporting
+- reduce random AI behavior
+- create one shared execution language
+- make quality predictable
+- make progress visible
+- make failure visible early
+
+This protocol defines how to build.
+Project specs define what to build.
+
+---
+
+## 2. Root principles
+
+All work must follow these principles:
+- clarity before speed
+- structure before output
+- truth before appearance
+- completion before expansion
+- consistency before creativity
+- systems before heroics
+- reporting is part of the work
+- no hidden assumptions
+- no silent deviation
+- founder calm is a system goal
+
+---
+
+## 3. What this file controls
+
+This file governs:
+- project start
+- planning
+- task breakdown
+- architecture
+- naming
+- language
+- content
+- design
+- coding
+- testing
+- QA
+- release
+- reporting
+- AI usage
+- team coordination
+- escalation
+- documentation
+- handoff
+- version control behavior
+- acceptance logic
+
+---
+
+## 4. Universal execution order
+
+Every project must move through the same order:
+1. Understand
+2. Clarify
+3. Lock
+4. Plan
+5. Build
+6. Verify
+7. Report
+8. Release
+9. Review
+
+Hard rule:
+- no team may skip from Stage 1 directly to Stage 5
+
+---
+
+## 5. Mandatory startup checklist for any task
+
+Before starting any task, the responsible human or AI must answer:
+1. What exactly is the task?
+2. Why does this task exist?
+3. Which project does it belong to?
+4. What system role does it serve?
+5. What is in scope?
+6. What is out of scope?
+7. What files or systems will be affected?
+8. What standard documents govern this task?
+9. What does "done" mean?
+
+If these are not answered, the task is not ready.
+
+---
+
+## 6. Project start protocol
+
+No project or subproject may begin without a minimum foundation pack:
+- `README.md`
+- `PROJECT_MASTER_SPEC.md`
+- `LANGUAGE_CODEX.md`
+- `UI_COPY_REGISTRY.md` if UI exists
+- `INFORMATION_ARCHITECTURE.md` if pages, menus, flows, or modules exist
+- `CMS_SCHEMA.md` if structured content exists
+- `QA_CHECKLIST.md`
+- `RELEASE_PROTOCOL.md`
+
+The categories above cannot disappear.
+
+---
+
+## 7. AI, Codex, and automation rules
+
+Any AI or automated agent must:
+- read before acting
+- not invent architecture, naming, tone, page roles, SEO patterns, legal copy, API shapes, or workflows without explicit request
+- not quietly rewrite core meaning
+- not hard-code public copy where centralized content is required
+- not claim false completion
+- declare assumptions
+- obey the language codex and banned words rules
+- finish the requested layer before opening unrelated work
+- say when something is uncertain
+- produce implementation-ready output
+
+AI output must be labeled as one of:
+- Draft
+- Structured Draft
+- Ready for Review
+- Implementation Ready
+
+If a request breaks system rules or introduces chaos, AI must refuse or correct direction.
+
+---
+
+## 8. Human team rules
+
+All human teams must:
+- work from current locked documents
+- read, clarify, lock, then build
+- report scope changes explicitly
+- report blockers immediately
+- avoid cosmetic progress theater
+- escalate only with context, options, recommendation, and consequence
+- search the repo before asking
+- mark partial layers clearly
+- respect naming systems
+- avoid one-off patterns unless converted into standard
+
+---
+
+## 9. Document hierarchy
+
+When documents conflict, this priority order applies:
+1. `MASTER_DEV_EXECUTION_PROTOCOL_2026.md`
+2. founder-locked instruction file for that project
+3. project master spec
+4. language and governance files
+5. UI / content / SEO / CMS files
+6. task-level tickets
+7. temporary comments or chat discussions
+
+Temporary chat does not override locked docs unless explicitly stated.
+
+---
+
+## 10. File, folder, and naming discipline
+
+Recommended root structure:
+
+```txt
+/docs/
+/content/
+/src/
+/public/
+/data/
+/scripts/
+/tests/
+/reports/
+README.md
+PROJECT_MASTER_SPEC.md
+MASTER_DEV_EXECUTION_PROTOCOL_2026.md
+```
+
+Rules:
+- do not scatter important rules across random folders
+- do not create duplicate sources of truth
+- do not create ambiguous filenames
+- every important filename must explain its purpose
+
+Names must be:
+- clear
+- stable
+- descriptive
+- reusable
+
+Avoid:
+- `final-final-v2`
+- `new-homepage-real`
+- `fixed-copy-latest`
+- `temp-page`
+- `draft2-actual`
+
+---
+
+## 11. Language, UI, design, and content rules
+
+Every project with visible language must define:
+- source-of-truth language
+- translation rule
+- banned words
+- title/meta rules
+- UI text source
+- bilingual display rule
+
+All UI text must be:
+- sourced from a shared registry or content file
+- consistent
+- short
+- meaningful
+- non-random
+
+Do not hard-code by default:
+- menu labels
+- buttons
+- CTA text
+- form labels
+- empty states
+- error states
+- badges
+- footer copy
+- metadata text
+
+Design must:
+- clarify the system
+- reduce cognitive load
+- preserve hierarchy
+- increase trust
+
+Content must:
+- answer a real role in the system
+- fit a defined page type
+- follow page grammar
+- match the language codex
+- support search and trust goals
+
+---
+
+## 12. Architecture and task breakdown rules
+
+Before code implementation, architecture must answer:
+- what are the main entities?
+- what are the main flows?
+- what data exists?
+- what states exist?
+- what permissions exist?
+- what is public?
+- what is internal?
+- what is manual?
+- what is automated?
+- what is stable?
+- what may change later?
+
+Every meaningful feature must be broken into:
+1. purpose
+2. user role
+3. business/system role
+4. UI surface
+5. data structure
+6. logic
+7. error states
+8. QA conditions
+9. done criteria
+
+---
+
+## 13. Definition of done and status system
+
+A task is only done when all are true:
+- scope is completed
+- naming is correct
+- structure matches the project spec
+- language matches the codex
+- UI copy matches the registry
+- code is maintainable
+- QA checklist passes
+- no critical blocker is hidden
+- report is written
+- next dependency is clear
+
+If one of these is missing, the task is not done.
+
+Approved statuses only:
+- Planned
+- In Progress
+- In Review
+- Blocked
+- Ready for QA
+- Ready for Release
+- Released
+- Archived
+
+---
+
+## 14. Reporting and escalation protocol
+
+Every daily or work-unit report must use this structure:
+1. What was completed
+2. What is in progress
+3. What is blocked
+4. What changed
+5. What is next
+6. What decision is needed
+
+No vague reports.
+No filler.
+No "almost done."
+
+Escalations must use:
+1. Context
+2. Current issue
+3. What has already been checked
+4. Options
+5. Recommended option
+6. Consequence of delay
+7. Required decision
+
+Never escalate raw confusion.
+
+---
+
+## 15. QA and release protocol
+
+QA starts at design, content, structure, and logic.
+
+QA must check:
+- function
+- language
+- design consistency
+- SEO correctness
+- content role clarity
+- responsive behavior
+- performance
+- internal links
+- metadata
+- trust/legal presence where needed
+
+Nothing goes live without:
+1. structure check
+2. language check
+3. UI check
+4. SEO check
+5. link check
+6. performance check
+7. report
+8. rollback awareness
+
+Every release must have:
+- version note
+- changed items
+- known limitations
+- next milestone
+
+---
+
+## 16. Change control, SEO, i18n, media, CMS, and trust rules
+
+Written update required when any of these change:
+- project role
+- information architecture
+- language system
+- CMS schema
+- URL structure
+- design system
+- permissions
+- deployment behavior
+- release strategy
+
+Every public project must define:
+- search role
+- core pages
+- metadata rules
+- canonical rules
+- structured data rules
+- image SEO rules
+- internal link rules
+- sitemap rules
+- trust pages
+
+If bilingual or multilingual, define:
+- source-of-truth language
+- display default language
+- browser behavior
+- manual override priority
+- hreflang logic
+- route logic
+- metadata per language
+- internal linking per language
+
+Media must:
+- add meaning
+- use clear filenames
+- include alt text
+- include OG strategy
+- keep URLs stable
+
+CMS must:
+- enforce structure
+- prevent chaos
+- support scale
+- support multilingual logic
+- support metadata completeness
+
+Every public-facing project must define trust:
+- what data is collected
+- why it is collected
+- where it goes
+- what is public
+- what is private
+- how errors are handled
+- what legal/trust pages exist
+
+---
+
+## 17. Handoff and acceptance protocol
+
+No task may be handed off without a structured handoff.
+
+Every handoff must include:
+- what was built
+- where it lives
+- how it works
+- what is included
+- what is not included
+- known issues
+- what to test
+- what is next
+
+Locked handoff format:
+
+```txt
+## HANDOFF
+### 1. Scope
+### 2. Location
+### 3. Implementation Summary
+### 4. Completed
+### 5. Not Included
+### 6. Known Issues
+### 7. Test Instructions
+### 8. Next Steps
+```
+
+Acceptance states only:
+- Accepted
+- Accepted with notes
+- Rejected
+- Needs revision
+
+Nothing goes live without:
+- handoff
+- QA
+- acceptance
+
+---
+
+## 18. Daily operating rules
+
+Before daily work starts, each person or AI must answer:
+1. What exactly am I working on today?
+2. Which project does it belong to?
+3. Which file or module does it affect?
+4. What does done look like for this task?
+5. What document defines how this must be done?
+
+Daily priority order:
+1. fix broken or blocked items
+2. complete in-progress tasks
+3. start new tasks
+
+Task sequence every day:
+1. understand
+2. clarify
+3. implement
+4. self-check
+5. prepare report
+
+Daily end state:
+- all work is completed, in progress, or blocked
+- report is written
+- next step is clear
+- no hidden assumption remains
+
+---
+
+## 19. Project reporting and weekly rhythm
+
+Suggested weekly cycle:
+- Day 1: review + plan
+- Day 2-4: focused build work
+- Day 5: QA + documentation + reporting
+- Day 6: refinement + low-risk fixes + backlog cleanup
+- Day 7: rest or async review only
+
+Each serious project should maintain:
+- `/docs/PROJECT_MASTER_SPEC.md`
+- `/docs/LANGUAGE_AND_SEO_GOVERNANCE.md`
+- `/docs/UI_COPY_REGISTRY.md`
+- `/docs/INFORMATION_ARCHITECTURE.md`
+- `/docs/CMS_SCHEMA.md`
+- `/docs/QA_CHECKLIST.md`
+- `/docs/RELEASE_PROTOCOL.md`
+- `/reports/WEEKLY_STATUS.md`
+- `/reports/DECISION_LOG.md`
+- `/reports/RISK_REGISTER.md`
+
+Decision log entries must capture:
+- date
+- decision
+- why
+- who made it
+- what changed because of it
+
+Risk registers must track:
+- risk name
+- severity
+- likelihood
+- owner
+- mitigation
+- current status
+
+---
+
+## 20. When to stop, improve, or reject work
+
+Stop work and report immediately if:
+- the task conflicts with locked docs
+- required source files are missing
+- project role becomes unclear
+- naming is drifting
+- scope silently doubles
+- the team is building on assumption only
+- AI output is clearly untrustworthy
+- critical trust/legal/SEO structure is missing
+
+You may propose improvements only after:
+- current standards are understood
+- current structure is respected
+- the improvement is concrete
+- the tradeoff is explained
+- the proposal is clearly labeled as a proposal
+
+Absolute prohibitions:
+- starting work without reading the protocol
+- claiming completion without QA and reporting
+- inventing naming systems mid-project
+- hard-coding public copy when a content source is required
+- shipping placeholder pages as if finished
+- using hype language against the codex
+- silently changing route structure
+- treating the founder as the documentation system
+- hiding blockers
+- rewriting core meaning under the label of optimization
+
+---
+
+## 21. Final execution command
+
+Before any work begins, every participant must actively ask:
+
+Does this reduce chaos, increase clarity, and move the project toward a real finished state?
+
+If the answer is no, the action must be stopped, rewritten, or rejected.
+
+---
+
+## 22. Final system statement
+
+This protocol exists so that:
+- teams can work independently without fragmentation
+- AI can assist without causing drift
+- projects can scale without losing structure
+- reporting can stay honest
+- quality can remain stable
+- the founder can stay calm and in control
+
+One-sentence rule:
+
+If a process, task, feature, page, or report cannot answer:
+
+Why does this exist, and how does it reduce future confusion?
+
+it is incomplete.

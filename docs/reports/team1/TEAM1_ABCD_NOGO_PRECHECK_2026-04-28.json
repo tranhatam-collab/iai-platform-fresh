@@ -1,0 +1,119 @@
+{
+  "generatedAt": "2026-04-28T06:39:53.152Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-04-28",
+  "overallPass": false,
+  "packetResults": [
+    {
+      "key": "teamA",
+      "label": "Team A / developer.iai.one",
+      "path": "docs/release-evidence/developer.iai.one/DEVELOPER_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+      "present": true,
+      "todoCount": 0,
+      "fields": {
+        "commitRef": "INFERRED_PENDING_OWNER_COMMIT_REF",
+        "targetEnvironment": "INFERRED_PENDING_OWNER_TARGET_ENV",
+        "ownerSignoff": "PENDING",
+        "finalStatus": "BLOCKED_PENDING_OWNER_EVIDENCE"
+      },
+      "checks": {
+        "noTodo": true,
+        "commitRef": true,
+        "targetEnvironment": true,
+        "ownerSignoff": false,
+        "finalStatus": false
+      },
+      "pass": false
+    },
+    {
+      "key": "teamB_cdn",
+      "label": "Team B / cdn.iai.one",
+      "path": "docs/release-evidence/cdn.iai.one/CDN_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+      "present": true,
+      "todoCount": 0,
+      "fields": {
+        "commitRef": "INFERRED_PENDING_OWNER_COMMIT_REF",
+        "targetEnvironment": "INFERRED_PENDING_OWNER_TARGET_ENV",
+        "ownerSignoff": "PENDING",
+        "finalStatus": "BLOCKED_PENDING_OWNER_EVIDENCE"
+      },
+      "checks": {
+        "noTodo": true,
+        "commitRef": true,
+        "targetEnvironment": true,
+        "ownerSignoff": false,
+        "finalStatus": false
+      },
+      "pass": false
+    },
+    {
+      "key": "teamB_flows",
+      "label": "Team B / flows.iai.one",
+      "path": "docs/release-evidence/flows.iai.one/FLOWS_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+      "present": true,
+      "todoCount": 0,
+      "fields": {
+        "commitRef": "INFERRED_PENDING_OWNER_COMMIT_REF",
+        "targetEnvironment": "INFERRED_PENDING_OWNER_TARGET_ENV",
+        "ownerSignoff": "PENDING",
+        "finalStatus": "BLOCKED_PENDING_OWNER_EVIDENCE"
+      },
+      "checks": {
+        "noTodo": true,
+        "commitRef": true,
+        "targetEnvironment": true,
+        "ownerSignoff": false,
+        "finalStatus": false
+      },
+      "pass": false
+    },
+    {
+      "key": "teamC",
+      "label": "Team C / cios.iai.one",
+      "path": "docs/release-evidence/cios.iai.one/CIOS_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+      "present": true,
+      "todoCount": 0,
+      "fields": {
+        "commitRef": "INFERRED_PENDING_OWNER_COMMIT_REF",
+        "targetEnvironment": "INFERRED_PENDING_OWNER_TARGET_ENV",
+        "ownerSignoff": "PENDING",
+        "finalStatus": "BLOCKED_PENDING_OWNER_EVIDENCE"
+      },
+      "checks": {
+        "noTodo": true,
+        "commitRef": true,
+        "targetEnvironment": true,
+        "ownerSignoff": false,
+        "finalStatus": false
+      },
+      "pass": false
+    }
+  ],
+  "teamBEvidence": {
+    "present": true,
+    "path": "docs/reports/team1/TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_2026-04-23.json",
+    "checks": {
+      "cdnRefsComplete": false,
+      "flowsRefsComplete": false
+    },
+    "missing": {
+      "cdn": [
+        "deploy_log_ref",
+        "rule_snapshot_ref",
+        "cache_header_proof_ref",
+        "purge_rollback_note_ref",
+        "asset_header_proof_ref"
+      ],
+      "flows": [
+        "route_map_production_ref",
+        "runtime_production_ref",
+        "screenshot_production_ref"
+      ]
+    }
+  },
+  "teamCRuntime": {
+    "present": true,
+    "path": "docs/reports/team1/TEAMC_CIOS_REVIEW_CLOSURE_STATUS_2026-04-28.json",
+    "reviewClosureReady": false
+  }
+}
