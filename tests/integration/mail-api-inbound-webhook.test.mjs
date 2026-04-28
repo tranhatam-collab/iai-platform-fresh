@@ -407,6 +407,161 @@ test("file-backed evidence sink persists records across instances", async () => 
   }
 });
 
+test("dedup: provider retry with same body returns 202 with replay flag and original evidence_id", async () => {
+  const sink = createInMemoryInboundWebhookEvidenceSink();
+  const ts = 1_700_000_500;
+  const handler = createInboundWebhookHandler({
+    resolveSecret: () => SECRET,
+    nowSeconds: () => ts,
+    evidenceSink: sink
+  });
+
+  const body = JSON.stringify({ provider_event_id: "evt_dedup_same", kind: "delivered" });
+  const sig = sign(SECRET, ts, body);
+
+  // First delivery.
+  const firstRes = makeFakeResponse();
+  await handler(
+    makeFakeRequest({
+      method: "POST",
+      url: "/v1/webhooks/inbound",
+      headers: {
+        [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
+        [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig,
+        "content-type": "application/json"
+      },
+      body
+    }),
+    firstRes,
+    "req_dedup_first"
+  );
+  assert.equal(firstRes.statusCode, 202);
+  const firstPayload = JSON.parse(firstRes.body);
+  assert.equal(firstPayload.data.replay, undefined);
+  const originalEvidenceId = firstPayload.data.evidence_id;
+  assert.ok(originalEvidenceId);
+
+  // Provider retry: identical body + signature.
+  const retryRes = makeFakeResponse();
+  await handler(
+    makeFakeRequest({
+      method: "POST",
+      url: "/v1/webhooks/inbound",
+      headers: {
+        [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
+        [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig,
+        "content-type": "application/json"
+      },
+      body
+    }),
+    retryRes,
+    "req_dedup_retry"
+  );
+  assert.equal(retryRes.statusCode, 202);
+  const retryPayload = JSON.parse(retryRes.body);
+  assert.equal(retryPayload.data.replay, true);
+  assert.equal(retryPayload.data.replay_of, originalEvidenceId);
+  assert.equal(retryPayload.data.evidence_id, originalEvidenceId);
+  // Sink must still have only 1 record (no duplicate row).
+  assert.equal(sink.list().length, 1);
+});
+
+test("dedup: same provider_event_id with mutated body returns 409 conflict and records rejection", async () => {
+  const sink = createInMemoryInboundWebhookEvidenceSink();
+  const ts = 1_700_000_600;
+  const handler = createInboundWebhookHandler({
+    resolveSecret: () => SECRET,
+    nowSeconds: () => ts,
+    evidenceSink: sink
+  });
+
+  const body1 = JSON.stringify({ provider_event_id: "evt_dedup_conflict", kind: "delivered" });
+  const sig1 = sign(SECRET, ts, body1);
+  await handler(
+    makeFakeRequest({
+      method: "POST",
+      url: "/v1/webhooks/inbound",
+      headers: {
+        [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
+        [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig1,
+        "content-type": "application/json"
+      },
+      body: body1
+    }),
+    makeFakeResponse(),
+    "req_conflict_first"
+  );
+
+  const body2 = JSON.stringify({ provider_event_id: "evt_dedup_conflict", kind: "bounced" });
+  const sig2 = sign(SECRET, ts, body2);
+  const conflictRes = makeFakeResponse();
+  await handler(
+    makeFakeRequest({
+      method: "POST",
+      url: "/v1/webhooks/inbound",
+      headers: {
+        [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
+        [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig2,
+        "content-type": "application/json"
+      },
+      body: body2
+    }),
+    conflictRes,
+    "req_conflict_second"
+  );
+  assert.equal(conflictRes.statusCode, 409);
+  const conflictPayload = JSON.parse(conflictRes.body);
+  assert.equal(conflictPayload.error.code, "MAIL_WEBHOOK_EVENT_ID_CONFLICT");
+  assert.ok(conflictPayload.error.details.existing_evidence_id);
+  // Conflict must be auditable: 2 rows in sink (1 valid + 1 rejection).
+  const records = sink.list();
+  assert.equal(records.length, 2);
+  assert.equal(records[0].signatureValid, true);
+  assert.equal(records[1].rejectionCode, "MAIL_WEBHOOK_EVENT_ID_CONFLICT");
+  assert.equal(records[1].signatureValid, false);
+});
+
+test("dedup: missing provider_event_id always records new evidence (no dedup possible)", async () => {
+  const sink = createInMemoryInboundWebhookEvidenceSink();
+  const ts = 1_700_000_700;
+  const handler = createInboundWebhookHandler({
+    resolveSecret: () => SECRET,
+    nowSeconds: () => ts,
+    evidenceSink: sink
+  });
+
+  // Body without provider_event_id field.
+  const body = JSON.stringify({ kind: "delivered" });
+  const sig = sign(SECRET, ts, body);
+
+  for (let i = 0; i < 2; i++) {
+    const res = makeFakeResponse();
+    await handler(
+      makeFakeRequest({
+        method: "POST",
+        url: "/v1/webhooks/inbound",
+        headers: {
+          [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
+          [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sig,
+          "content-type": "application/json"
+        },
+        body
+      }),
+      res,
+      `req_no_id_${i}`
+    );
+    assert.equal(res.statusCode, 202);
+    const payload = JSON.parse(res.body);
+    assert.equal(payload.data.provider_event_id, null);
+    assert.equal(payload.data.replay, undefined);
+  }
+
+  // Both calls must produce distinct evidence rows.
+  const records = sink.list();
+  assert.equal(records.length, 2);
+  assert.notEqual(records[0].evidenceId, records[1].evidenceId);
+});
+
 // --- helpers --------------------------------------------------------------
 
 function makeFakeRequest({ method, url, headers, body }) {

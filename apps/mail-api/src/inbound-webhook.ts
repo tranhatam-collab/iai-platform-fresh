@@ -40,7 +40,8 @@ export type InboundWebhookRejectionCode =
   | "MAIL_WEBHOOK_TIMESTAMP_OUT_OF_WINDOW"
   | "MAIL_WEBHOOK_SIGNATURE_MISSING"
   | "MAIL_WEBHOOK_SIGNATURE_INVALID"
-  | "MAIL_WEBHOOK_BODY_INVALID";
+  | "MAIL_WEBHOOK_BODY_INVALID"
+  | "MAIL_WEBHOOK_EVENT_ID_CONFLICT";
 
 export interface InboundWebhookEvidenceSink {
   recordEvidence(record: InboundWebhookEvidenceRecord): Promise<void> | void;
@@ -573,6 +574,63 @@ export function createInboundWebhookHandler(
       providerEventId: verifyResult.providerEventId,
       rejectionCode: null
     };
+
+    // Dedup: if provider_event_id is present and we have already recorded a
+    // signature-valid record for it, treat this as a provider retry.
+    //   - Same body hash  -> idempotent replay: return 202 with original
+    //                        evidence_id and `replay=true`. Do NOT append a
+    //                        new evidence row (avoids unbounded duplication).
+    //   - Different body  -> 409 conflict: same id with mutated content is
+    //                        a provider bug; surface explicitly so callers
+    //                        can investigate. Record a rejection row so ops
+    //                        can audit.
+    // If provider_event_id is absent, dedup is impossible — accept and record
+    // as a fresh event (caller-side at-least-once semantics).
+    if (verifyResult.providerEventId && evidenceSink.findByProviderEventId) {
+      const existing = evidenceSink.findByProviderEventId(verifyResult.providerEventId);
+      if (existing && existing.signatureValid) {
+        if (existing.bodyHashSha256 === verifyResult.bodyHashSha256) {
+          writeJson(response, 202, {
+            ok: true,
+            data: {
+              evidence_id: existing.evidenceId,
+              provider_event_id: verifyResult.providerEventId,
+              received_at: existing.receivedAt,
+              replay: true,
+              replay_of: existing.evidenceId
+            },
+            meta: { request_id: requestId }
+          });
+          return { handled: true };
+        }
+        // Same id, different body — record + reject.
+        const conflictRecord: InboundWebhookEvidenceRecord = {
+          receivedAt,
+          evidenceId,
+          signatureValid: false,
+          timestampSkewSeconds: nowSeconds() - verifyResult.timestamp,
+          bodyByteLength: Buffer.byteLength(raw, "utf8"),
+          bodyHashSha256: verifyResult.bodyHashSha256,
+          providerEventId: verifyResult.providerEventId,
+          rejectionCode: "MAIL_WEBHOOK_EVENT_ID_CONFLICT"
+        };
+        await evidenceSink.recordEvidence(conflictRecord);
+        writeJson(response, 409, {
+          ok: false,
+          error: {
+            code: "MAIL_WEBHOOK_EVENT_ID_CONFLICT",
+            message: `provider_event_id=${verifyResult.providerEventId} already recorded with a different body hash.`,
+            details: {
+              existing_evidence_id: existing.evidenceId,
+              existing_body_hash_sha256: existing.bodyHashSha256
+            }
+          },
+          meta: { request_id: requestId, evidence_id: evidenceId }
+        });
+        return { handled: true };
+      }
+    }
+
     await evidenceSink.recordEvidence(record);
 
     writeJson(response, 202, {

@@ -90,10 +90,11 @@ the 256 KiB cap.
 
 | Code | When | Provider action |
 |---|---|---|
-| `202 Accepted` | Signature valid, evidence persisted. | Mark delivery success. |
+| `202 Accepted` | Signature valid, evidence persisted. (See dedup note in §9: a retry with same `provider_event_id` + same body returns `202` + `replay: true` + the **original** `evidence_id`.) | Mark delivery success. |
 | `400 Bad Request` | Body could not be read (e.g. premature stream close). | Retry with full body. |
 | `401 Unauthorized` | Missing or invalid signature, missing/invalid timestamp, or unparseable JSON body. | Stop retrying — verify secret + signing logic + JSON. |
 | `408 Request Timeout` | Timestamp outside replay window. | Resend with fresh timestamp; do not loop. |
+| `409 Conflict` | Same `provider_event_id` already recorded with a different body hash (`MAIL_WEBHOOK_EVENT_ID_CONFLICT`). | Investigate provider-side mutation; do not retry. |
 | `413 Payload Too Large` | Body > 256 KiB (`MAIL_WEBHOOK_BODY_INVALID`). | Strip raw email or send pointer URL instead. |
 | `503 Service Unavailable` | Receiver missing secret (mis-config). | Page the iai.one ops contact; do not retry blindly. |
 
@@ -285,11 +286,19 @@ under "Public smoke matrix re-run after swap".
   evidence and answers GET queries. Downstream wiring (alerting,
   routing, automated reply) is a future workstream and out of scope
   here.
-* No deduplication: if the provider retries with the same
-  `provider_event_id`, two evidence rows result. Receiver-side
-  dedup is on the roadmap; for now ops uses
-  `findByProviderEventId` (returns the **first** match) for happy
-  path lookup.
+* Deduplication (P9, shipped 2026-04-28 evening): if the provider
+  retries a delivery with the same `provider_event_id`:
+  * **Same body** (signature-valid, identical SHA-256 over body) →
+    handler returns `202` with the **original** `evidence_id` and
+    `replay: true` + `replay_of: <original_evidence_id>`. No new
+    evidence row is appended.
+  * **Different body** (same id, mutated payload) → handler returns
+    `409 MAIL_WEBHOOK_EVENT_ID_CONFLICT` with
+    `details.existing_evidence_id`. A rejection row IS appended for
+    auditability.
+  * **No `provider_event_id`** in body → dedup is impossible; every
+    request gets a fresh `evidence_id`. Provider should always send
+    a stable id.
 * No back-pressure: the handler is synchronous against the file
   sink. At the current 256 KiB cap and NDJSON write-once semantics,
   expected throughput is ≥ 200 req/s on the production VPS, well

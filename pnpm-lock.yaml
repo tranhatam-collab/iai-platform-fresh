@@ -18,6 +18,18 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  apps/app: {}
+
+  apps/dash: {}
+
+  apps/developer: {}
+
+  apps/docs: {}
+
+  apps/flow: {}
+
+  apps/home: {}
+
   apps/mail-api:
     dependencies:
       '@iai/mail-core':
@@ -38,6 +50,22 @@ importers:
       '@iai/mail-core':
         specifier: workspace:*
         version: link:../../packages/mail-core
+
+  apps/mail-worker:
+    dependencies:
+      '@iai/mail-core':
+        specifier: workspace:*
+        version: link:../../packages/mail-core
+
+  apps/nft: {}
+
+  apps/noos-web: {}
+
+  apps/pay: {}
+
+  apps/root: {}
+
+  apps/web: {}
 
   packages/config: {}
 
