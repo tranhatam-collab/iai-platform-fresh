@@ -73,12 +73,12 @@ founder_decisions:
 When this manifest + 6 evidence files all complete, AI Owner Pay+Email re-runs:
 
 ```bash
-# 1. Verify pay D1 readback matches provider_ref
-node scripts/pay-team-d-tranhatam-evidence-check.mjs --site=tramsaigon.com --date=2026-04-28
-# (note: existing checker is for tranhatam; tramsaigon equivalent will land when first evidence is ready)
+# 1. Verify tramsaigon.com provider/D1/mail/inbox evidence packet
+node scripts/pay-team-d-tramsaigon-evidence-check.mjs --date=2026-04-28
 
 # 2. Verify mail readback matches message_id chain
-# (D1 readback script TBD - will be authored when first real evidence lands)
+# The checker above keeps mail evidence blocked until mail-readback.json has all 4 Team D
+# core templates with message_id + delivered/sent/accepted final state.
 
 # 3. Promote intake board row SITE-INTAKE-112: FORM_IN_PROGRESS -> READY_FOR_LIVE
 # (manual edit `docs/PAY_IAI_ONE_SITE_PAYMENT_ACTIVATION_INTAKE_BOARD_2026.md` line 300)

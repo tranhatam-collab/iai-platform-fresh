@@ -50,6 +50,7 @@
     "report:pay-prod-gate": "node scripts/team1-pay-prod-gate-check.mjs",
     "report:pay-gate-loop": "node scripts/team1-pay-gate-loop.mjs",
     "report:pay-docs-integration": "node scripts/pay-docs-integration-check.mjs",
+    "report:tramsaigon-evidence": "node scripts/pay-team-d-tramsaigon-evidence-check.mjs",
     "report:team2-pay-prod-probe": "node scripts/team2-pay-prod-runtime-probe.mjs",
     "report:team5-web-kpi": "node scripts/team5-web-kpi-snapshot.mjs",
     "report:team5-web-kpi-delta": "node scripts/team5-web-kpi-delta.mjs",

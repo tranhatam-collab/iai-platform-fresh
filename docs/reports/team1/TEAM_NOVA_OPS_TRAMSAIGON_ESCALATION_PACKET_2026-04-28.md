@@ -128,7 +128,7 @@ These are tracked in row SITE-INTAKE-112 but TNO không escalate vì founder ph�
   ```bash
   ls -la docs/release-evidence/pay.iai.one/2026-04-28/tramsaigon.com/ | grep -v PENDING
   ```
-- Pay D1 readback (when available): `node scripts/pay-team-d-tranhatam-evidence-check.mjs --site=tramsaigon.com --date=2026-04-28` (note: script may need adaptation for tramsaigon — currently scoped to tranhatam; adapt when first evidence lands).
+- Tramsaigon evidence gate: `node scripts/pay-team-d-tramsaigon-evidence-check.mjs --date=2026-04-28`.
 
 ## 7) Close condition for this escalation packet
 
