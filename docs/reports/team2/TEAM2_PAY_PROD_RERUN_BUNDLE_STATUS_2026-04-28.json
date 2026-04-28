@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-04-28T12:00:40.412Z",
+  "generatedAt": "2026-04-28T15:07:47.879Z",
   "timezone": "Asia/Ho_Chi_Minh",
   "date": "2026-04-28",
   "status": "BLOCKED_PRECHECK",
-  "preflightOnly": true,
+  "preflightOnly": false,
   "skipTests": false,
   "preflight": {
     "authKeyHeaderName": null,
@@ -16,13 +16,13 @@
       },
       {
         "name": "tenant_code_explicit",
-        "pass": true,
-        "note": "tenant=vetuonglai"
+        "pass": false,
+        "note": "Missing TEAM2_PAY_GATE_TENANT_CODE."
       },
       {
         "name": "site_code_explicit",
-        "pass": true,
-        "note": "site=vetuonglai-member"
+        "pass": false,
+        "note": "Missing TEAM2_PAY_GATE_SITE_CODE."
       }
     ],
     "ready": false
@@ -81,6 +81,8 @@
   },
   "nextActions": [
     "Cấp key canonical cho probe nội bộ (`TEAM2_PAY_GATE_API_KEY` hoặc `TEAM2_PAY_GATE_SITE_KEY`).",
+    "Khóa `TEAM2_PAY_GATE_TENANT_CODE` cho site/domain đang rerun.",
+    "Khóa `TEAM2_PAY_GATE_SITE_CODE` cho site/domain đang rerun.",
     "Rerun checkout probe chỉ sau khi key/header canonical đã được owner xác nhận đúng contract.",
     "Đồng bộ deploy/runtime production để `/health` expose `shared_read_model` và `shared_upstream_runtime` đúng contract.",
     "Đóng các tín hiệu gate còn fail: auth_key_present, checkout_url_non_null, payment_link_id_non_null, no_214, production_gate_green, shared_read_model_ready_for_shared_only, shared_upstream_active_read_mode_shared_contract, shared_upstream_release_gate_ready."

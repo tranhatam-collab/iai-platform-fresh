@@ -1,5 +1,5 @@
 # TEAM_ADMIN_ALL_TEAMS_COMPLETION_STATUS_2026-04-28
-- Generated at: 2026-04-28T11:51:49.378Z
+- Generated at: 2026-04-28T15:07:48.277Z
 - Timezone: Asia/Ho_Chi_Minh
 - Gate state: BLOCKED_ON_PAY_PRODUCTION_GATE
 - Completion: 39%
@@ -42,7 +42,7 @@
 - Team B CDN/Flows production evidence complete: FAIL
 - Team B CDN/Flows checker overall pass: PASS
 - Universal bilingual live ready: FAIL
-- Universal bilingual pending surfaces: pay, dash, web, noos-web
+- Universal bilingual pending surfaces: noos-web
 - Team C review closure ready: FAIL
 - Pay docs integration pass: PASS
 - Domain verdict (developer reopen): PASS
@@ -64,7 +64,7 @@
 6. Team C must close CIOS packet issues: Vitest/local install repair and upstream npm test rerun, strict deployed smoke rerun with current URL + secrets.
 7. Team Email SMTP must close 5 evidence clusters before live-close: mailbox/alias truth, inbound routing truth, Gmail proof, Outlook proof, internal inbox proof.
 8. Team D must close tranhatam.com external activation evidence (mailbox/alias, runtime bindings, provider_ref, message_id, D1 row, inbox proof) before any READY_FOR_LIVE claim.
-9. Team C language lane must remove remaining hard-coded bilingual copy and metadata drift (pending surfaces: pay, dash, web, noos-web).
+9. Team C language lane must remove remaining hard-coded bilingual copy and metadata drift (pending surfaces: noos-web).
 10. Team C cios closure: Khôi phục sibling workspace ../cios.iai.one trước khi claim Team C closure.
 11. Team C cios closure: Điều tra `npm test` của ../cios.iai.one trong môi trường có DB/toolchain đúng hoặc thêm harness test phù hợp trước khi Team 1 dùng upstream suite làm proof.
 12. Team C cios closure: Rerun `node scripts/teamc-cios-strict-smoke-capture.mjs` và xử lý lỗi runtime theo artifact strict smoke mới.
@@ -92,10 +92,10 @@
 - CDN delta evidence: 2026-04-22 / docs/release-evidence/cdn.iai.one/CDN_IAI_ONE_DELTA_EVIDENCE_2026-04-22.md
 
 ## Git scope
-- Dirty files: 454
-- Out-of-scope files: 202
+- Dirty files: 13
+- Out-of-scope files: 1
 - Commit scope locked: FAIL
-- Out-of-scope sample: apps/dash/src/i18n.ts, apps/dash/src/render.ts, apps/nft/src/i18n.ts, apps/nft/src/render.ts, apps/noos-web/src/render.ts, apps/root/src/render.ts, content/en.json, content/vi.json
+- Out-of-scope sample: pnpm-lock.yaml
 
 ## Runbook
 - `pnpm report:team-admin-completion -- --date=YYYY-MM-DD`

@@ -1,14 +1,14 @@
 # TEAM2_PAY_PROD_RERUN_BUNDLE_STATUS_2026-04-28
-- Generated at: 2026-04-28T12:00:40.412Z
+- Generated at: 2026-04-28T15:07:47.879Z
 - Timezone: Asia/Ho_Chi_Minh
 - Status: `BLOCKED_PRECHECK`
-- Preflight only: `yes`
+- Preflight only: `no`
 - Skip tests: `no`
 
 ## Preflight
 - `auth_key_present`: `FAIL` — Missing canonical pay gate key. Set TEAM2_PAY_GATE_* or PAY_IAI_ONE_GATE_* or TNO_PAY_GATE_* variables.
-- `tenant_code_explicit`: `PASS` — tenant=vetuonglai
-- `site_code_explicit`: `PASS` — site=vetuonglai-member
+- `tenant_code_explicit`: `FAIL` — Missing TEAM2_PAY_GATE_TENANT_CODE.
+- `site_code_explicit`: `FAIL` — Missing TEAM2_PAY_GATE_SITE_CODE.
 
 ## Commands
 - no commands executed
@@ -40,6 +40,8 @@
 
 ## Next actions
 - Cấp key canonical cho probe nội bộ (`TEAM2_PAY_GATE_API_KEY` hoặc `TEAM2_PAY_GATE_SITE_KEY`).
+- Khóa `TEAM2_PAY_GATE_TENANT_CODE` cho site/domain đang rerun.
+- Khóa `TEAM2_PAY_GATE_SITE_CODE` cho site/domain đang rerun.
 - Rerun checkout probe chỉ sau khi key/header canonical đã được owner xác nhận đúng contract.
 - Đồng bộ deploy/runtime production để `/health` expose `shared_read_model` và `shared_upstream_runtime` đúng contract.
 - Đóng các tín hiệu gate còn fail: auth_key_present, checkout_url_non_null, payment_link_id_non_null, no_214, production_gate_green, shared_read_model_ready_for_shared_only, shared_upstream_active_read_mode_shared_contract, shared_upstream_release_gate_ready.

@@ -49,14 +49,29 @@ Sau khi owner ack, Team 2 chay:
 |---|---|---|---|---|---|
 | Lan 1 (sang) | 2026-04-28T~02:00Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Phat hanh packet goc + ping |
 | Lan 2 (chieu) | 2026-04-28T11:51Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Khong thay doi -> owner chua ack/deploy |
+| Lan 3 (toi) | 2026-04-28T15:07Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Sau ~3-13 gio, ket qua nhu cu — escalate founder |
 
-Hai lan re-run cach nhau ~10 gio van cho ket qua giong nhau:
-`auth_key_present=false`, `production_gate_green=false`,
+Ba lan re-run cach nhau (lan 1 -> 2 ~10 gio, lan 2 -> 3 ~3 gio) van cho
+ket qua byte-identical: `auth_key_present=false`, `production_gate_green=false`,
 `shared_*` tat ca van fail. Day la _bang chung khoa_ rang khoi
 khong phai van de transient hay timing — chinh xac la chua co owner
 action (cap key + deploy lai pay shared `/health` contract).
 
+## Escalation founder (2026-04-28 toi)
+
+Sau 3 lan re-run trong cung ngay khong co thay doi, dieu kien khoa
+khong the tu giai bang code. Founder can quyet:
+
+1. **Push owner cap key**: TEAM2_PAY_GATE_API_KEY phai bind cho probe noi bo
+   lay trang thai checkout (header `x-api-key`).
+2. **Push owner deploy pay shared `/health`**: contract `data.shared_read_model`
+   + `data.shared_upstream_runtime` da co san trong code; can owner deploy
+   phien ban moi cho `pay.iai.one` (tranh regression voi prod traffic 18 domain).
+
+Khong co 2 dieu nay, gate van LOCK. Code Team 1 + Team 2 da san sang
+re-run trong vong vai phut sau khi 2 dieu kien runtime duoc owner cap nhan.
+
 Hanh dong tiep theo (trong khi cho owner):
-- Mai sang re-run them 1 lan -> neu van khong doi, escalate cho founder.
+- Mai sang re-run them 1 lan -> neu van khong doi, founder push lan 2.
 - Khong tu y tao API key thay vi owner.
 - Khong tu y deploy pay shared contract — co the gay regression cho prod traffic.
