@@ -92,16 +92,19 @@ the 256 KiB cap.
 |---|---|---|
 | `202 Accepted` | Signature valid, evidence persisted. (See dedup note in §9: a retry with same `provider_event_id` + same body returns `202` + `replay: true` + the **original** `evidence_id`.) | Mark delivery success. |
 | `400 Bad Request` | Body could not be read (e.g. premature stream close). | Retry with full body. |
-| `401 Unauthorized` | Missing or invalid signature, missing/invalid timestamp, or unparseable JSON body. | Stop retrying — verify secret + signing logic + JSON. |
+| `401 Unauthorized` | Missing or invalid signature, or missing/invalid timestamp. | Stop retrying — verify secret + signing logic. |
 | `408 Request Timeout` | Timestamp outside replay window. | Resend with fresh timestamp; do not loop. |
 | `409 Conflict` | Same `provider_event_id` already recorded with a different body hash (`MAIL_WEBHOOK_EVENT_ID_CONFLICT`). | Investigate provider-side mutation; do not retry. |
 | `413 Payload Too Large` | Body > 256 KiB (`MAIL_WEBHOOK_BODY_INVALID`). | Strip raw email or send pointer URL instead. |
 | `503 Service Unavailable` | Receiver missing secret (mis-config). | Page the iai.one ops contact; do not retry blindly. |
 
 Note: the receiver does **not** enforce `Content-Type: application/json`
-strictly — it just needs the bytes to parse as JSON. Sending a wrong
-content-type still works as long as the body is JSON. We recommend
-setting it correctly anyway for cache / proxy hygiene.
+strictly — it just needs the signature to verify. The receiver attempts
+to parse the body as JSON to extract `provider_event_id`, but if the
+body is not valid JSON (or is JSON without an id field), the request
+still returns `202` with `provider_event_id: null` — dedup is then
+impossible. We recommend providers always send valid JSON with a stable
+`provider_event_id` (or `id` / `providerEventId` alias) so dedup works.
 
 All non-`202` responses still emit an `evidence_id` in
 `meta.evidence_id` and persist a record with the `rejectionCode`

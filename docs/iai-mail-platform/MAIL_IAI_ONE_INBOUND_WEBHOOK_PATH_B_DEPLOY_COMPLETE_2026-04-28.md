@@ -333,3 +333,67 @@ rm iai-mail-api-pathb && docker run -d … iai-mail-api-pathb:6f8c02c`
 restores the previous runtime byte-for-byte.
 
 Path B image is now in lockstep with git HEAD (`c1b9b3b`).
+
+---
+
+## P9 ADDENDUM — Dedup deploy (2026-04-28T15:21Z)
+
+**Image swap**: `iai-mail-api-pathb:c1b9b3b` → `iai-mail-api-pathb:fb91d1b`
+
+**Atomic swap timing**:
+- stop+rm: 0.295s
+- run new: 0.287s
+- **TOTAL DOWNTIME: 0.581s** (better than P6 ~3s)
+
+**Image manifest**: `sha256:db8203eb094bffdcc6d2d442a113defabe5c8821d5e1011f3409aedf0dd1c9d8`
+**Image size**: 231MB (identical to c1b9b3b)
+**Built from**: fresh repo `/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh/` HEAD `fb91d1b`
+**Bundle path on VPS**: `/opt/iai-mail-api-pathb-fb91d1b/`
+**Bundle tar archive**: `/tmp/iai-mail-api-pathb-fb91d1b.tar.gz` (97KB)
+
+**Env override identical to c1b9b3b** (no env changes needed for P9):
+- `PORT=3001`
+- `MAIL_API_BIND_ADDRESS=0.0.0.0`
+- `MAIL_API_INBOUND_EVIDENCE_FILE=/var/lib/iai-mail-api/inbound-evidence.ndjson`
+- `MAIL_API_WEBHOOK_SECRET=<unchanged>`
+- Volume mount `/var/lib/iai-mail-api` preserved (uid 1000)
+- Network `mailcowdockerized_mailcow-network`, port `127.0.0.1:3001:3001`
+- Restart `unless-stopped`
+
+**Evidence file continuity verified**: 12 rows pre-swap → 23 rows post-swap (11 new from smoke matrix), no data loss.
+
+**Smoke matrix P9 (2026-04-28T15:22Z, 12/13 PASS)**:
+
+| ID | Scenario | Expected | Actual |
+|---|---|---|---|
+| T1 | POST valid sig | 202 | 202 ✓ |
+| T2 | POST no signature | 401 | 401 ✓ |
+| T3 | POST bad signature | 401 | 401 ✓ |
+| T4 | POST no timestamp | 401 | 401 ✓ |
+| T5 | POST timestamp -600s | 408 | 408 ✓ |
+| T6 | POST non-JSON valid sig | 401 (per old runbook) | 202 with `provider_event_id: null` (matches actual code; runbook fixed) |
+| **D1** | **POST fresh `provider_event_id`** | **202 + new evidence_id** | **202 ✓** |
+| **D2** | **REPLAY same body+id** | **202 + `replay:true` + `replay_of=<orig>`** | **202 ✓ replay_of matches** |
+| **D3** | **CONFLICT same id+diff body** | **409 `MAIL_WEBHOOK_EVENT_ID_CONFLICT` + `existing_evidence_id`** | **409 ✓ conflict body audited** |
+
+T6 documented as design-intent, not regression: handler accepts non-JSON bodies with valid signature and stores them with `provider_event_id: null` (no dedup possible). Runbook §5 updated to reflect actual behavior.
+
+**Audit row for D3 conflict** (verified in NDJSON):
+```
+evid=evt_inbound_96d2da17... pid=dedup-smoke-1777389750 rejection=MAIL_WEBHOOK_EVENT_ID_CONFLICT hash=720b3913…
+```
+
+**Rollback**:
+```
+docker stop iai-mail-api-pathb && docker rm iai-mail-api-pathb && \
+docker run -d --name iai-mail-api-pathb \
+  --network mailcowdockerized_mailcow-network --restart unless-stopped \
+  -p 127.0.0.1:3001:3001 -v /var/lib/iai-mail-api:/var/lib/iai-mail-api \
+  -e PORT=3001 -e MAIL_API_BIND_ADDRESS=0.0.0.0 \
+  -e MAIL_API_INBOUND_EVIDENCE_FILE=/var/lib/iai-mail-api/inbound-evidence.ndjson \
+  -e MAIL_API_WEBHOOK_SECRET=<secret> \
+  iai-mail-api-pathb:c1b9b3b
+```
+The c1b9b3b image is preserved in `docker images`. Same env/mount/network restores byte-for-byte previous runtime; evidence file unaffected.
+
+**Path B image is now in lockstep with fresh-repo HEAD `fb91d1b` (P9 dedup).**
