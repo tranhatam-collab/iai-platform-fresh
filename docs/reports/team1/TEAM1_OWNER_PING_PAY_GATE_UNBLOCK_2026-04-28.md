@@ -50,12 +50,15 @@ Sau khi owner ack, Team 2 chay:
 | Lan 1 (sang) | 2026-04-28T~02:00Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Phat hanh packet goc + ping |
 | Lan 2 (chieu) | 2026-04-28T11:51Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Khong thay doi -> owner chua ack/deploy |
 | Lan 3 (toi) | 2026-04-28T15:07Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Sau ~3-13 gio, ket qua nhu cu — escalate founder |
+| Lan 4 (17:00 ICT loop) | 2026-04-28T16:10Z | 401 | legacy_or_unknown | BLOCKED_PRECHECK | Sau ~1h escalation packet TNO, van byte-identical — owner chua action |
 
-Ba lan re-run cach nhau (lan 1 -> 2 ~10 gio, lan 2 -> 3 ~3 gio) van cho
-ket qua byte-identical: `auth_key_present=false`, `production_gate_green=false`,
-`shared_*` tat ca van fail. Day la _bang chung khoa_ rang khoi
-khong phai van de transient hay timing — chinh xac la chua co owner
-action (cap key + deploy lai pay shared `/health` contract).
+Bon lan re-run cach nhau (lan 1 -> 2 ~10 gio, lan 2 -> 3 ~3 gio,
+lan 3 -> 4 ~1 gio) van cho ket qua byte-identical (chi khac
+`generatedAt` + idempotencyKey ngau nhien moi run): `auth_key_present=false`,
+`production_gate_green=false`, `shared_*` tat ca van fail. Day la
+_bang chung cung_ rang khoi khong phai van de transient hay timing —
+chinh xac la chua co owner action (cap key + deploy lai pay shared
+`/health` contract).
 
 ## Escalation founder (2026-04-28 toi)
 

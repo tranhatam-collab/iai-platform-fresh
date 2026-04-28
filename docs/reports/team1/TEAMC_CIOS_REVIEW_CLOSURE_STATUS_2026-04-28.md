@@ -1,5 +1,5 @@
 # TEAMC_CIOS_REVIEW_CLOSURE_STATUS_2026-04-28
-- Generated at: 2026-04-28T06:54:28.296Z
+- Generated at: 2026-04-28T16:10:35.712Z
 - Timezone: Asia/Ho_Chi_Minh
 - Review closure ready: FAIL
 - Timeout per command: 20000ms
@@ -34,8 +34,8 @@
 - strict smoke: SKIPPED_ENV_NOT_READY
 
 ## Command output excerpts
-- workspace evidence guard stdout: ✖ cios sibling workspace exposes release-critical route shells (0.729917ms)
-✖ cios sibling workspace exposes runtime contract and rollback proof (0.120375ms)
+- workspace evidence guard stdout: ✖ cios sibling workspace exposes release-critical route shells (1.031834ms)
+✖ cios sibling workspace exposes runtime contract and rollback proof (0.139667ms)
 ℹ tests 2
 ℹ suites 0
 ℹ pass 0
@@ -43,17 +43,17 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 51.1545
+ℹ duration_ms 49.171667
 
 ✖ failing tests:
 
 test at tests/integration/cios-release-evidence.test.mjs:15:1
-✖ cios sibling workspace exposes release-critical route shells (0.729917ms)
+✖ cios sibling workspace exposes release-critical route shells (1.031834ms)
   AssertionError [ERR_ASSERTION]: expected sibling cios.iai.one workspace
   
   false !== true
   
-      at TestContext.<anonymous> (file:///Users/tranhatam/Documents/Devnewproject/iai-platform-worktree/tests/integration/cios-release-evidence.test.mjs:16:10)
+      at TestContext.<anonymous> (file:///Users/tranhatam/Documents/Devnewproject/iai-platform-fresh/tests/integration/cios-release-evidence.test.mjs:16:10)
       at Test.runInAsyncScope (node:async_hooks:214:14)
       at Test.run (node:internal/test_runner/test:1106:25)
       at Test.start (node:internal/test_runner/test:1003:17)
@@ -67,17 +67,17 @@ test at tests/integration/cios-release-evidence.test.mjs:15:1
   }
 
 test at tests/integration/cios-release-evidence.test.mjs:36:1
-✖ cios sibling workspace exposes runtime contract and rollback proof (0.120375ms)
+✖ cios sibling workspace exposes runtime contract and rollback proof (0.139667ms)
   Error: ENOENT: no such file or directory, open '/Users/tranhatam/Documents/Devnewproject/cios.iai.one/package.json'
       at readFileSync (node:fs:439:20)
-      at readCiosFile (file:///Users/tranhatam/Documents/Devnewproject/iai-platform-worktree/tests/integration/cios-release-evidence.test.mjs:12:10)
-      at TestContext.<anonymous> (file:///Users/tranhatam/Documents/Devnewproject/iai-platform-worktree/tests/integration/cios-release-evidence.test.mjs:37:34)
+      at readCiosFile (file:///Users/tranhatam/Documents/Devnewproject/iai-platform-fresh/tests/integration/cios-release-evidence.test.mjs:12:10)
+      at TestContext.<anonymous> (file:///Users/tranhatam/Documents/Devnewproject/iai-platform-fresh/tests/integration/cios-release-evidence.test.mjs:37:34)
       at Test.runInAsyncScope (node:async_hooks:214:14)
       at Test.run (node:internal/test_runner/test:1106:25)
       at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
       at Test.postRun (node:internal/test_runner/test:1235:19)
       at Test.run (node:internal/test_runner/test:1163:12)
-   ...
+      at a...
 - workspace evidence guard stderr: none
 - upstream vitest stdout: none
 - upstream vitest stderr: none

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-28T15:07:48.277Z",
+  "generatedAt": "2026-04-28T16:10:00.341Z",
   "timezone": "Asia/Ho_Chi_Minh",
   "requestedDate": "2026-04-28",
   "gateState": "BLOCKED_ON_PAY_PRODUCTION_GATE",
@@ -37,8 +37,8 @@
   },
   "readiness": {
     "batchReadyToStage": true,
-    "batchReadyToCommit": false,
-    "commitScopeLocked": false
+    "batchReadyToCommit": true,
+    "commitScopeLocked": true
   },
   "checks": {
     "governanceReady": true,
@@ -226,12 +226,10 @@
   },
   "gitScopeStatus": {
     "available": true,
-    "dirtyFiles": 13,
-    "outOfScopeFiles": 1,
-    "outOfScopeExamples": [
-      "pnpm-lock.yaml"
-    ],
-    "commitScopeLocked": false
+    "dirtyFiles": 10,
+    "outOfScopeFiles": 0,
+    "outOfScopeExamples": [],
+    "commitScopeLocked": true
   },
   "remainingActions": [
     "Team 1 must secure final provider/live owner confirmation for pay.iai.one and update the owner note checkpoint.",

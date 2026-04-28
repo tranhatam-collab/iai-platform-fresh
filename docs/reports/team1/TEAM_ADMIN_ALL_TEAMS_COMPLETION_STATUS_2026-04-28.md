@@ -1,12 +1,12 @@
 # TEAM_ADMIN_ALL_TEAMS_COMPLETION_STATUS_2026-04-28
-- Generated at: 2026-04-28T15:07:48.277Z
+- Generated at: 2026-04-28T16:10:00.341Z
 - Timezone: Asia/Ho_Chi_Minh
 - Gate state: BLOCKED_ON_PAY_PRODUCTION_GATE
 - Completion: 39%
 - Remaining: 61%
 - Completion band: EARLY_STAGE
 - Batch ready to stage: PASS
-- Batch ready to commit: FAIL
+- Batch ready to commit: PASS
 
 ## Gate checks
 - Governance ready: PASS
@@ -92,10 +92,10 @@
 - CDN delta evidence: 2026-04-22 / docs/release-evidence/cdn.iai.one/CDN_IAI_ONE_DELTA_EVIDENCE_2026-04-22.md
 
 ## Git scope
-- Dirty files: 13
-- Out-of-scope files: 1
-- Commit scope locked: FAIL
-- Out-of-scope sample: pnpm-lock.yaml
+- Dirty files: 10
+- Out-of-scope files: 0
+- Commit scope locked: PASS
+- Out-of-scope sample: none
 
 ## Runbook
 - `pnpm report:team-admin-completion -- --date=YYYY-MM-DD`
