@@ -24,6 +24,7 @@ This plan replaces the broad Wave 1 and clarifies the remaining public-truth cle
 6. `app.iai.one` is explicitly placed under the technical/internal gate matrix (Wave 4) to remove the public-shell vs technical-surface ambiguity in the original plan.
 7. Section 7 lists known deferred items with their closing wave so nothing leaks as silent debt.
 8. Section 8 defines a uniform evidence packet spec so every wave produces review-ready output in the same shape.
+9. On 2026-05-02, after the live infrastructure audit (`AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`), six new deferred items D7–D12 were added to §7. D7 (GitHub push) and D8 (Cloudflare Pages source reconciliation) are now W1A-deploy-blocking. D2 and D3 are marked closed in §7 referencing `TEAM1_W1A_D2_D3_CLOSEOUT_2026-05-02.md`.
 
 ## 1. Hard lock
 
@@ -227,35 +228,55 @@ Applies to:
 
 ## 6. Immediate next actions
 
-1. finish `Batch 1.1`
-2. rerun focused QC:
-   - `root`
-   - `home`
-   - `pay`
-   - `web`
-   - trust-state generation
-3. generate `W1A` evidence packet inputs
-4. only after `W1A` is clean, open `W1B` packet for `docs.iai.one`
+State as of 2026-05-02: `Batch 1.1` is committed at `3048195` (`docs(web): lock Batch 1.1 and W1 evidence`). D2 and D3 are closed repo-side. Live infrastructure audit landed (`AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`) and added D7–D12 to §7.
+
+Next, in order:
+
+1. founder repo-side review of the §7 patch (D7–D12) and the live infra audit
+2. commit the §7 patch + audit file (a docs-only commit; no deploy state changes)
+3. close `W1A`-deploy-blocking items before any preview deploy:
+   - **D7** — push `iai-platform-fresh` to GitHub `tranhatam-collab`
+   - **D8** — reconcile Cloudflare Pages source-of-truth for `home-iai-one` (and decide split for `flow-iai-one`, `app-iai-one`, `docs-iai-one`)
+   - **D12** — either configure DNS A record for `root.iai.one` or remove `root.iai.one` from `trust-state.json official_domains`
+4. once D7 + D8 + D12 are closed, request founder approval for `W1A` preview deploy
+5. only after `W1A` is clean and verified live, open `W1B` packet for `docs.iai.one` and bring it up to §8 file-shape (current packet is partial)
 
 ## 7. Known deferred items
 
 These items are intentionally deferred. They are NOT silent debt. Each entry names the wave where it must close.
 
-| # | Item | Source audit | Owner | Closes at |
-|---|---|---|---|---|
-| D1 | `web.iai.one` `noindex` / `x-robots-tag` header in `apps/web` | `AUDIT_LEGAL_NOINDEX_GAPS_2026-05-01.md` §3 | Team 5 Web | W5 (before any DNS/deploy flip) |
-| D2 | Footer legal URL standardized to `https://docs.iai.one/legal/iai-flow/` across `root/home/docs/developer/app` | `AUDIT_LEGAL_NOINDEX_GAPS_2026-05-01.md` §2, §4 | Team A Docs / Legal owners | W1A (must land before W1A evidence packet is signed) |
-| D3 | Entity `Angel Edu Tam Foundation Inc` exposed in public footer copy where directive requires | `AUDIT_LEGAL_NOINDEX_GAPS_2026-05-01.md` §1 | Team A Docs / Legal owners | W1A |
-| D4 | `apps/pay` `payment-surface-registry.ts` lines 410/659/686 + `apps/pay/src/server.ts:261` `webUrl` config audit | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #3, #4 | Team Pay | W4 |
-| D5 | `apps/web/src/i18n.ts:28,149` self-reference in `web.iai.one` SEO entry | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #2 | Team 5 Web | W5 |
-| D6 | `content/{en,vi}.json` key `web.landing.footer` rendered only inside `apps/web` (verified) — re-verify gating when Wave 5 enables web | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #5 | Team 5 Web | W5 |
+| # | Item | Source audit | Owner | Closes at | Status |
+|---|---|---|---|---|---|
+| D1 | `web.iai.one` `noindex` / `x-robots-tag` header in `apps/web` | `AUDIT_LEGAL_NOINDEX_GAPS_2026-05-01.md` §3 | Team 5 Web | W5 (before any DNS/deploy flip) | open |
+| D2 | Footer legal URL standardized to `https://docs.iai.one/legal/iai-flow/` across `root/home/docs/developer/app` | `AUDIT_LEGAL_NOINDEX_GAPS_2026-05-01.md` §2, §4 | Team A Docs / Legal owners | W1A | **closed** in `TEAM1_W1A_D2_D3_CLOSEOUT_2026-05-02.md` |
+| D3 | Entity `Angel Edu Tam Foundation Inc` exposed in public footer copy where directive requires | `AUDIT_LEGAL_NOINDEX_GAPS_2026-05-01.md` §1 | Team A Docs / Legal owners | W1A | **closed** in `TEAM1_W1A_D2_D3_CLOSEOUT_2026-05-02.md` |
+| D4 | `apps/pay` `payment-surface-registry.ts` lines 410/659/686 + `apps/pay/src/server.ts:261` `webUrl` config audit | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #3, #4 | Team Pay | W4 | open |
+| D5 | `apps/web/src/i18n.ts:28,149` self-reference in `web.iai.one` SEO entry | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #2 | Team 5 Web | W5 | open |
+| D6 | `content/{en,vi}.json` key `web.landing.footer` rendered only inside `apps/web` (verified) — re-verify gating when Wave 5 enables web | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #5 | Team 5 Web | W5 | open |
+| D7 | Repo `iai-platform-fresh` has no GitHub remote and is not pushed to `tranhatam-collab`. Local-only state cannot survive disk loss and cannot drive CI deploy. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §C | Founder / Team 1 Control Tower | **before W1A preview deploy** | open |
+| D8 | Cloudflare Pages source-of-truth reconciliation, split by wave (each sub-scope is independently deploy-blocking for its wave): D8a `home-iai-one` Pages currently linked to old repo `Home.iai.one` (last push 2026-03-28) — must point at monorepo `apps/home` — **W1A**. D8b `docs-iai-one` Pages source currently unverified — must point at monorepo `apps/docs` — **W1B**. D8c `flow-iai-one` Pages and `iai-dash` Pages source must be confirmed against monorepo `apps/flow` / `apps/dash` — **W2**. D8d `app-iai-one` Pages source must be confirmed against monorepo `apps/app` — **W4**. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §B1 | Founder / Team 5 Web | D8a → W1A, D8b → W1B, D8c → W2, D8d → W4 (each gates its own wave deploy) | open |
+| D9 | Workers `iai-api`, `iai-api-production`, `iai-api-preview`, `iai-flow-api` exist with the same name in BOTH Cloudflare account `Tranhatam` (chính, modified 2026-04-10) and account `Tranhatam66` (cũ, modified 2026-04). Same name across accounts creates deploy-targeting risk. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §B3, §B4 | Team Runtime / API owners | W4 | open |
+| D10 | Worker `pay-iai-one` was modified at 2026-05-01 10:28 UTC in account `Tranhatam`, but local repo `iai-platform-fresh` was not pushed and has HEAD `3048195` from 2026-05-02 00:51 +07. The deployed worker source is unverified. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §B2, §D | Team Pay | W4 | open |
+| D11 | Production response on `dash.iai.one`, `pay.iai.one`, `api.flow.iai.one` does NOT carry `x-robots-tag: noindex, nofollow` header even though repo code sets it. Live worker version is older than repo. Split by wave: D11a `dash.iai.one` redeploy → **W2**. D11b `api.flow.iai.one` redeploy → **W2** (paired with `flow.iai.one`). D11c `pay.iai.one` redeploy → **W4**. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §A, §E | Team 5 Web (D11a) / Team Runtime (D11b) / Team Pay (D11c) | D11a → W2, D11b → W2, D11c → W4 | open |
+| D12 | `root.iai.one` is declared in `trust-state.json official_domains` but has no DNS A record. **W1A-blocking.** Founder must pick exactly one of two paths and execute before W1A preview deploy: (path A) configure a DNS A record for `root.iai.one` and attach it to a Cloudflare Pages or Worker target consistent with the monorepo; or (path B) remove the entry from `trust-state.json official_domains`, regenerate trust-state, and update `content/site-map.md` accordingly. Mixed/partial state is not acceptable. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §A | Founder / Team 1 | W1A (deploy-blocking, path A or path B) | open |
 
-Hard rule: no wave's evidence packet may be signed if any of its `closes at` items remains open.
+Hard rules — two distinct gates:
+
+1. **Repo-side packet review gate.** Founder may review and accept a wave's evidence packet repo-side as long as the packet is file-shape complete per §8 and lists the deferred items it touches. Items in `closes at` that are still `open` do not block repo-side review; they DO block the deploy approval gate below. This gate produces only a written "founder review approved (repo-side)" line in the packet README — it does not authorize any infrastructure change.
+
+2. **Preview / production deploy approval gate.** No preview or production deploy of a wave may be triggered while ANY `closes at` item for that wave remains `open`. This is what actually controls live infrastructure. Specifically:
+   - **W1A preview deploy is blocked** until D7 (GitHub remote + push), D8 (Pages source reconciliation for `home`/`root`), and D12 (`root.iai.one` DNS decision) are closed.
+   - **W1B preview deploy is blocked** until D8 sub-scope for `docs-iai-one` Pages source is closed and the `docs.iai.one` packet is brought up to §8 file-shape.
+   - **W2 preview deploy** for `dash.iai.one` and `flow.iai.one` / `api.flow.iai.one` is blocked until D11 sub-scope (W2) is closed.
+   - **W4 preview deploy** for `pay.iai.one` and `app.iai.one` is blocked until D4, D9, D10, and D11 sub-scope (W4) are closed.
+
+The two gates are deliberately separated so repo work and founder review can continue in parallel with the slower infrastructure reconciliation work.
 
 Current closeout note:
 
 - D2 and D3 are closed repo-side in `TEAM1_W1A_D2_D3_CLOSEOUT_2026-05-02.md`.
-- W1A packet signing may proceed to founder repo-side review after packet file-shape verification.
+- D7 through D12 were added on 2026-05-02 from the live infrastructure audit; see `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`.
+- W1A packet signing may proceed to founder repo-side review; W1A preview deploy is gated on D7 and D8.
 
 ## 8. Evidence packet spec
 
