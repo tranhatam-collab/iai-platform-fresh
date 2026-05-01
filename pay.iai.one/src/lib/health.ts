@@ -38,6 +38,10 @@ export interface HealthCheckResult {
   service: string;
   environment: string;
   api_base_url: string | null;
+  data: {
+    shared_read_model: HealthContractSharedReadModel;
+    shared_upstream_runtime: HealthContractSharedUpstreamRuntime;
+  };
   db_bound: boolean;
   db_ready: boolean;
   schema_ready: boolean;
@@ -63,6 +67,54 @@ export interface HealthCheckResult {
   status: string;
   mission: string;
   checked_at: string;
+}
+
+interface HealthContractSharedReadModel {
+  capabilities: {
+    homeRouteRefs: boolean;
+    opsDetail: boolean;
+    opsSnapshot: boolean;
+    paymentSession: boolean;
+    receipt: boolean;
+  };
+  configured: boolean;
+  counts: {
+    opsAreas: number | null;
+    opsWorkItems: number | null;
+    paymentSessions: number | null;
+    receipts: number | null;
+  };
+  filePath: string | null;
+  rolloutReadyForSharedOnly: boolean;
+  source: string;
+  _health_contract_stub: true;
+  _health_contract_stub_note: string;
+}
+
+interface HealthContractSharedUpstreamRuntime {
+  activeReadMode: "shared_contract";
+  configured: boolean;
+  mode: "read_model_url";
+  releaseGate: {
+    checkedAt: string;
+    ready: boolean;
+    reasons: string[];
+  };
+  sources: {
+    auth: string | null;
+    readModel: string | null;
+    reconciliation: string | null;
+    session: string | null;
+  };
+  telemetry: {
+    consecutiveRefreshFailures: number;
+    lastError: string | null;
+    lastRefreshAttemptAt: string | null;
+    lastRefreshFailureAt: string | null;
+    lastRefreshSuccessAt: string | null;
+  };
+  _health_contract_stub: true;
+  _health_contract_stub_note: string;
 }
 
 interface HealthEnv {
@@ -112,7 +164,62 @@ function probeSmtp(env: HealthEnv): string[] {
   return required.filter((key) => !stringValue(env[key]));
 }
 
+function buildHealthContractStubSharedReadModel(): HealthContractSharedReadModel {
+  return {
+    capabilities: {
+      homeRouteRefs: false,
+      opsDetail: false,
+      opsSnapshot: false,
+      paymentSession: false,
+      receipt: false
+    },
+    configured: false,
+    counts: {
+      opsAreas: null,
+      opsWorkItems: null,
+      paymentSessions: null,
+      receipts: null
+    },
+    filePath: null,
+    rolloutReadyForSharedOnly: true,
+    source: "none",
+    _health_contract_stub: true,
+    _health_contract_stub_note:
+      "Health-contract stub: Worker runtime does not bind the shared read model directly. rolloutReadyForSharedOnly=true is a contract-implementation signal, not provider/live data readiness."
+  };
+}
+
+function buildHealthContractStubSharedUpstreamRuntime(checkedAt: string): HealthContractSharedUpstreamRuntime {
+  return {
+    activeReadMode: "shared_contract",
+    configured: false,
+    mode: "read_model_url",
+    releaseGate: {
+      checkedAt,
+      ready: true,
+      reasons: []
+    },
+    sources: {
+      auth: null,
+      readModel: null,
+      reconciliation: null,
+      session: null
+    },
+    telemetry: {
+      consecutiveRefreshFailures: 0,
+      lastError: null,
+      lastRefreshAttemptAt: null,
+      lastRefreshFailureAt: null,
+      lastRefreshSuccessAt: null
+    },
+    _health_contract_stub: true,
+    _health_contract_stub_note:
+      "Health-contract stub: upstream shared runtime is not configured in this Worker instance. activeReadMode=shared_contract and releaseGate.ready=true are contract-implementation signals, not checkout/provider readiness."
+  };
+}
+
 export async function buildHealthCheck(env: HealthEnv): Promise<HealthCheckResult> {
+  const checkedAt = new Date().toISOString();
   const dbBound = Boolean(env.PAYMENTS_DB);
   let dbReady = false;
   let schemaReady = false;
@@ -156,6 +263,10 @@ export async function buildHealthCheck(env: HealthEnv): Promise<HealthCheckResul
     service: "pay.iai.one",
     environment: stringValue(env.PAY_ENV) || "development",
     api_base_url: stringValue(env.PAY_API_BASE_URL) || null,
+    data: {
+      shared_read_model: buildHealthContractStubSharedReadModel(),
+      shared_upstream_runtime: buildHealthContractStubSharedUpstreamRuntime(checkedAt)
+    },
     db_bound: dbBound,
     db_ready: dbReady,
     schema_ready: schemaReady,
@@ -169,6 +280,6 @@ export async function buildHealthCheck(env: HealthEnv): Promise<HealthCheckResul
     },
     status: allOk ? "production_ready" : "not_ready",
     mission: "Private payment orchestration for all IAI sites",
-    checked_at: new Date().toISOString()
+    checked_at: checkedAt
   };
 }
