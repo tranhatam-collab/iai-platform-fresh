@@ -71,7 +71,7 @@ function catalogEntryFromUnknown(input: unknown): CatalogEntry | null {
     code,
     amount: Math.trunc(amount),
     currency,
-    description: description.slice(0, 25)
+    description: description.slice(0, 9)
   };
 }
 

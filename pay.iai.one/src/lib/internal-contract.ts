@@ -63,8 +63,12 @@ export interface InternalCheckoutAttemptSummary {
   provider_payment_url: string | null;
 }
 
+/**
+ * Live internal checkout currently targets payOS-first VND rails.
+ * Keep the generated description short enough for the strictest documented payOS rail.
+ */
 function truncateDescription(value: string): string {
-  return value.slice(0, 25);
+  return value.slice(0, 9);
 }
 
 export function validateInternalCheckoutRequest(input: unknown):

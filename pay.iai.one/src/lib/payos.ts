@@ -1,6 +1,12 @@
 import { json } from "./http";
 import { hmacSha256Hex, integerValue, isObject, normalizeUrl, queryStringFromObject, readJsonBody, scalarValue, stringValue, timingSafeEqual } from "./utils";
 
+/**
+ * payOS currently documents a shorter description limit for some live banking rails.
+ * Keeping the live payload at 9 characters is the safer default until the provider
+ * owner confirms a looser merchant/channel-specific limit in production.
+ */
+const PAYOS_DESCRIPTION_MAX_LENGTH = 9;
 const PAYOS_API_BASE = "https://api-merchant.payos.vn";
 
 export interface PayOSEnv {
@@ -95,7 +101,7 @@ export function validatePayOSCheckoutPayload(input: unknown):
   const amount = integerValue(body.amount);
   const returnUrl = normalizeUrl(body.return_url);
   const cancelUrl = normalizeUrl(body.cancel_url);
-  const description = stringValue(body.description || body.order_id).slice(0, 25);
+  const description = stringValue(body.description || body.order_id).slice(0, PAYOS_DESCRIPTION_MAX_LENGTH);
 
   if (!tenantCode || !siteCode || !orderId || !orderCode || !amount || !returnUrl || !cancelUrl || !description) {
     return {

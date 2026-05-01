@@ -200,8 +200,8 @@ async function main() {
   const orderId = `${orderPrefix}_${date.replace(/-/g, "")}_${Date.now().toString(36)}`;
 
   const payload = {
-    tenant_code: process.env.TEAM2_PAY_GATE_TENANT_CODE ?? "lamviecmuonnoi",
-    site_code: process.env.TEAM2_PAY_GATE_SITE_CODE ?? "lamviecmuonnoi",
+    tenant_code: process.env.TEAM2_PAY_GATE_TENANT_CODE ?? "vetuonglai",
+    site_code: process.env.TEAM2_PAY_GATE_SITE_CODE ?? "vetuonglai-member",
     internal_order_id: orderId,
     provider: process.env.TEAM2_PAY_GATE_PROVIDER ?? "payos",
     plan_code: process.env.TEAM2_PAY_GATE_PLAN_CODE ?? "starter",
@@ -211,7 +211,7 @@ async function main() {
     success_url: process.env.TEAM2_PAY_GATE_SUCCESS_URL ?? "https://web.iai.one/checkout-success",
     cancel_url: process.env.TEAM2_PAY_GATE_CANCEL_URL ?? "https://web.iai.one/checkout-cancel",
     callback_url:
-      process.env.TEAM2_PAY_GATE_CALLBACK_URL ?? "https://api.lamviecmuonnoi.com/payments/webhook/iai-pay",
+      process.env.TEAM2_PAY_GATE_CALLBACK_URL ?? "https://member.vetuonglai.com/api/access/webhooks/pay/iai-one",
     user_id: process.env.TEAM2_PAY_GATE_USER_ID ?? "team2_probe",
     email: process.env.TEAM2_PAY_GATE_EMAIL ?? "team2-runtime@iai.one",
     full_name: process.env.TEAM2_PAY_GATE_FULL_NAME ?? "Team 2 Runtime Probe",
