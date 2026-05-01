@@ -3,10 +3,10 @@
 - Date: `2026-05-01`
 - Surface: `home.iai.one`
 - Wave: `W1A`
-- Status: `PRE_DEPLOY_REVIEW_READY`
+- Status: `PRE_DEPLOY_REVIEW_READY_DEPLOY_BLOCKED_D7_D8A_D12`
 - Global state: `PRODUCTION_PUBLICATION_HOLD`
 - Working repo: `/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh`
-- Current commit basis: `aaa0c05` (`docs(team1): patch plan v2 with live infra audit (D7-D12)`, 2026-05-02). Previous bases were `97ee825` and `3048195`.
+- Current commit basis: `62931a9` (`docs(team1): refresh commit basis to aaa0c05 in W1A/W1B packets`, 2026-05-02). Previous bases were `aaa0c05`, `97ee825`, and `3048195`.
 - Related plan: `docs/reports/team1/TEAM1_ALL_WEB_COMPLETION_PLAN_V2_2026-05-01.md`
 
 ## 1. Purpose
@@ -109,7 +109,7 @@ Do not treat this as production approval.
 
 Next step after approval:
 
-1. commit Batch 1 / Batch 1.1
+1. close D7 (GitHub remote + push), D8a (Pages source reconciliation), and D12 (`root.iai.one` DNS/trust-state decision)
 2. generate preview deploy for `home.iai.one`
 3. attach screenshot and Lighthouse evidence
 4. request production approval

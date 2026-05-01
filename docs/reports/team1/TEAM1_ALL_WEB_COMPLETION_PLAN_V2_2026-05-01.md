@@ -230,16 +230,17 @@ Applies to:
 
 State as of 2026-05-02: `Batch 1.1` is committed at `3048195` (`docs(web): lock Batch 1.1 and W1 evidence`). D2 and D3 are closed repo-side. Live infrastructure audit landed (`AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`) and added D7–D12 to §7.
 
+State refresh: §7 audit patch is already committed (`aaa0c05`) and packet commit-basis refresh is committed (`62931a9`).
+
 Next, in order:
 
-1. founder repo-side review of the §7 patch (D7–D12) and the live infra audit
-2. commit the §7 patch + audit file (a docs-only commit; no deploy state changes)
-3. close `W1A`-deploy-blocking items before any preview deploy:
+1. founder repo-side review of §7 (D7–D12) and `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`
+2. close `W1A`-deploy-blocking items before any preview deploy:
    - **D7** — push `iai-platform-fresh` to GitHub `tranhatam-collab`
    - **D8** — reconcile Cloudflare Pages source-of-truth for `home-iai-one` (and decide split for `flow-iai-one`, `app-iai-one`, `docs-iai-one`)
    - **D12** — either configure DNS A record for `root.iai.one` or remove `root.iai.one` from `trust-state.json official_domains`
-4. once D7 + D8 + D12 are closed, request founder approval for `W1A` preview deploy
-5. only after `W1A` is clean and verified live, open `W1B` packet for `docs.iai.one` and bring it up to §8 file-shape (current packet is partial)
+3. once D7 + D8 + D12 are closed, request founder approval for `W1A` preview deploy
+4. only after `W1A` is clean and verified live, close D8b for `docs.iai.one` and request founder approval for `W1B` preview deploy
 
 ## 7. Known deferred items
 
@@ -276,7 +277,7 @@ Current closeout note:
 
 - D2 and D3 are closed repo-side in `TEAM1_W1A_D2_D3_CLOSEOUT_2026-05-02.md`.
 - D7 through D12 were added on 2026-05-02 from the live infrastructure audit; see `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`.
-- W1A packet signing may proceed to founder repo-side review; W1A preview deploy is gated on D7 and D8.
+- W1A packet signing may proceed to founder repo-side review; W1A preview deploy is gated on D7, D8a, and D12.
 
 ## 8. Evidence packet spec
 

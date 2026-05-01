@@ -3,10 +3,10 @@
 - Date: `2026-05-01`
 - Surface: `docs.iai.one`
 - Wave: `W1B`
-- Status: `PRE_DEPLOY_REVIEW_READY`
+- Status: `PRE_DEPLOY_REVIEW_READY_DEPLOY_BLOCKED_D8B`
 - Global state: `PRODUCTION_PUBLICATION_HOLD`
 - Working repo: `/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh`
-- Current commit basis: `aaa0c05` (`docs(team1): patch plan v2 with live infra audit (D7-D12)`, 2026-05-02). Previous bases were `97ee825` and `3048195`.
+- Current commit basis: `62931a9` (`docs(team1): refresh commit basis to aaa0c05 in W1A/W1B packets`, 2026-05-02). Previous bases were `aaa0c05`, `97ee825`, and `3048195`.
 - Related plan: `docs/reports/team1/TEAM1_ALL_WEB_COMPLETION_PLAN_V2_2026-05-01.md`
 
 ## 1. Purpose
@@ -57,10 +57,11 @@ Out of scope:
 | `pnpm test:docs` | PASS `5/5` | Includes build, docs routes, and pay-docs integration checker no-write mode |
 | Canonical metadata | PASS repo-side | `https://docs.iai.one/` asserted in integration test |
 | Bilingual docs shell | PASS repo-side | VI default and EN explicit rendering asserted |
-| Legal/footer review | PENDING_PREVIEW | Needs preview/manual proof before production |
+| Legal/footer review | PASS repo-side | Footer legal URL + entity proof is tracked in `legal-footer-proof.md`; preview visuals still pending |
 | Screenshot pack | PENDING_PREVIEW | To run after founder approves preview deploy |
 | Lighthouse | PENDING_PREVIEW | Applies after preview URL exists |
 | Live monitoring | NOT_STARTED | Production deploy not approved yet |
+| D8b source-of-truth gate | BLOCKED | `docs-iai-one` Pages source reconciliation is required before preview deploy |
 
 ## 5. Risk Notes
 
@@ -90,3 +91,7 @@ Next step after approval:
 2. generate preview deploy for `docs.iai.one`
 3. attach screenshot and Lighthouse evidence
 4. request production approval
+
+Deploy block:
+
+- W1B preview deploy remains blocked until D8b is closed per plan §7.
