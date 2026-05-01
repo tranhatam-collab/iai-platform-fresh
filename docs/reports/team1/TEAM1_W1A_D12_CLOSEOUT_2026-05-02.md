@@ -97,7 +97,7 @@ $ head -5 trust-iai-one-starter/public/data/trust-state.json
 
 After this closeout:
 
-- W1A preview deploy is now blocked **only on D8a** (`home-iai-one` Pages source reconciliation).
+- W1A preview deploy is now blocked **only on D8a** (`home-iai-one` Pages source reconciliation). D7 was already closed in `TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`.
 
 ---
 

@@ -88,20 +88,20 @@ D7 closing only removes the local-only-repo risk. It does not:
 - decide which Cloudflare Pages projects should be re-linked to the monorepo (that is **D8a/D8b/D8c/D8d**, each at its own wave);
 - trigger any preview or production deploy (the plan v2 deploy approval gate still requires founder to sign off per wave);
 - imply that the monorepo passes external CI (no CI is wired up yet);
-- close `D12` (`root.iai.one` DNS decision is still required for W1A preview).
+- execute the `D12` DNS/trust-state path itself (that closeout was completed later via path B in `TEAM1_W1A_D12_CLOSEOUT_2026-05-02.md`).
 
 Per plan v2 §7 hard rule 2:
 
-- W1A preview deploy is now blocked on **D8a + D12** only.
+- W1A preview deploy is now blocked on **D8a** only (`D12` is closed via path B in `TEAM1_W1A_D12_CLOSEOUT_2026-05-02.md`).
 - W1B preview deploy is now blocked on **D8b** plus the D8b sub-scope decision.
 
 ---
 
 ## 5. Follow-up actions
 
-1. Pick D12 path A or path B and execute. Operator recommendation: **path B** (remove `root.iai.one` from `trust-state.json official_domains`, regenerate trust-state, update `content/site-map.md`) — it removes the misclassification with no infra change. Path A requires standing up a target for `root.iai.one`, which is out of scope of W1A truth cleanup.
+1. D12 is closed via path B; see `TEAM1_W1A_D12_CLOSEOUT_2026-05-02.md`.
 2. Decide D8a path: switch the existing Pages project `home-iai-one` to monorepo `apps/home`, OR retire `home-iai-one` and create a fresh Pages project bound to the monorepo. Either path requires a single Cloudflare dashboard action by the founder, then a redeploy.
-3. After D8a + D12 are closed, the W1A preview deploy may be requested for founder sign-off.
+3. After D8a is closed, the W1A preview deploy may be requested for founder sign-off.
 
 ---
 

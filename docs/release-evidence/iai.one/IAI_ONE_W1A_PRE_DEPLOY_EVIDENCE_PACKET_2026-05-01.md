@@ -110,7 +110,7 @@ Do not treat this as production approval.
 
 Next step after approval:
 
-1. close D8a (Pages source reconciliation). D12 (`root.iai.one` DNS/trust-state decision) was closed via path B on 2026-05-02 (`TEAM1_W1A_D12_CLOSEOUT_2026-05-02.md`).
+1. close D8a (Pages source reconciliation). D7 (GitHub push) was closed on 2026-05-02 (`TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`); D12 (`root.iai.one` DNS/trust-state decision) was closed via path B on 2026-05-02 (`TEAM1_W1A_D12_CLOSEOUT_2026-05-02.md`).
 2. generate preview deploy for `iai.one`
 3. attach screenshot and Lighthouse evidence
 4. request production approval

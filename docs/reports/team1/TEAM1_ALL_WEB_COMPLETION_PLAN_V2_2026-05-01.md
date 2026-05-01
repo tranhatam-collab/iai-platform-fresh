@@ -237,7 +237,7 @@ Next, in order:
 1. founder repo-side review of §7 (D7–D12) and `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`
 2. close `W1A`-deploy-blocking items before any preview deploy:
    - **D7** — push `iai-platform-fresh` to GitHub `tranhatam-collab` — **closed 2026-05-02** (`TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`)
-   - **D8a** — reconcile Cloudflare Pages source-of-truth for `home-iai-one` (point at monorepo `apps/home`)
+   - **D8a** — reconcile Cloudflare Pages source-of-truth for `home-iai-one` (point at monorepo `apps/home`); execution packet prepared in `TEAM1_W1A_D8A_EXECUTION_PACKET_2026-05-02.md`
    - **D12** — `root.iai.one` DNS / trust-state decision — **closed 2026-05-02 via path B** (`TEAM1_W1A_D12_CLOSEOUT_2026-05-02.md`)
 3. once D8a is closed, request founder approval for `W1A` preview deploy
 4. only after `W1A` is clean and verified live, close D8b for `docs.iai.one` and request founder approval for `W1B` preview deploy
@@ -279,6 +279,7 @@ Current closeout note:
 - D7 through D12 were added on 2026-05-02 from the live infrastructure audit; see `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`.
 - D7 was closed on 2026-05-02; see `TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`. Repo `iai-platform-fresh` is now pushed to `git@github.com:tranhatam-collab/iai-platform-fresh.git` (`main` synced).
 - D12 was closed on 2026-05-02 via path B; see `TEAM1_W1A_D12_CLOSEOUT_2026-05-02.md`. `root.iai.one` was removed from `trust-state.json official_domains`; declared count reduced 5 → 4.
+- D8a remains open; execution packet is ready in `TEAM1_W1A_D8A_EXECUTION_PACKET_2026-05-02.md` for one founder dashboard action + post-action verification.
 - W1A packet signing may proceed to founder repo-side review; W1A preview deploy is now gated only on D8a.
 
 ## 8. Evidence packet spec
