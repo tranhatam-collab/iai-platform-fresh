@@ -6,7 +6,7 @@
 - Status: `PRE_DEPLOY_REVIEW_READY`
 - Global state: `PRODUCTION_PUBLICATION_HOLD`
 - Working repo: `/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh`
-- Current commit basis: `3048195` (`docs(web): lock Batch 1.1 and W1 evidence`, 2026-05-02 00:51 +07). Previous basis was `97ee825`. Will be refreshed again to the commit that lands the live infrastructure audit + §7 D7–D12 patch on 2026-05-02.
+- Current commit basis: `aaa0c05` (`docs(team1): patch plan v2 with live infra audit (D7-D12)`, 2026-05-02). Previous bases were `97ee825` and `3048195`.
 - Related plan: `docs/reports/team1/TEAM1_ALL_WEB_COMPLETION_PLAN_V2_2026-05-01.md`
 
 ## 1. Purpose

@@ -39,4 +39,4 @@ Founder sign-off date: —
 
 ## Commit basis
 
-`3048195` — same as W1A packets. Will be refreshed to the next commit that lands §7 patch + live infra audit (2026-05-02).
+`aaa0c05` (`docs(team1): patch plan v2 with live infra audit (D7-D12)`, 2026-05-02). Previous bases were `97ee825` and `3048195`.
