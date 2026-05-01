@@ -236,10 +236,10 @@ Next, in order:
 
 1. founder repo-side review of §7 (D7–D12) and `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`
 2. close `W1A`-deploy-blocking items before any preview deploy:
-   - **D7** — push `iai-platform-fresh` to GitHub `tranhatam-collab`
-   - **D8** — reconcile Cloudflare Pages source-of-truth for `home-iai-one` (and decide split for `flow-iai-one`, `app-iai-one`, `docs-iai-one`)
-   - **D12** — either configure DNS A record for `root.iai.one` or remove `root.iai.one` from `trust-state.json official_domains`
-3. once D7 + D8 + D12 are closed, request founder approval for `W1A` preview deploy
+   - **D7** — push `iai-platform-fresh` to GitHub `tranhatam-collab` — **closed 2026-05-02** (`TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`)
+   - **D8a** — reconcile Cloudflare Pages source-of-truth for `home-iai-one` (point at monorepo `apps/home`)
+   - **D12** — either configure DNS A record for `root.iai.one` (path A) or remove `root.iai.one` from `trust-state.json official_domains` and regenerate (path B)
+3. once D8a + D12 are closed, request founder approval for `W1A` preview deploy
 4. only after `W1A` is clean and verified live, close D8b for `docs.iai.one` and request founder approval for `W1B` preview deploy
 
 ## 7. Known deferred items
@@ -254,7 +254,7 @@ These items are intentionally deferred. They are NOT silent debt. Each entry nam
 | D4 | `apps/pay` `payment-surface-registry.ts` lines 410/659/686 + `apps/pay/src/server.ts:261` `webUrl` config audit | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #3, #4 | Team Pay | W4 | open |
 | D5 | `apps/web/src/i18n.ts:28,149` self-reference in `web.iai.one` SEO entry | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #2 | Team 5 Web | W5 | open |
 | D6 | `content/{en,vi}.json` key `web.landing.footer` rendered only inside `apps/web` (verified) — re-verify gating when Wave 5 enables web | `AUDIT_UNRESOLVED_DOMAIN_REFS_2026-05-01.md` MEDIUM #5 | Team 5 Web | W5 | open |
-| D7 | Repo `iai-platform-fresh` has no GitHub remote and is not pushed to `tranhatam-collab`. Local-only state cannot survive disk loss and cannot drive CI deploy. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §C | Founder / Team 1 Control Tower | **before W1A preview deploy** | open |
+| D7 | Repo `iai-platform-fresh` has no GitHub remote and is not pushed to `tranhatam-collab`. Local-only state cannot survive disk loss and cannot drive CI deploy. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §C | Founder / Team 1 Control Tower | **before W1A preview deploy** | **closed** in `TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md` |
 | D8 | Cloudflare Pages source-of-truth reconciliation, split by wave (each sub-scope is independently deploy-blocking for its wave): D8a `home-iai-one` Pages currently linked to old repo `Home.iai.one` (last push 2026-03-28) — must point at monorepo `apps/home` — **W1A**. D8b `docs-iai-one` Pages source currently unverified — must point at monorepo `apps/docs` — **W1B**. D8c `flow-iai-one` Pages and `iai-dash` Pages source must be confirmed against monorepo `apps/flow` / `apps/dash` — **W2**. D8d `app-iai-one` Pages source must be confirmed against monorepo `apps/app` — **W4**. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §B1 | Founder / Team 5 Web | D8a → W1A, D8b → W1B, D8c → W2, D8d → W4 (each gates its own wave deploy) | open |
 | D9 | Workers `iai-api`, `iai-api-production`, `iai-api-preview`, `iai-flow-api` exist with the same name in BOTH Cloudflare account `Tranhatam` (chính, modified 2026-04-10) and account `Tranhatam66` (cũ, modified 2026-04). Same name across accounts creates deploy-targeting risk. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §B3, §B4 | Team Runtime / API owners | W4 | open |
 | D10 | Worker `pay-iai-one` was modified at 2026-05-01 10:28 UTC in account `Tranhatam`, but local repo `iai-platform-fresh` was not pushed and has HEAD `3048195` from 2026-05-02 00:51 +07. The deployed worker source is unverified. | `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §B2, §D | Team Pay | W4 | open |
@@ -266,7 +266,7 @@ Hard rules — two distinct gates:
 1. **Repo-side packet review gate.** Founder may review and accept a wave's evidence packet repo-side as long as the packet is file-shape complete per §8 and lists the deferred items it touches. Items in `closes at` that are still `open` do not block repo-side review; they DO block the deploy approval gate below. This gate produces only a written "founder review approved (repo-side)" line in the packet README — it does not authorize any infrastructure change.
 
 2. **Preview / production deploy approval gate.** No preview or production deploy of a wave may be triggered while ANY `closes at` item for that wave remains `open`. This is what actually controls live infrastructure. Specifically:
-   - **W1A preview deploy is blocked** until D7 (GitHub remote + push), D8 (Pages source reconciliation for `home`/`root`), and D12 (`root.iai.one` DNS decision) are closed.
+   - **W1A preview deploy is blocked** until D8a (`home-iai-one` Pages source reconciled to monorepo) and D12 (`root.iai.one` DNS decision: path A or path B) are closed. D7 (GitHub remote + push) was closed on 2026-05-02; see `TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`.
    - **W1B preview deploy is blocked** until D8 sub-scope for `docs-iai-one` Pages source is closed and the `docs.iai.one` packet is brought up to §8 file-shape.
    - **W2 preview deploy** for `dash.iai.one` and `flow.iai.one` / `api.flow.iai.one` is blocked until D11 sub-scope (W2) is closed.
    - **W4 preview deploy** for `pay.iai.one` and `app.iai.one` is blocked until D4, D9, D10, and D11 sub-scope (W4) are closed.
@@ -277,7 +277,8 @@ Current closeout note:
 
 - D2 and D3 are closed repo-side in `TEAM1_W1A_D2_D3_CLOSEOUT_2026-05-02.md`.
 - D7 through D12 were added on 2026-05-02 from the live infrastructure audit; see `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`.
-- W1A packet signing may proceed to founder repo-side review; W1A preview deploy is gated on D7, D8a, and D12.
+- D7 was closed on 2026-05-02; see `TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`. Repo `iai-platform-fresh` is now pushed to `git@github.com:tranhatam-collab/iai-platform-fresh.git` (`main` synced).
+- W1A packet signing may proceed to founder repo-side review; W1A preview deploy is gated on D8a and D12.
 
 ## 8. Evidence packet spec
 
