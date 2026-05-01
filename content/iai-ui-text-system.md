@@ -411,6 +411,8 @@ Never use:
 | footer.statement | IAI.ONE định nghĩa cấu trúc. Các bề mặt triển khai bên trong cấu trúc đó. | IAI.ONE defines the structure. Surfaces implement within it. |
 | footer.trust | Không đầu cơ. Chỉ bằng chứng. | No speculation. Only proof. |
 | footer.docs | Tài liệu và ranh giới | Documentation and boundaries |
+| footer.entity | Pháp nhân: Angel Edu Tam Foundation Inc | Legal entity: Angel Edu Tam Foundation Inc |
+| footer.legal.iai_flow | Ranh giới pháp lý IAI Flow | IAI Flow legal boundary |
 
 ---
 

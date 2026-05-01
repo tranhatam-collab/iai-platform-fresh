@@ -15,6 +15,7 @@ export interface RootRenderConfig {
   flowUrl: string;
   nftUrl: string;
   portalUrl: string;
+  webSurfaceEnabled: boolean;
   webUrl: string;
 }
 
@@ -83,7 +84,18 @@ export function renderRootHome(config: RootRenderConfig, locale: Locale): string
           ${renderSurfaceCard(locale, t(locale, "nav.developer"), t(locale, "root.surface.developer.body"), config.developerUrl, t(locale, "btn.open"), "developer")}
           ${renderSurfaceCard(locale, t(locale, "nav.dashboard"), t(locale, "root.surface.dash.body"), config.dashUrl, t(locale, "btn.open_control"), "dash")}
           ${renderSurfaceCard(locale, t(locale, "nav.verify"), t(locale, "root.surface.verify.body"), config.nftUrl, t(locale, "btn.view_registry"), "verify")}
-          ${renderSurfaceCard(locale, t(locale, "nav.web"), t(locale, "root.surface.web.body"), config.webUrl, t(locale, "btn.open_web"), "web")}
+          ${
+            config.webSurfaceEnabled
+              ? renderSurfaceCard(
+                  locale,
+                  t(locale, "nav.web"),
+                  t(locale, "root.surface.web.body"),
+                  config.webUrl,
+                  t(locale, "btn.open_web"),
+                  "web"
+                )
+              : ""
+          }
         </section>
 
         <section class="boundary-grid">
@@ -123,7 +135,18 @@ export function renderRootHome(config: RootRenderConfig, locale: Locale): string
             <a href="${escapeHtml(localizeExternalUrl(config.docsUrl, locale))}">${escapeHtml(t(locale, "nav.docs"))}</a>
             <a href="${escapeHtml(localizeExternalUrl(config.developerUrl, locale))}">${escapeHtml(t(locale, "nav.developer"))}</a>
             <a href="${escapeHtml(localizeExternalUrl(config.dashUrl, locale))}">${escapeHtml(t(locale, "nav.dashboard"))}</a>
-            <a href="${escapeHtml(localizeExternalUrl(config.webUrl, locale))}">${escapeHtml(t(locale, "nav.web"))}</a>
+            ${
+              config.webSurfaceEnabled
+                ? `<a href="${escapeHtml(localizeExternalUrl(config.webUrl, locale))}">${escapeHtml(
+                    t(locale, "nav.web")
+                  )}</a>`
+                : ""
+            }
+          </div>
+          <div class="footer-col">
+            <p class="footer-heading">${escapeHtml(t(locale, "footer.nav.legal"))}</p>
+            <a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a>
+            <p>${escapeHtml(t(locale, "footer.entity"))}</p>
           </div>
         </div>
       </footer>

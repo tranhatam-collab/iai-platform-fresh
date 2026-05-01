@@ -126,6 +126,10 @@ function classifyDomainStatus(dnsResolved, httpStatus) {
   return { status: "unverified", reason: `http_${httpStatus || "no_response"}` };
 }
 
+function resolveDomainPublicVisibility(status) {
+  return status === "verified" ? "public" : "hold";
+}
+
 function buildCommit() {
   return shell("git rev-parse --short HEAD") || "unknown";
 }
@@ -169,7 +173,7 @@ async function main() {
             : `Probe state ${reason}. Surface treated as Unverified until proof is available.`),
       last_reviewed_at: today,
       stale_after_days: STALE_AFTER_DAYS,
-      public_visibility: "public",
+      public_visibility: resolveDomainPublicVisibility(status),
       probe: { dns_resolved, ip_records, http_status, probe_method: "dig+curl HEAD" }
     };
     domains.push(item);

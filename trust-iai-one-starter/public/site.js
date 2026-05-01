@@ -107,6 +107,8 @@ function renderHeroMeta() {
 function renderM1() {
   if (!trust) return;
   const items = trust.modules.official_domains || [];
+  const publicItems = items.filter(d => d.public_visibility === "public");
+  const outside = items.filter(d => d.public_visibility !== "public");
   const verified = items.filter(d => d.status === "verified");
   const declared = items.filter(d => d.status === "declared");
   const unverified = items.filter(d => d.status === "unverified");
@@ -129,7 +131,7 @@ function renderM1() {
   const reg = $("m1Registry");
   if (reg) {
     reg.innerHTML = "";
-    [...verified, ...declared, ...unverified].forEach(d => {
+    publicItems.forEach(d => {
       const ip = (d.probe.ip_records || []).join(", ") || "—";
       const http = d.probe.http_status || "—";
       const it = el("div", "item domain-item",
@@ -143,6 +145,30 @@ function renderM1() {
          ${disclosureBlock(d.disclosure)}
          ${reviewedLine(d.last_reviewed_at, d.stale_days)}`);
       reg.appendChild(it);
+    });
+  }
+
+  const outsideList = $("m1Outside");
+  if (outsideList) {
+    outsideList.innerHTML = "";
+    outside.forEach(d => {
+      const ip = (d.probe.ip_records || []).join(", ") || "—";
+      const http = d.probe.http_status || "—";
+      outsideList.appendChild(
+        el(
+          "div",
+          "item domain-item",
+          `<div class="row"><strong>${escapeHtml(d.domain)}</strong>${statusTag(d.status)}</div>
+           <small class="muted">${escapeHtml(d.role)} · ${escapeHtml(d.legal_lane || "")}</small>
+           <div class="kv">
+             <span><em>${locale === "vi" ? "Owner" : "Owner"}:</em> ${escapeHtml(d.owner_team || "—")}</span>
+             <span><em>DNS:</em> ${escapeHtml(ip)}</span>
+             <span><em>HTTP:</em> ${escapeHtml(String(http))}</span>
+           </div>
+           ${disclosureBlock(d.disclosure)}
+           ${reviewedLine(d.last_reviewed_at, d.stale_days)}`
+        )
+      );
     });
   }
 }

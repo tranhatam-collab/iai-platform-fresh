@@ -67,6 +67,8 @@ test("developer landing page keeps quickstart and canonical metadata", async () 
   assert.match(html, /href="\/sdk"/);
   assert.match(html, /href="\/nodes"/);
   assert.match(html, /href="\/changelog"/);
+  assert.match(html, /https:\/\/docs\.iai\.one\/legal\/iai-flow\//);
+  assert.match(html, /Angel Edu Tam Foundation Inc/);
   assert.match(html, /<link rel="canonical" href="https:\/\/developer\.iai\.one\/" \/>/);
   assert.match(html, /hreflang="en"/);
   assert.match(html, /property="og:title"/);
@@ -93,6 +95,8 @@ test("developer required routes are reachable and canonicalized", async () => {
       )
     );
     assert.match(html, route.marker);
+    assert.match(html, /https:\/\/docs\.iai\.one\/legal\/iai-flow\//);
+    assert.match(html, /Angel Edu Tam Foundation Inc/);
   }
 });
 
@@ -107,6 +111,7 @@ test("developer route supports explicit english rendering", async () => {
   assert.match(html, /<html lang="en">/);
   assert.match(html, /Auth/);
   assert.match(html, /Auth route defines shared identity integration/);
+  assert.match(html, /Legal entity: Angel Edu Tam Foundation Inc/);
   assert.match(html, /<link rel="canonical" href="https:\/\/developer\.iai\.one\/auth\?lang=en" \/>/);
 });
 

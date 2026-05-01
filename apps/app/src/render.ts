@@ -102,6 +102,8 @@ export function renderAppHome(config: AppRenderConfig, locale: Locale): string {
       <footer class="footer">
         <p>${escapeHtml(t(locale, "footer.statement"))}</p>
         <p>${escapeHtml(t(locale, "footer.trust"))}</p>
+        <p>${escapeHtml(t(locale, "footer.entity"))}</p>
+        <p><a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a></p>
       </footer>
     `
   );

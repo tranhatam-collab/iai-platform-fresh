@@ -35,6 +35,10 @@ It must not:
 - `ROOT_DASH_URL`
 - `ROOT_NFT_URL`
 - `ROOT_WEB_URL`
+- `ROOT_WEB_SURFACE_ENABLED`
+
+`ROOT_WEB_SURFACE_ENABLED` defaults to `false`.
+Only set it to `true` after Team 1 accepts DNS/deploy truth for `web.iai.one`.
 
 ## Verification
 

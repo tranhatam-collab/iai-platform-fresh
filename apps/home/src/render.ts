@@ -15,6 +15,7 @@ export interface HomeRenderConfig {
   flowUrl: string;
   nftUrl: string;
   rootUrl: string;
+  webSurfaceEnabled: boolean;
   webUrl: string;
 }
 
@@ -75,7 +76,17 @@ export function renderHomePortal(config: HomeRenderConfig, locale: Locale): stri
           ${renderSurfaceCard(locale, t(locale, "surface.developer.title"), t(locale, "home.surface.developer.body"), config.developerUrl, t(locale, "btn.open"))}
           ${renderSurfaceCard(locale, t(locale, "surface.dash.title"), t(locale, "home.surface.dash.body"), config.dashUrl, t(locale, "btn.open_control"))}
           ${renderSurfaceCard(locale, t(locale, "surface.verify.title"), t(locale, "home.surface.verify.body"), config.nftUrl, t(locale, "btn.view_registry"))}
-          ${renderSurfaceCard(locale, t(locale, "web.title"), t(locale, "home.surface.web.body"), config.webUrl, t(locale, "btn.open_web"))}
+          ${
+            config.webSurfaceEnabled
+              ? renderSurfaceCard(
+                  locale,
+                  t(locale, "web.title"),
+                  t(locale, "home.surface.web.body"),
+                  config.webUrl,
+                  t(locale, "btn.open_web")
+                )
+              : ""
+          }
         </section>
 
         <section class="boundary-grid">
@@ -94,6 +105,8 @@ export function renderHomePortal(config: HomeRenderConfig, locale: Locale): stri
       <footer class="footer">
         <p>${escapeHtml(t(locale, "footer.statement"))}</p>
         <p>${escapeHtml(t(locale, "footer.docs"))}</p>
+        <p>${escapeHtml(t(locale, "footer.entity"))}</p>
+        <p><a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a></p>
       </footer>
     `
   );

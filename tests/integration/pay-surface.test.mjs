@@ -105,6 +105,8 @@ test("pay health route exposes phase D prep contract and locale lock", async () 
   assert.equal(payload.data.shared_upstream_runtime.activeReadMode, "shared_contract");
   assert.equal(payload.data.shared_upstream_runtime.releaseGate.ready, true);
   assert.equal(payload.data.shared_upstream_runtime.configured, false);
+  assert.equal(payload.data.web_surface_enabled, false);
+  assert.equal(payload.data.web_url, null);
   assert.ok(payload.data.route_family.api.includes("/api/receiver-registry"));
   assert.ok(
     payload.data.route_family.api.includes(
@@ -1232,6 +1234,22 @@ test("pay landing page keeps EN-first metadata and phase messaging", async () =>
   assert.match(html, /application\/ld\+json/);
   assert.match(html, new RegExp(`/checkout/${homeRefs.demoCheckoutSessionId}`));
   assert.match(html, /\/ops\/reconciliation/);
+  assert.doesNotMatch(html, /https:\/\/web\.iai\.one/);
+});
+
+test("pay can explicitly re-enable the web surface when Team 1 flips deploy truth", async () => {
+  const response = await dispatchToHandler(
+    createPayRequestHandler({
+      webSurfaceEnabled: true
+    }),
+    {
+      url: "/"
+    }
+  );
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, /https:\/\/web\.iai\.one/);
 });
 
 test("pay supports explicit vietnamese rendering", async () => {

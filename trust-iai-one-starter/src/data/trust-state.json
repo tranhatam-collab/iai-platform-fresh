@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-04-28T11:52:20.325Z",
-  "build_commit": "e1ae171",
+  "generated_at": "2026-05-01T16:32:37.821Z",
+  "build_commit": "97ee825",
   "verification_policy": {
     "stale_after_days": 30,
     "phase": "phase_1_static",
@@ -17,7 +17,7 @@
     "public_statement_vi": "Trang này có thể có sự hỗ trợ của AI và đã được con người rà soát. Tuyên bố public đi kèm bằng chứng hoặc công bố giới hạn.",
     "private_session_details_public": false,
     "hard_coded_model_names_in_public": false,
-    "last_reviewed_at": "2026-04-28"
+    "last_reviewed_at": "2026-05-01"
   },
   "modules": {
     "official_domains": [
@@ -30,22 +30,22 @@
         "legal_lane": "platform charter",
         "public_evidence": {
           "dns": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -67,10 +67,10 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
@@ -94,22 +94,22 @@
         "legal_lane": "trust disclosures",
         "public_evidence": {
           "dns": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -126,22 +126,22 @@
         "legal_lane": "billing-support-only",
         "public_evidence": {
           "dns": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -163,10 +163,10 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
@@ -195,10 +195,10 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
@@ -227,10 +227,10 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
@@ -259,10 +259,10 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
@@ -286,22 +286,22 @@
         "legal_lane": "developer hub",
         "public_evidence": {
           "dns": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -318,22 +318,22 @@
         "legal_lane": "documentation",
         "public_evidence": {
           "dns": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -350,9 +350,9 @@
         "legal_lane": "developer api",
         "public_evidence": null,
         "disclosure": "DNS resolves but expected content was not confirmed at build time.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
-        "public_visibility": "public",
+        "public_visibility": "hold",
         "probe": {
           "dns_resolved": true,
           "ip_records": [
@@ -374,22 +374,22 @@
         "legal_lane": "internal operations",
         "public_evidence": {
           "dns": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -406,22 +406,22 @@
         "legal_lane": "payment processing",
         "public_evidence": {
           "dns": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -442,10 +442,10 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-04-28T11:52:20.325Z"
+          "probed_at": "2026-05-01T16:32:37.821Z"
         },
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
         "public_visibility": "public",
         "probe": {
@@ -468,9 +468,9 @@
         "legal_lane": "cdn delivery",
         "public_evidence": null,
         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
-        "public_visibility": "public",
+        "public_visibility": "hold",
         "probe": {
           "dns_resolved": false,
           "ip_records": [],
@@ -489,9 +489,9 @@
         "legal_lane": "automation runs",
         "public_evidence": null,
         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
-        "public_visibility": "public",
+        "public_visibility": "hold",
         "probe": {
           "dns_resolved": false,
           "ip_records": [],
@@ -510,9 +510,9 @@
         "legal_lane": "web product",
         "public_evidence": null,
         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
-        "public_visibility": "public",
+        "public_visibility": "hold",
         "probe": {
           "dns_resolved": false,
           "ip_records": [],
@@ -531,9 +531,9 @@
         "legal_lane": "root navigation",
         "public_evidence": null,
         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "stale_after_days": 30,
-        "public_visibility": "public",
+        "public_visibility": "hold",
         "probe": {
           "dns_resolved": false,
           "ip_records": [],
@@ -553,7 +553,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "Trần Hà Tâm",
         "disclosure": "Single-founder authority. Public contact via official trust mailbox.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -567,7 +567,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "Trust PMO (founder-led in Phase 1)",
         "disclosure": "Phase 1: PMO duties operated under founder oversight. Standalone PMO seat is roadmap.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -581,7 +581,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "AI-assisted, human-reviewed lane",
         "disclosure": "Operational team behind payment + email control plane. Public contact routed via trust mailbox.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -595,7 +595,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "AI-assisted, human-reviewed lane",
         "disclosure": "Operates dashboard surface and platform probes. Internal scope summary only.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -609,7 +609,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "AI-assisted, human-reviewed lane",
         "disclosure": "Maintains NOOS commerce contracts. Public boundary only.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -623,7 +623,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "Pending team identification (Q-OPEN-1)",
         "disclosure": "Team identity not yet locked. Treated as Unverified per claim standard §2.3.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -637,7 +637,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "Pending team identification (Q-OPEN-4)",
         "disclosure": "Team identity not yet locked. Public CDN evidence pending.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -651,7 +651,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "Pending team identification (Q-OPEN-4)",
         "disclosure": "Team identity not yet locked. Public Flows evidence pending.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -665,7 +665,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "Pending team identification (Q-OPEN-4)",
         "disclosure": "CIOS closure 8/8 verified internally; public team identity pending.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -679,7 +679,7 @@
         "public_contact_reference": "trust@iai.one",
         "owner_declared": "AI-assisted, human-reviewed lane",
         "disclosure": "Maintains web KPI snapshots. Public boundary only.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -696,7 +696,7 @@
         "use_case": "public reporting path",
         "public_evidence": null,
         "disclosure": "Mailbox declared as the single public trust contact. Setup confirmation and SLA evidence pending in Phase 2.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -711,7 +711,7 @@
         "use_case": "submit a trust report directly from the surface",
         "public_evidence": "/api/trust/report",
         "disclosure": "Form posts to a Cloudflare Worker. Phase 1 logs reports for human review; no auto-ticket SLA.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -726,7 +726,7 @@
         "use_case": "audit what the last build verified",
         "public_evidence": "docs/verification-log.md",
         "disclosure": "Regenerated on every build. Reflects probe state at that build only.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -741,7 +741,7 @@
         "use_case": "third-party verification of trust claims",
         "public_evidence": "/data/trust-state.json",
         "disclosure": "Phase 1 is build-time only. No runtime updates between deploys.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -758,7 +758,7 @@
         "evidence_reference": "scripts/trust-state-builder.mjs (digA)",
         "limitations": "Build-time only. Does not detect DNS changes after build.",
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -773,7 +773,7 @@
         "evidence_reference": "scripts/trust-state-builder.mjs (httpProbe)",
         "limitations": "Confirms an endpoint responds. Does not assert the body or business logic is correct.",
         "disclosure": null,
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -788,7 +788,7 @@
         "evidence_reference": "git log + repository-relative paths in trust-state.json",
         "limitations": "Some sources stay private when exposing them would create new risk.",
         "disclosure": "Internal-only sources downgrade public claims to Declared per claim standard §2.2.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -803,7 +803,7 @@
         "evidence_reference": "trust-state.json team_id field",
         "limitations": "Does not prove individual operator identity. Public mode lists team scope only.",
         "disclosure": "Phase 1 lists team scope and contact, not private operator identities.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -818,7 +818,7 @@
         "evidence_reference": null,
         "limitations": "Phase 1 does not run content audits. Roadmap for Phase 2.",
         "disclosure": "Phase 1 cannot assert content correctness. Claims about a domain's content are Declared at most.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,
@@ -886,7 +886,7 @@
         ],
         "public_contact": "trust@iai.one",
         "disclosure": "This is the trust surface itself. Phase 1 is static-first and reflects build-time state.",
-        "last_reviewed_at": "2026-04-28",
+        "last_reviewed_at": "2026-05-01",
         "public_visibility": "public",
         "stale_after_days": 30,
         "stale_days": 0,

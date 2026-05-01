@@ -22,6 +22,7 @@ export interface PayRenderConfig {
   homeUrl: string;
   readModel: PayReadModel;
   rootUrl: string;
+  webSurfaceEnabled: boolean;
   webUrl: string;
 }
 
@@ -70,7 +71,9 @@ export function renderPayHome(config: PayRenderConfig, locale: Locale): string {
           <a href="${escapeHtml(localizeExternalUrl(config.appUrl, locale))}">${escapeHtml(t(locale, "nav.app"))}</a>
           <a href="${escapeHtml(localizeExternalUrl(config.flowUrl, locale))}">${escapeHtml(t(locale, "surface.flow.title"))}</a>
           <a href="${escapeHtml(localizeExternalUrl(config.docsUrl, locale))}">${escapeHtml(t(locale, "nav.docs"))}</a>
-          <a href="${escapeHtml(localizeExternalUrl(config.webUrl, locale))}">${escapeHtml(t(locale, "nav.web"))}</a>
+          ${config.webSurfaceEnabled
+            ? `<a href="${escapeHtml(localizeExternalUrl(config.webUrl, locale))}">${escapeHtml(t(locale, "nav.web"))}</a>`
+            : ""}
           <a href="${escapeHtml(localizeExternalUrl(config.dashUrl, locale))}">${escapeHtml(t(locale, "nav.dashboard"))}</a>
           ${renderLocaleSwitch(locale, "/")}
         </nav>
@@ -238,7 +241,9 @@ export function renderPayHome(config: PayRenderConfig, locale: Locale): string {
           ${renderSurfaceCard(locale, t(locale, "surface.flow.title"), t(locale, "pay.surface.flow.body"), config.flowUrl, t(locale, "btn.open_runtime"))}
           ${renderSurfaceCard(locale, t(locale, "surface.docs.title"), t(locale, "pay.surface.docs.body"), config.docsUrl, t(locale, "btn.read"))}
           ${renderSurfaceCard(locale, t(locale, "surface.dash.title"), t(locale, "pay.surface.dash.body"), config.dashUrl, t(locale, "btn.open_control"))}
-          ${renderSurfaceCard(locale, t(locale, "nav.web"), t(locale, "pay.surface.web.body"), config.webUrl, t(locale, "btn.open_web"))}
+          ${config.webSurfaceEnabled
+            ? renderSurfaceCard(locale, t(locale, "nav.web"), t(locale, "pay.surface.web.body"), config.webUrl, t(locale, "btn.open_web"))
+            : ""}
         </section>
       </main>
 

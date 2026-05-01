@@ -258,6 +258,11 @@ function resolveConfig(options: PayServerOptions, fetchImpl: typeof globalThis.f
     resolveSharedUpstreamRuntimeStatus: resolvedReadModel.resolveSharedUpstreamStatus,
     rootUrl: options.rootUrl ?? process.env.PAY_ROOT_URL ?? "https://iai.one",
     sessionContextConfig: {},
+    webSurfaceEnabled: resolveBooleanFlag(
+      options.webSurfaceEnabled,
+      process.env.PAY_WEB_SURFACE_ENABLED,
+      false
+    ),
     webUrl: options.webUrl ?? process.env.PAY_WEB_URL ?? "https://web.iai.one"
   };
 }
@@ -791,7 +796,8 @@ async function handleRequest(
             root_url: config.rootUrl,
             service: "iai-pay",
             status: "phase_d_prep",
-            web_url: config.webUrl
+            web_surface_enabled: config.webSurfaceEnabled,
+            web_url: config.webSurfaceEnabled ? config.webUrl : null
           }
         },
         locale
@@ -1833,6 +1839,31 @@ function readNumberEnv(value: string | undefined): number | undefined {
 
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function resolveBooleanFlag(
+  optionValue: boolean | undefined,
+  envValue: string | undefined,
+  defaultValue: boolean
+): boolean {
+  if (optionValue !== undefined) {
+    return optionValue;
+  }
+
+  if (envValue === undefined) {
+    return defaultValue;
+  }
+
+  const normalized = envValue.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return defaultValue;
 }
 
 function normalizePathname(pathname: string): string {

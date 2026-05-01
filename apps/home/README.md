@@ -35,6 +35,10 @@ It must not:
 - `HOME_DASH_URL`
 - `HOME_NFT_URL`
 - `HOME_WEB_URL`
+- `HOME_WEB_SURFACE_ENABLED`
+
+`HOME_WEB_SURFACE_ENABLED` defaults to `false`.
+Only set it to `true` after Team 1 accepts DNS/deploy truth for `web.iai.one`.
 
 ## Verification
 

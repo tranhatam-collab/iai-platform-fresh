@@ -71,6 +71,14 @@ test("web onboarding reads shared Team 2 contracts and redirects to shared auth"
   assert.equal(healthPayload.ok, true);
   assert.equal(healthPayload.data.auth_mode, "shared_redirect");
 
+  const landingResponse = await dispatchToHandler(webHandler, {
+    url: "/"
+  });
+  const landingHtml = await landingResponse.text();
+  assert.equal(landingResponse.status, 200);
+  assert.match(landingHtml, /Planned website creation and commerce growth surface on IAI/);
+  assert.match(landingHtml, /remains under release hold until DNS, deploy, and owner proof are approved/);
+
   const contractResponse = await dispatchToHandler(webHandler, {
     url: "/contract-status"
   });
@@ -128,10 +136,15 @@ test("web onboarding reads shared Team 2 contracts and redirects to shared auth"
   const eventsPayload = await eventsResponse.json();
   assert.equal(eventsResponse.status, 200);
   assert.equal(eventsPayload.ok, true);
-  assert.equal(eventsPayload.data.total, 3);
+  assert.equal(eventsPayload.data.total, 4);
   assert.deepEqual(
     eventsPayload.data.items.map((item) => item.eventName),
-    ["web_onboarding_started", "web_role_selected", "web_auth_handoff_started"]
+    [
+      "web_landing_view",
+      "web_onboarding_started",
+      "web_role_selected",
+      "web_auth_handoff_started"
+    ]
   );
   assert.ok(contractRequests.length > 0);
   assert.ok(

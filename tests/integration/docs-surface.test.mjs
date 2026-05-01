@@ -30,6 +30,8 @@ test("docs landing page stays a boundary shell and keeps canonical metadata", as
   assert.match(html, /Docs giữ kiến trúc, chuẩn, vai trò và ranh giới của toàn hệ/);
   assert.match(html, /https:\/\/developer\.iai\.one/);
   assert.match(html, /https:\/\/flow\.iai\.one/);
+  assert.match(html, /https:\/\/docs\.iai\.one\/legal\/iai-flow\//);
+  assert.match(html, /Angel Edu Tam Foundation Inc/);
   assert.match(html, /<link rel="canonical" href="https:\/\/docs\.iai\.one\/" \/>/);
   assert.match(html, /hreflang="en"/);
   assert.match(html, /property="og:title"/);
@@ -50,6 +52,7 @@ test("docs supports explicit english rendering", async () => {
   assert.match(html, /<html lang="en">/);
   assert.match(html, /Docs holds architecture, standards, roles, and system boundaries/);
   assert.match(html, /If a statement cannot be traced to codex and evidence/);
+  assert.match(html, /Legal entity: Angel Edu Tam Foundation Inc/);
 });
 
 test("docs keeps missing routes explicit", async () => {

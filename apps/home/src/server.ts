@@ -28,6 +28,11 @@ function resolveConfig(options: HomeServerOptions): ResolvedHomeConfig {
     flowUrl: options.flowUrl ?? process.env.HOME_FLOW_URL ?? "https://flow.iai.one",
     nftUrl: options.nftUrl ?? process.env.HOME_NFT_URL ?? "https://nft.iai.one",
     rootUrl: options.rootUrl ?? process.env.HOME_ROOT_URL ?? "https://iai.one",
+    webSurfaceEnabled: parseBooleanFlag(
+      options.webSurfaceEnabled,
+      process.env.HOME_WEB_SURFACE_ENABLED,
+      false
+    ),
     webUrl: options.webUrl ?? process.env.HOME_WEB_URL ?? "https://web.iai.one"
   };
 }
@@ -74,7 +79,8 @@ async function handleRequest(
             root_url: config.rootUrl,
             service: "iai-home",
             status: "ok",
-            web_url: config.webUrl
+            web_surface_enabled: config.webSurfaceEnabled,
+            web_url: config.webSurfaceEnabled ? config.webUrl : null
           }
         },
         locale
@@ -126,4 +132,30 @@ function normalizeHeaderValue(value: string | string[] | undefined): string | nu
   }
 
   return Array.isArray(value) ? value.join(",") : value;
+}
+
+function parseBooleanFlag(
+  optionValue: boolean | undefined,
+  envValue: string | undefined,
+  defaultValue: boolean
+): boolean {
+  if (typeof optionValue === "boolean") {
+    return optionValue;
+  }
+
+  if (!envValue) {
+    return defaultValue;
+  }
+
+  const normalized = envValue.trim().toLowerCase();
+
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return defaultValue;
 }

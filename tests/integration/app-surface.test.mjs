@@ -30,6 +30,8 @@ test("app landing page stays a user product shell and keeps canonical metadata",
   assert.match(html, /Bắt đầu từ hành trình của người dùng, không từ hạ tầng/);
   assert.match(html, /https:\/\/nft\.iai\.one/);
   assert.match(html, /https:\/\/dash\.iai\.one/);
+  assert.match(html, /https:\/\/docs\.iai\.one\/legal\/iai-flow\//);
+  assert.match(html, /Angel Edu Tam Foundation Inc/);
   assert.match(html, /<link rel="canonical" href="https:\/\/app\.iai\.one\/" \/>/);
   assert.match(html, /hreflang="en"/);
   assert.match(html, /application\/ld\+json/);
@@ -46,6 +48,7 @@ test("app supports explicit english rendering", async () => {
   assert.match(html, /<html lang="en">/);
   assert.match(html, /Start from the user journey, not from the infrastructure/);
   assert.match(html, /The app is a product surface, not every layer at once/);
+  assert.match(html, /Legal entity: Angel Edu Tam Foundation Inc/);
 });
 
 test("app keeps missing routes explicit", async () => {

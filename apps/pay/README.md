@@ -85,6 +85,7 @@ Checkout and receipt shells also expose explicit read-model state variants for:
 - `PAY_DOCS_URL`
 - `PAY_DASH_URL`
 - `PAY_WEB_URL`
+- `PAY_WEB_SURFACE_ENABLED`
 - `PAY_READ_MODEL_MODE`
 - `PAY_SHARED_READ_MODEL_FILE`
 - `PAY_SHARED_READ_MODEL_URL`
@@ -104,6 +105,9 @@ Checkout and receipt shells also expose explicit read-model state variants for:
 - `shared_fallback_demo` -> use shared bindings first, then fall back to demo contract
 - `demo_only` -> bypass shared bindings and use demo contract only
 - `shared_only` -> use shared bindings without demo fallback
+
+`PAY_WEB_SURFACE_ENABLED` defaults to `false`.
+Keep this disabled until `web.iai.one` has DNS, deploy, and owner proof accepted by Team 1.
 
 `PAY_SHARED_READ_MODEL_FILE` points to a JSON file that follows `iai.pay.shared-read-model.v1`. The adapter in `src/shared-read-model.ts` loads this file, validates the schema version, maps core truth records into pay shell records, and exposes rollout status through `/health`.
 

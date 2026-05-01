@@ -1,21 +1,23 @@
 # web.iai.one
 
-Minimal Team 5 onboarding surface for `web.iai.one`.
+Minimal Team 5 onboarding surface for `web.iai.one` while public release remains on hold.
 
 ## Purpose
 
-This app is a growth/onboarding surface only.
+This app is a planned growth/onboarding surface only.
 
 It must:
 - route new users clearly
 - read shared Team 2 contracts before handoff
 - redirect into shared auth
 - hand off to shared `app`, `flow`, or `dash` routes
+- stay under release hold until DNS, deploy, and owner proof are accepted
 
 It must not:
 - create local auth
 - create local billing rails
 - redefine IAI mission or brand meaning
+- claim `web.iai.one` is public-live before Team 1 and founder flip publication hold
 
 ## Routes
 
@@ -42,3 +44,8 @@ It must not:
 
 - `pnpm test:web`
 - `node scripts/web-dev-stack.mjs`
+
+## Release state
+
+`web.iai.one` remains under `PRODUCTION_PUBLICATION_HOLD` until Wave 5.
+Repo-side work may continue, but public-live claims must wait for DNS proof, deploy proof, and owner sign-off.

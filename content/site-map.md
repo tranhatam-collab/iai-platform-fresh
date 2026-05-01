@@ -1,8 +1,11 @@
 # IAI SITE MAP
 ## Canonical subdomain structure
-## Version 1.0 (Locked)
+## Version 1.1 (Release-hold public truth)
 
 ---
+
+Public listing in this file does not equal deploy-ready or DNS-ready.
+Surfaces under release-hold or internal infrastructure must not be treated as public-live until Team 1 accepts production evidence.
 
 ## Root
 - iai.one
@@ -34,7 +37,9 @@
   - proofs
   - billing
 - api.iai.one
+  - technical runtime surface
 - api.flow.iai.one
+  - technical flow runtime surface
 
 ## Knowledge
 - docs.iai.one
@@ -44,21 +49,25 @@
 - nft.iai.one
 
 ## Growth
-- web.iai.one
-  - free informational sites
-  - paid business and commerce plans
-  - templates
-  - AI-assisted setup
 - cios.iai.one
   - enterprise intelligence
 - pay.iai.one
   - payment and settlement
 
+## Growth (release hold)
+- web.iai.one
+  - website creation and commerce growth layer
+  - not public-live until DNS and deploy proof are accepted
+
 ## Future
 - noos.iai.one
   - aggregate / meaning layer only after core maturity
 
-## Infrastructure
+## Internal / infrastructure / hold
 - mail.iai.one
 - cdn.iai.one
+  - internal infrastructure surface
+  - do not expose in public navigation until DNS and cache policy proof exist
 - flows.iai.one
+  - internal automation surface
+  - do not expose in public navigation until production route/runtime proof exists
