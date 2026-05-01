@@ -142,9 +142,19 @@ const checkout = readJson(checkoutPath);
 const sharedReadModel = getNested(health, ["data", "shared_read_model"]);
 const sharedUpstreamRuntime = getNested(health, ["data", "shared_upstream_runtime"]);
 const checkoutUrl = firstByKeys(checkout, new Set(["checkout_url", "checkoutUrl", "redirect_url", "redirectUrl", "url"]));
+const checkoutCode =
+  (checkout && typeof checkout === "object" && typeof checkout.code === "string" ? checkout.code : null) ||
+  String(firstByKeys(checkout, new Set(["code"])) || "") ||
+  null;
+const checkoutMessage =
+  (checkout && typeof checkout === "object" && typeof checkout.message === "string" ? checkout.message : null) ||
+  (checkout && typeof checkout === "object" && typeof checkout.desc === "string" ? checkout.desc : null) ||
+  null;
 const paymentLinkId = firstByKeys(checkout, new Set(["payment_link_id", "paymentLinkId", "provider_payment_id", "providerPaymentId", "link_id", "linkId"]));
 const providerCodes = collectNumericProviderCodes(checkout);
 const has214 = providerCodes.includes(214);
+const authFailureCodes = new Set(["API_KEY_REQUIRED", "API_KEY_INVALID", "API_KEY_SCOPE_MISMATCH"]);
+const authContractPass = !authFailureCodes.has(checkoutCode || "") && checkoutStatus !== 401 && checkoutStatus !== 403;
 
 const summary = {
   generatedAt: new Date().toISOString(),
@@ -155,6 +165,7 @@ const summary = {
   signals: {
     health_status_ok: healthStatus === 200,
     shared_read_model_present: Boolean(sharedReadModel),
+    auth_contract_pass: authContractPass,
     shared_upstream_runtime_present: Boolean(sharedUpstreamRuntime),
     checkout_status_201: checkoutStatus === 201,
     checkout_url_non_null: Boolean(checkoutUrl),
@@ -166,6 +177,8 @@ const summary = {
     checkout_status: checkoutStatus,
     health_contract_shape:
       sharedReadModel || sharedUpstreamRuntime ? "shared_runtime_contract" : "legacy_or_unknown",
+    checkout_code: checkoutCode,
+    checkout_message: checkoutMessage,
     checkout_url: checkoutUrl || null,
     payment_link_id: paymentLinkId || null,
     provider_codes_numeric: providerCodes
@@ -175,9 +188,11 @@ const summary = {
 summary.pass = Object.values(summary.signals).every(Boolean);
 summary.stop_owner = !summary.signals.shared_read_model_present || !summary.signals.shared_upstream_runtime_present
   ? "Team Runtime"
-  : !summary.signals.checkout_url_non_null || !summary.signals.payment_link_id_non_null || !summary.signals.no_214
-    ? "Team Pay"
-    : "none";
+  : !summary.signals.auth_contract_pass
+    ? "Team Runtime/Auth"
+    : !summary.signals.checkout_url_non_null || !summary.signals.payment_link_id_non_null || !summary.signals.no_214
+      ? "Team Pay"
+      : "none";
 
 fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + "\n", "utf8");
 console.log(JSON.stringify(summary, null, 2));
