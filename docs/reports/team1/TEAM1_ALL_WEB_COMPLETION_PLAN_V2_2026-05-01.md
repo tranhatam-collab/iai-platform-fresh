@@ -24,7 +24,7 @@ This plan replaces the broad Wave 1 and clarifies the remaining public-truth cle
 6. `app.iai.one` is explicitly placed under the technical/internal gate matrix (Wave 4) to remove the public-shell vs technical-surface ambiguity in the original plan.
 7. Section 7 lists known deferred items with their closing wave so nothing leaks as silent debt.
 8. Section 8 defines a uniform evidence packet spec so every wave produces review-ready output in the same shape.
-9. On 2026-05-02, after the live infrastructure audit (`AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`), six new deferred items D7–D12 were added to §7. D7 (GitHub push) and D8 (Cloudflare Pages source reconciliation) are now W1A-deploy-blocking. D2 and D3 are marked closed in §7 referencing `TEAM1_W1A_D2_D3_CLOSEOUT_2026-05-02.md`.
+9. On 2026-05-02, after the live infrastructure audit (`AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`), six new deferred items D7–D12 were added to §7. D7 (GitHub push) is now closed in `TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`. D8 (Cloudflare Pages source reconciliation) remains deploy-blocking. D2 and D3 are marked closed in §7 referencing `TEAM1_W1A_D2_D3_CLOSEOUT_2026-05-02.md`.
 
 ## 1. Hard lock
 
