@@ -4,54 +4,63 @@
 - Scope: pay production gate only
 
 ## Locked truth
-- Key/auth lane was treated as technically cleared by manual rerun evidence outside the repo worktree.
-- If the canonical one-shot probe returns `API_KEY_REQUIRED`, `API_KEY_INVALID`, or `API_KEY_SCOPE_MISMATCH`, key/auth reopens under Team Runtime/Auth for the canonical tenant/site contract.
-- Repo-side machine artifacts still need a fresh rerun bundle to reflect that cleared auth state.
-- Commit `30e661e` already adds the shared-runtime health contract stub in `pay.iai.one/src/lib/health.ts`.
-- Commit `83d3f39` adds Team 2 narrative reports, but does not regenerate the machine-readable probe and gate artifacts.
+- Canonical gate key/auth is now closed again for the current batch.
+- The canonical one-shot probe no longer fails with `API_KEY_INVALID`, `API_KEY_REQUIRED`, or `API_KEY_SCOPE_MISMATCH`.
+- Team Runtime has already closed the `/health` shared-contract lane and the D1 schema lane on production.
+- Repo-side machine artifacts still need a fresh rerun bundle after Team Pay clears the provider/business truth.
+- Commit `30e661e` adds the shared-runtime health contract stub in `pay.iai.one/src/lib/health.ts`.
+- Commit `885fbd1` closes the canonical probe target drift and the 9-character payOS description cap mitigation.
 
 ## Repo-side correction closed in this batch
 - `scripts/team2-pay-prod-runtime-probe.mjs` now defaults to the canonical gate target:
   - `tenant_code = vetuonglai`
   - `site_code = vetuonglai-member`
   - `callback_url = https://member.vetuonglai.com/api/access/webhooks/pay/iai-one`
-- payOS live descriptions are now capped to 9 characters in the Worker lane so the checkout payload no longer exceeds the strictest documented live rail limit.
+- payOS live descriptions are capped to 9 characters in the Worker lane so the checkout payload no longer exceeds the strictest documented live rail limit.
 - Purpose: remove a plausible code-side contributor to provider `214` before the next production rerun.
 - Purpose: prevent future drift where narrative reports say canonical target while machine artifacts still probe a legacy target.
 
-## Current state after the canonical one-shot probe
+## Current state after the latest canonical one-shot probe
 1. Team Runtime
-- Worker deploy and `/health` shared contract are now live on production.
-- Schema migrations for the ledger/reconciliation tables have been applied on D1 production.
+- Worker deploy and `/health` shared contract are live on production.
+- D1 production has the ledger/reconciliation schema required by the live health contract.
 - Result: the old `/health` blocker is closed.
 
 2. Team Runtime/Auth
-- The canonical one-shot probe returned `403 API_KEY_INVALID` for `vetuonglai / vetuonglai-member`.
-- Required outcome:
-  - the canonical gate key must hash-match the production `service_api_keys` row for `vetuonglai / vetuonglai-member`
-  - the one-shot probe must stop returning `API_KEY_INVALID`, `API_KEY_REQUIRED`, or `API_KEY_SCOPE_MISMATCH`
-  - `checkout_status_201 = PASS`
+- Canonical auth now passes for the current gate key.
+- Keep the reopening rule only as a guardrail if a later one-shot falls back to `401/403` auth errors.
 
 3. Team Pay
-- This lane is blocked behind Team Runtime/Auth.
-- Open Team Pay only after the canonical one-shot probe clears auth and reaches the provider/business path.
-- Then Team Pay owns:
-  - resolve live PayOS business `214`
-  - verify the production rerun after the shorter description cap is deployed
+- Team Pay is the active blocker owner now.
+- The canonical one-shot probe reached the provider/business path and stopped on payOS truth:
+  - `checkout_status = 502`
+  - `checkout_code = 214`
+  - `checkout_message = Cổng thanh toán không tồn tại hoặc đã tạm dừng, vui lòng chọn cổng khác`
+  - `checkout_url = null`
+  - `payment_link_id = null`
+- Working assumption from founder context:
+  - the current payOS setup may still be personal-only and not have the business gateway/channel active for the organization yet
+  - if that assumption is true, `214` is expected provider truth, not a code defect
+- Required outcome:
+  - verify merchant is active on the payOS dashboard
+  - verify payment channels are enabled
+  - verify package/quota is valid
+  - verify whether the current merchant account is personal-only vs. business/enterprise-capable
+  - verify the configured merchant matches `PAYOS_CLIENT_ID` bound in production
+  - rerun until `checkout_status_201 = PASS`
   - `checkout_url` non-null
   - `payment_link_id` non-null
   - `no_214 = PASS`
 
 ## Team Runtime/Auth reopening rule
-- Canonical one-shot probe must not return `API_KEY_REQUIRED`, `API_KEY_INVALID`, or `API_KEY_SCOPE_MISMATCH`.
-- If it does, stop in Team Runtime/Auth before opening Team Pay or Team 2 again.
+- If a later canonical one-shot probe returns `API_KEY_REQUIRED`, `API_KEY_INVALID`, or `API_KEY_SCOPE_MISMATCH`, auth reopens under Team Runtime/Auth immediately.
 
 ## Team 2 rerun rule
-- Do not touch key/auth again.
-- Do not rotate the gate key again.
-- Rerun only after Team Runtime/Auth confirms the canonical key binding is live and Team Pay confirms the provider/business path is live if that lane is still needed.
+- Do not touch key/auth again unless the reopening rule is triggered.
+- Do not rotate the gate key again inside this batch.
+- Rerun only after Team Pay confirms the provider/business path is live.
 
-## Exact rerun bundle after upstream confirmation
+## Exact rerun bundle after Team Pay confirmation
 ```bash
 cd "/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh"
 node scripts/team2-pay-prod-runtime-probe.mjs --date=2026-05-01
@@ -61,7 +70,7 @@ node scripts/team1-pay-full-rerun-review-check.mjs --date=2026-05-01
 ```
 
 ## Stop rules
-- If `checkout_url` or `payment_link_id` is still null, stop in Team Pay.
 - If the canonical one-shot probe returns `401/403` with `API_KEY_REQUIRED`, `API_KEY_INVALID`, or `API_KEY_SCOPE_MISMATCH`, stop in Team Runtime/Auth.
-- If `/health` still misses `data.shared_read_model` or `data.shared_upstream_runtime`, stop in Team Runtime.
-- Do not reopen key/auth investigations inside this batch.
+- If `checkout_status = 502` with provider/business `214`, stop in Team Pay.
+- If `checkout_url` or `payment_link_id` is still null after auth passes, stop in Team Pay.
+- If `/health` misses `data.shared_read_model` or `data.shared_upstream_runtime`, stop in Team Runtime.
