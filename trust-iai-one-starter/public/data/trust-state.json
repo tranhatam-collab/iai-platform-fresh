@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-05-01T16:32:37.821Z",
-  "build_commit": "97ee825",
+  "generated_at": "2026-05-01T19:54:32.796Z",
+  "build_commit": "81d1aab",
   "verification_policy": {
     "stale_after_days": 30,
     "phase": "phase_1_static",
@@ -30,12 +30,12 @@
         "legal_lane": "platform charter",
         "public_evidence": {
           "dns": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -44,8 +44,8 @@
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -62,12 +62,12 @@
         "legal_lane": "navigation only",
         "public_evidence": {
           "dns": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -76,8 +76,8 @@
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -99,7 +99,7 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -126,12 +126,12 @@
         "legal_lane": "billing-support-only",
         "public_evidence": {
           "dns": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -140,8 +140,8 @@
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "104.21.8.122",
-            "172.67.139.112"
+            "172.67.139.112",
+            "104.21.8.122"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -163,7 +163,7 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -195,7 +195,7 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -227,7 +227,7 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -259,7 +259,7 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -291,7 +291,7 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -323,7 +323,7 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -374,12 +374,12 @@
         "legal_lane": "internal operations",
         "public_evidence": {
           "dns": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -388,8 +388,8 @@
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -406,12 +406,12 @@
         "legal_lane": "payment processing",
         "public_evidence": {
           "dns": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -420,8 +420,8 @@
         "probe": {
           "dns_resolved": true,
           "ip_records": [
-            "172.67.139.112",
-            "104.21.8.122"
+            "104.21.8.122",
+            "172.67.139.112"
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD"
@@ -442,7 +442,7 @@
           ],
           "http_status": 200,
           "probe_method": "dig+curl HEAD",
-          "probed_at": "2026-05-01T16:32:37.821Z"
+          "probed_at": "2026-05-01T19:54:32.796Z"
         },
         "disclosure": null,
         "last_reviewed_at": "2026-05-01",
@@ -508,27 +508,6 @@
         "canonical": true,
         "owner_team": "team-5",
         "legal_lane": "web product",
-        "public_evidence": null,
-        "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
-        "last_reviewed_at": "2026-05-01",
-        "stale_after_days": 30,
-        "public_visibility": "hold",
-        "probe": {
-          "dns_resolved": false,
-          "ip_records": [],
-          "http_status": 0,
-          "probe_method": "dig+curl HEAD"
-        },
-        "stale_days": 0,
-        "stale": false
-      },
-      {
-        "domain": "root.iai.one",
-        "role": "root surface",
-        "status": "declared",
-        "canonical": true,
-        "owner_team": "trust-pmo",
-        "legal_lane": "root navigation",
         "public_evidence": null,
         "disclosure": "Officially declared in roadmap. DNS does not resolve at build time. Not presented as live.",
         "last_reviewed_at": "2026-05-01",

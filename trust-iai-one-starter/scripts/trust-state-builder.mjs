@@ -39,8 +39,9 @@ const APPROVED_DOMAINS = [
   // Roadmap-declared domains. May not yet probe successfully.
   { domain: "cdn.iai.one",        role: "cdn edge",                   canonical: true,  owner_team: "team-b-cdn",   legal_lane: "cdn delivery" },
   { domain: "flows.iai.one",      role: "automation surface",         canonical: true,  owner_team: "team-b-flows", legal_lane: "automation runs" },
-  { domain: "web.iai.one",        role: "web surface",                canonical: true,  owner_team: "team-5",       legal_lane: "web product" },
-  { domain: "root.iai.one",       role: "root surface",               canonical: true,  owner_team: "trust-pmo",    legal_lane: "root navigation" }
+  { domain: "web.iai.one",        role: "web surface",                canonical: true,  owner_team: "team-5",       legal_lane: "web product" }
+  // Note: `root.iai.one` was removed from official_domains on 2026-05-02 (D12 path B).
+  // It had no DNS A record and no deploy target. Re-add only if a real surface is provisioned.
 ];
 
 // Foundation pack: TRUST_MODULE_DATA_CONTRACTS.md §4
