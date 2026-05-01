@@ -1,0 +1,483 @@
+{
+  "generatedAt": "2026-05-01T12:29:00.070Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-05-01",
+  "signalStart": "2026-04-19T00:00:00+07:00",
+  "target": {
+    "baseUrl": "https://pay.iai.one",
+    "endpointPath": "/internal/checkout-session",
+    "targetUrl": "https://pay.iai.one/internal/checkout-session"
+  },
+  "auth": {
+    "keyHeaderName": "x-api-key",
+    "keyProvided": true,
+    "keySource": "TEAM2_PAY_GATE_API_KEY"
+  },
+  "request": {
+    "idempotencyKey": "team2-prod-20260501-momw37jv",
+    "internal_order_id": "ord_team2_probe_20260501_momw37jv",
+    "tenant_code": "vetuonglai",
+    "site_code": "vetuonglai-member",
+    "amount": 3000,
+    "currency": "VND"
+  },
+  "responses": {
+    "health": {
+      "url": "https://pay.iai.one/health",
+      "method": "GET",
+      "startedAt": "2026-05-01T12:28:59.515Z",
+      "endedAt": "2026-05-01T12:28:59.777Z",
+      "status": 200,
+      "ok": true,
+      "body": {
+        "ok": false,
+        "service": "pay.iai.one",
+        "environment": "production",
+        "api_base_url": "https://pay.iai.one",
+        "data": {
+          "shared_read_model": {
+            "capabilities": {
+              "homeRouteRefs": false,
+              "opsDetail": false,
+              "opsSnapshot": false,
+              "paymentSession": false,
+              "receipt": false
+            },
+            "configured": false,
+            "counts": {
+              "opsAreas": null,
+              "opsWorkItems": null,
+              "paymentSessions": null,
+              "receipts": null
+            },
+            "filePath": null,
+            "rolloutReadyForSharedOnly": true,
+            "source": "none",
+            "_health_contract_stub": true,
+            "_health_contract_stub_note": "Health-contract stub: Worker runtime does not bind the shared read model directly. rolloutReadyForSharedOnly=true is a contract-implementation signal, not provider/live data readiness."
+          },
+          "shared_upstream_runtime": {
+            "activeReadMode": "shared_contract",
+            "configured": false,
+            "mode": "read_model_url",
+            "releaseGate": {
+              "checkedAt": "2026-05-01T12:28:59.720Z",
+              "ready": true,
+              "reasons": []
+            },
+            "sources": {
+              "auth": null,
+              "readModel": null,
+              "reconciliation": null,
+              "session": null
+            },
+            "telemetry": {
+              "consecutiveRefreshFailures": 0,
+              "lastError": null,
+              "lastRefreshAttemptAt": null,
+              "lastRefreshFailureAt": null,
+              "lastRefreshSuccessAt": null
+            },
+            "_health_contract_stub": true,
+            "_health_contract_stub_note": "Health-contract stub: upstream shared runtime is not configured in this Worker instance. activeReadMode=shared_contract and releaseGate.ready=true are contract-implementation signals, not checkout/provider readiness."
+          }
+        },
+        "db_bound": true,
+        "db_ready": true,
+        "schema_ready": true,
+        "schema_proof": {
+          "expected_tables": 19,
+          "found_tables": 19,
+          "missing_tables": [],
+          "present_tables": [
+            "tenants",
+            "merchant_sites",
+            "provider_accounts",
+            "service_api_keys",
+            "customers",
+            "payment_intents",
+            "payment_attempts",
+            "provider_events",
+            "refunds",
+            "email_receipts",
+            "idempotency_keys",
+            "audit_logs",
+            "email_delivery_evidence",
+            "wallet_accounts",
+            "ledger_accounts",
+            "ledger_transfers",
+            "ledger_entries",
+            "wallet_balances",
+            "reconciliation_cases"
+          ]
+        },
+        "providers_total": 6,
+        "provider_ready": true,
+        "provider_proof": [
+          {
+            "code": "payos",
+            "label": "payOS",
+            "env_ready": true,
+            "missing_env_keys": [],
+            "stage": "launch"
+          },
+          {
+            "code": "momo",
+            "label": "MoMo",
+            "env_ready": false,
+            "missing_env_keys": [
+              "MOMO_PARTNER_CODE",
+              "MOMO_ACCESS_KEY",
+              "MOMO_SECRET_KEY"
+            ],
+            "stage": "launch"
+          },
+          {
+            "code": "zalopay",
+            "label": "ZaloPay",
+            "env_ready": false,
+            "missing_env_keys": [
+              "ZALOPAY_APP_ID",
+              "ZALOPAY_KEY1",
+              "ZALOPAY_KEY2"
+            ],
+            "stage": "launch"
+          },
+          {
+            "code": "vnpay",
+            "label": "VNPay",
+            "env_ready": false,
+            "missing_env_keys": [
+              "VNPAY_TMN_CODE",
+              "VNPAY_HASH_SECRET"
+            ],
+            "stage": "launch"
+          },
+          {
+            "code": "paypal",
+            "label": "PayPal",
+            "env_ready": false,
+            "missing_env_keys": [
+              "PAYPAL_CLIENT_ID",
+              "PAYPAL_CLIENT_SECRET",
+              "PAYPAL_WEBHOOK_ID"
+            ],
+            "stage": "phase_2"
+          },
+          {
+            "code": "stripe",
+            "label": "Stripe",
+            "env_ready": false,
+            "missing_env_keys": [
+              "STRIPE_SECRET_KEY",
+              "STRIPE_PUBLISHABLE_KEY",
+              "STRIPE_WEBHOOK_SECRET"
+            ],
+            "stage": "phase_2"
+          }
+        ],
+        "smtp_ready": false,
+        "smtp_proof": {
+          "missing_env_keys": [
+            "EMAIL_FROM_BILLING"
+          ]
+        },
+        "status": "not_ready",
+        "mission": "Private payment orchestration for all IAI sites",
+        "checked_at": "2026-05-01T12:28:59.720Z"
+      }
+    },
+    "providers": {
+      "url": "https://pay.iai.one/v1/providers",
+      "method": "GET",
+      "startedAt": "2026-05-01T12:28:59.585Z",
+      "endedAt": "2026-05-01T12:28:59.775Z",
+      "status": 200,
+      "ok": true,
+      "body": {
+        "ok": true,
+        "service": "pay.iai.one",
+        "environment": "production",
+        "api_base_url": "https://pay.iai.one",
+        "db_bound": true,
+        "providers_total": 6,
+        "providers": [
+          {
+            "code": "payos",
+            "label": "payOS",
+            "market": "vietnam",
+            "priority": 1,
+            "stage": "launch",
+            "modes": [
+              "hosted_checkout",
+              "redirect",
+              "webhook",
+              "refund_api",
+              "query_api"
+            ],
+            "methods": [
+              "vietqr",
+              "bank_transfer",
+              "payment_link"
+            ],
+            "currencies": [
+              "VND"
+            ],
+            "envKeys": [
+              "PAYOS_CLIENT_ID",
+              "PAYOS_API_KEY",
+              "PAYOS_CHECKSUM_KEY"
+            ],
+            "notes": "Fastest domestic launch candidate for payment link, QR, and banking-first checkout.",
+            "env_ready": true,
+            "missing_env_keys": [],
+            "runtime_status": "credentials_present"
+          },
+          {
+            "code": "momo",
+            "label": "MoMo",
+            "market": "vietnam",
+            "priority": 2,
+            "stage": "launch",
+            "modes": [
+              "hosted_checkout",
+              "redirect",
+              "webhook",
+              "refund_api",
+              "query_api",
+              "subscription"
+            ],
+            "methods": [
+              "wallet",
+              "atm_card",
+              "international_card",
+              "installment"
+            ],
+            "currencies": [
+              "VND"
+            ],
+            "envKeys": [
+              "MOMO_PARTNER_CODE",
+              "MOMO_ACCESS_KEY",
+              "MOMO_SECRET_KEY"
+            ],
+            "notes": "Strong wallet and local checkout coverage with refund and recurring support.",
+            "env_ready": false,
+            "missing_env_keys": [
+              "MOMO_PARTNER_CODE",
+              "MOMO_ACCESS_KEY",
+              "MOMO_SECRET_KEY"
+            ],
+            "runtime_status": "credentials_missing"
+          },
+          {
+            "code": "zalopay",
+            "label": "ZaloPay",
+            "market": "vietnam",
+            "priority": 3,
+            "stage": "launch",
+            "modes": [
+              "hosted_checkout",
+              "redirect",
+              "webhook",
+              "refund_api",
+              "query_api"
+            ],
+            "methods": [
+              "wallet",
+              "banking",
+              "domestic_card",
+              "international_card",
+              "qr"
+            ],
+            "currencies": [
+              "VND"
+            ],
+            "envKeys": [
+              "ZALOPAY_APP_ID",
+              "ZALOPAY_KEY1",
+              "ZALOPAY_KEY2"
+            ],
+            "notes": "Useful for wallet-driven conversion and strong local brand recognition.",
+            "env_ready": false,
+            "missing_env_keys": [
+              "ZALOPAY_APP_ID",
+              "ZALOPAY_KEY1",
+              "ZALOPAY_KEY2"
+            ],
+            "runtime_status": "credentials_missing"
+          },
+          {
+            "code": "vnpay",
+            "label": "VNPay",
+            "market": "vietnam",
+            "priority": 4,
+            "stage": "launch",
+            "modes": [
+              "hosted_checkout",
+              "redirect",
+              "webhook",
+              "refund_api",
+              "query_api"
+            ],
+            "methods": [
+              "atm_card",
+              "internet_banking",
+              "vnpay_qr",
+              "international_card"
+            ],
+            "currencies": [
+              "VND"
+            ],
+            "envKeys": [
+              "VNPAY_TMN_CODE",
+              "VNPAY_HASH_SECRET"
+            ],
+            "notes": "Broad domestic bank and QR acceptance and common merchant familiarity.",
+            "env_ready": false,
+            "missing_env_keys": [
+              "VNPAY_TMN_CODE",
+              "VNPAY_HASH_SECRET"
+            ],
+            "runtime_status": "credentials_missing"
+          },
+          {
+            "code": "paypal",
+            "label": "PayPal",
+            "market": "international",
+            "priority": 5,
+            "stage": "phase_2",
+            "modes": [
+              "hosted_checkout",
+              "redirect",
+              "webhook",
+              "refund_api",
+              "query_api"
+            ],
+            "methods": [
+              "paypal_balance",
+              "international_card"
+            ],
+            "currencies": [
+              "USD",
+              "EUR",
+              "GBP"
+            ],
+            "envKeys": [
+              "PAYPAL_CLIENT_ID",
+              "PAYPAL_CLIENT_SECRET",
+              "PAYPAL_WEBHOOK_ID"
+            ],
+            "notes": "International layer for cross-border buyers once domestic launch is stable.",
+            "env_ready": false,
+            "missing_env_keys": [
+              "PAYPAL_CLIENT_ID",
+              "PAYPAL_CLIENT_SECRET",
+              "PAYPAL_WEBHOOK_ID"
+            ],
+            "runtime_status": "credentials_missing"
+          },
+          {
+            "code": "stripe",
+            "label": "Stripe",
+            "market": "international",
+            "priority": 6,
+            "stage": "phase_2",
+            "modes": [
+              "hosted_checkout",
+              "redirect",
+              "webhook",
+              "refund_api",
+              "query_api",
+              "subscription"
+            ],
+            "methods": [
+              "international_card",
+              "apple_pay",
+              "google_pay"
+            ],
+            "currencies": [
+              "USD",
+              "EUR",
+              "GBP"
+            ],
+            "envKeys": [
+              "STRIPE_SECRET_KEY",
+              "STRIPE_PUBLISHABLE_KEY",
+              "STRIPE_WEBHOOK_SECRET"
+            ],
+            "notes": "Best international API surface for subscriptions, cards, and wallet rails later.",
+            "env_ready": false,
+            "missing_env_keys": [
+              "STRIPE_SECRET_KEY",
+              "STRIPE_PUBLISHABLE_KEY",
+              "STRIPE_WEBHOOK_SECRET"
+            ],
+            "runtime_status": "credentials_missing"
+          }
+        ]
+      }
+    },
+    "checkout": {
+      "url": "https://pay.iai.one/internal/checkout-session",
+      "method": "POST",
+      "startedAt": "2026-05-01T12:28:59.586Z",
+      "endedAt": "2026-05-01T12:29:00.068Z",
+      "status": 502,
+      "ok": false,
+      "body": {
+        "ok": false,
+        "success": false,
+        "contract_version": "2026-04-15",
+        "provider": "payos",
+        "payment_session_id": "pi_90d1dfbe57384968ae2f3edff0822301",
+        "internal_order_id": "ord_team2_probe_20260501_momw37jv",
+        "checkout_url": null,
+        "expires_at": null,
+        "amount": 3000,
+        "currency": "VND",
+        "status": "214",
+        "provider_order_id": "4812473095110",
+        "provider_payment_id": null,
+        "persistence": {
+          "payment_intent_id": "pi_90d1dfbe57384968ae2f3edff0822301",
+          "internal_order_id": "ord_team2_probe_20260501_momw37jv",
+          "tenant_code": "vetuonglai",
+          "site_code": "vetuonglai-member"
+        },
+        "code": "214",
+        "message": "Cổng thanh toán không tồn tại hoặc đã tạm dừng, vui lòng chọn cổng khác"
+      }
+    }
+  },
+  "extracted": {
+    "checkout_url": null,
+    "shared_read_model_rollout_ready_for_shared_only": true,
+    "shared_upstream_active_read_mode": "shared_contract",
+    "shared_upstream_release_gate_ready": true,
+    "shared_upstream_release_gate_reasons": [],
+    "payment_link_id": null,
+    "provider_codes_numeric": [
+      214,
+      4812473095110,
+      214
+    ]
+  },
+  "signals": {
+    "auth_key_present": true,
+    "attempt_after_2026_04_19": true,
+    "checkout_url_non_null": false,
+    "payment_link_id_non_null": false,
+    "no_214": false,
+    "production_gate_green": false,
+    "shared_read_model_ready_for_shared_only": true,
+    "shared_upstream_active_read_mode_shared_contract": true,
+    "shared_upstream_release_gate_ready": true
+  },
+  "unmetSignals": [
+    "checkout_url_non_null",
+    "payment_link_id_non_null",
+    "no_214",
+    "production_gate_green"
+  ]
+}

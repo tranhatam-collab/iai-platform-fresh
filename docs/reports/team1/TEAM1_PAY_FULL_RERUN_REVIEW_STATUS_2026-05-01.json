@@ -1,0 +1,134 @@
+{
+  "generatedAt": "2026-05-01T12:33:49.520Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-05-01",
+  "status": "REVIEW_BLOCKED_GATE_FAIL",
+  "artifactChecks": [
+    {
+      "name": "bundle_markdown",
+      "path": "docs/reports/team2/TEAM2_PAY_PROD_RERUN_BUNDLE_STATUS_2026-05-01.md",
+      "present": true
+    },
+    {
+      "name": "bundle_json",
+      "path": "docs/reports/team2/TEAM2_PAY_PROD_RERUN_BUNDLE_STATUS_2026-05-01.json",
+      "present": true
+    },
+    {
+      "name": "runtime_probe_markdown",
+      "path": "docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-05-01.md",
+      "present": true
+    },
+    {
+      "name": "runtime_probe_json",
+      "path": "docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-05-01.json",
+      "present": true
+    },
+    {
+      "name": "shared_runtime_probe_markdown",
+      "path": "docs/reports/team2/TEAM2_PAY_SHARED_RUNTIME_PROBE_2026-05-01.md",
+      "present": true
+    },
+    {
+      "name": "shared_runtime_probe_json",
+      "path": "docs/reports/team2/TEAM2_PAY_SHARED_RUNTIME_PROBE_2026-05-01.json",
+      "present": true
+    },
+    {
+      "name": "team1_gate_markdown",
+      "path": "docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-05-01.md",
+      "present": true
+    },
+    {
+      "name": "team1_gate_json",
+      "path": "docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-05-01.json",
+      "present": true
+    }
+  ],
+  "signalChecks": [
+    {
+      "name": "bundle_preflight_ready",
+      "pass": true,
+      "details": "bundle.status=RERUN_COMPLETED_GATE_FAIL"
+    },
+    {
+      "name": "bundle_green",
+      "pass": false,
+      "details": "bundle.status=RERUN_COMPLETED_GATE_FAIL"
+    },
+    {
+      "name": "gate_overall_pass",
+      "pass": false,
+      "details": "gateDecision=LOCK_RETAINED_WITH_REASON"
+    },
+    {
+      "name": "shared_health_contract_shared_runtime",
+      "pass": true,
+      "details": "health_contract_shape=shared_runtime_contract"
+    }
+  ],
+  "runtimeGateSignals": [
+    {
+      "signal": "auth_key_present",
+      "pass": true,
+      "source": "docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-05-01.json"
+    },
+    {
+      "signal": "checkout_url_non_null",
+      "pass": false,
+      "source": "docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-05-01.json"
+    },
+    {
+      "signal": "payment_link_id_non_null",
+      "pass": false,
+      "source": "docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-05-01.json"
+    },
+    {
+      "signal": "no_214",
+      "pass": false,
+      "source": "docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-05-01.json"
+    },
+    {
+      "signal": "production_gate_green",
+      "pass": false,
+      "source": "docs/reports/team2/TEAM2_PAY_PROD_RUNTIME_PROBE_2026-05-01.json"
+    },
+    {
+      "signal": "shared_read_model_ready_for_shared_only",
+      "pass": true,
+      "source": "docs/reports/team2/TEAM2_PAY_SHARED_RUNTIME_PROBE_2026-05-01.json"
+    },
+    {
+      "signal": "shared_upstream_active_read_mode_shared_contract",
+      "pass": true,
+      "source": "docs/reports/team2/TEAM2_PAY_SHARED_RUNTIME_PROBE_2026-05-01.json"
+    },
+    {
+      "signal": "shared_upstream_release_gate_ready",
+      "pass": true,
+      "source": "docs/reports/team2/TEAM2_PAY_SHARED_RUNTIME_PROBE_2026-05-01.json"
+    }
+  ],
+  "bundleSummary": {
+    "status": "RERUN_COMPLETED_GATE_FAIL",
+    "preflightReady": true,
+    "nextActions": [
+      "Team Pay xác minh merchant/channel/package truth trên payOS dashboard.",
+      "Rerun one-shot canonical cho tới khi checkout_status=201 và link non-null.",
+      "Chỉ sau khi provider truth xanh, Team 2 mới chạy lại full rerun bundle chính thức."
+    ]
+  },
+  "gateSummary": {
+    "overallPass": false,
+    "gateDecision": "LOCK_RETAINED_WITH_REASON",
+    "unmetSignals": [
+      "checkout_url_non_null",
+      "payment_link_id_non_null",
+      "no_214",
+      "production_gate_green"
+    ]
+  },
+  "nextActions": [
+    "Đóng các tín hiệu gate còn fail: checkout_url_non_null, payment_link_id_non_null, no_214, production_gate_green."
+  ]
+}
