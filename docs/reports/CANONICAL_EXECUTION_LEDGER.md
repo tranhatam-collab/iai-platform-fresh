@@ -8,7 +8,7 @@ Source of Truth: YES
 
 Update SLA: `<= 24h`
 
-Last updated: `2026-04-22`
+Last updated: `2026-05-02` (§6 addendum; §3 table still anchored to `2026-04-22` and pending re-survey)
 
 ---
 
@@ -105,3 +105,37 @@ Nếu team không biết làm gì tiếp:
 - làm đúng `next_action_owner`
 
 Không cần suy đoán thêm ngoài ledger này.
+
+## 6. Addendum 2026-05-02 — patch state without rewriting §3 table
+
+Reason: §3 table is `state_as_of: 2026-04-22` (10 days stale). Until full re-survey is approved, this addendum patches truth.
+
+### 6.1 New entries
+
+| entry_id | entry_type | owner_team | authority_team | current_state | blocking_entries | required_evidence | next_action | next_action_owner | truth_source_file | state_as_of | is_stale |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `lane.team1-w1a-deploy-gate` | cross-team-gate | Team 1 | Team 1 | `REVIEW_READY_DEPLOY_BLOCKED` | `decision.architecture-home-iai` | D8a closure (which itself blocks on architecture decision) | wait founder architecture decision, then re-open D8a packet | Founder + Team 1 | `docs/reports/team1/TEAM1_ALL_WEB_COMPLETION_PLAN_V2_2026-05-01.md` §7 row D8 | `2026-05-02` | `no` |
+| `lane.team1-w1b-deploy-gate` | cross-team-gate | Team 1 + Team A | Team 1 | `REVIEW_READY_DEPLOY_BLOCKED` | `decision.docs-runtime-model` | D8b closure | wait founder docs runtime decision | Founder + Team 1 + Team A | `docs/reports/team1/TEAM1_W1B_D8B_EXECUTION_PACKET_2026-05-02.md` | `2026-05-02` | `no` |
+| `decision.architecture-home-iai` | founder-decision | Founder | Founder | `OPEN_OVERDUE_NONE` | none | founder picks Next.js-canonical or Node-canonical | reply on `NEXT_VS_NODE_DRIFT_2026-05-02.md` §4 | Founder | `docs/reports/team1/NEXT_VS_NODE_DRIFT_2026-05-02.md` | `2026-05-02` | `no` |
+| `decision.docs-runtime-model` | founder-decision | Founder | Founder | `OPEN` | none | founder picks Pages-canonical, Node-canonical, or temp dual-source | reply on D8B execution packet §4 | Founder | `docs/reports/team1/TEAM1_W1B_D8B_EXECUTION_PACKET_2026-05-02.md` | `2026-05-02` | `no` |
+| `decision.team-agent-identification` | founder-decision | Founder | Founder | `OPEN_OVERDUE_2D` | none | founder names agent owner for Team A, Team B-CDN, Team B-Flows, Team C | reply on Q-OPEN-4 reassess | Founder | `docs/reports/team1/TEAM1_BLOCKER_DASHBOARD_2026-05-02.md` | `2026-05-02` | `no` |
+
+### 6.2 Patches to existing entries (delta only, do not re-edit §3 rows)
+
+- `lane.pay-production-gate`: still `GATE_LOCKED`. New evidence: `docs/reports/team2/TEAM2_PAY_PROD_RERUN_BUNDLE_STATUS_2026-05-01.md` shows shared-runtime now PASS but checkout/payment_link/no_214 still FAIL. Root cause shifted from API key (closed) to merchant truth on payOS. External blocker name: payOS business verification.
+- `domain.pay.iai.one`: unchanged.
+- `lane.team5-live-sync`: still `REVIEW_BLOCKED`. Readiness loop 2026-04-28 returned `NOT_READY_FOR_SYNCHRONIZED_LIVE` — failure streak = 5+ days, escalation flag raised in `TEAM1_BLOCKER_DASHBOARD_2026-05-02.md`.
+- `lane.mail-system`, `lane.mail-wave-1`, `lane.mail-wave-2-auth`, `lane.mail-wave-3-pay-flow`, `lane.mail-global-live`: still `is_stale: yes` from `2026-04-15..04-19`. No state change recorded. Treat as drift risk.
+- `domain.cdn.iai.one`, `domain.flows.iai.one`, `domain.cios.iai.one`, `domain.developer.iai.one`: unchanged. Blocked on `decision.team-agent-identification` — agent owner not named for Team A/B-CDN/B-Flows/C.
+- `lane.universal-bilingual-rebuild`: unchanged.
+- `lane.team1-deferred-w1a` (NEW alias): use `TEAM1_ALL_WEB_COMPLETION_PLAN_V2_2026-05-01.md` §7 directly. D2/D3/D7/D12 closed. D8a paused. D4/D5/D6 open. D8b held. D8c/D8d/D9/D10/D11 open per wave.
+
+### 6.3 Stale-rule reminder
+
+Per §3 column `is_stale`: rows with `state_as_of` older than 7 days must be re-surveyed before being cited as truth in any new gate verdict.
+
+Rows currently stale (≥10 days old):
+- entire §3 table (anchored 2026-04-22)
+- `lane.mail-*` lane family (2026-04-15..04-19)
+
+Until §3 is re-surveyed, this §6 addendum is the canonical patch layer.
