@@ -30,7 +30,7 @@
 
 ## 3. Known gap (does NOT block W1B preview deploy)
 
-The exact GitHub repo bound to `docs-iai-one` cannot be read via wrangler CLI today. The capture note logs the procedure for founder to read it from Cloudflare dashboard (Workers & Pages → docs-iai-one → Settings → Builds & deployments → Source). When pasted, `SURFACE_SOURCE_OF_TRUTH.md` §1 row `docs.iai.one` updates from `TBD` to the real URL.
+The exact GitHub repo bound to `docs-iai-one` cannot be read via wrangler CLI today. The capture note logs the procedure for founder to read it from Cloudflare dashboard (Workers & Pages → docs-iai-one → Settings → Builds & deployments → Source). When pasted, `SURFACE_SOURCE_OF_TRUTH.md` §1 row `docs.iai.one` can be refined from the current generic pending note to the real URL.
 
 This gap does NOT block W1B preview deploy because:
 - W1B preview deploy means triggering a preview build on the canonical Pages project via dashboard.

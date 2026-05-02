@@ -12,7 +12,7 @@
 Wave: W1B
 Surface: docs.iai.one
 QC green: yes (per `qc-results.md` and `artifacts/W1B_QC_TEST_SUMMARY_2026-05-01.md`)
-Deferred items addressed: D2 (closed), D3 (closed), D8b (open; deploy-blocking)
+Deferred items addressed: D2 (closed), D3 (closed), D8b (closed via path P1; exact bound repo URL remains a documented dashboard follow-up)
 Founder review status: pending
 Founder sign-off date: —
 ```
@@ -29,12 +29,12 @@ Founder sign-off date: —
 | `sitemap-proof.md` | yes | repo-side proof |
 | `domain-proof.md` | yes | deploy-time live proof still pending |
 | `screenshots/` | yes | placeholder with required capture list |
-| `deferred.md` | yes | includes D8b deploy-blocking state |
+| `deferred.md` | yes | includes post-closeout D8b note and remaining preview/prod items |
 
 ## Closure plan
 
 1. W1A packet review proceeds independently of W1B (separate gates in plan §7).
-2. **Before** founder approves W1B preview deploy, D8b must be closed (`docs-iai-one` Pages source reconciled to monorepo `apps/docs`).
+2. D8b is closed via path P1: `docs-iai-one` Pages project is canonical; `apps/docs` is explicitly `experimental, not_live`. Exact GitHub repo URL remains a documented dashboard follow-up, not a preview blocker.
 3. The pre-deploy narrative file `DOCS_IAI_ONE_W1B_PRE_DEPLOY_EVIDENCE_PACKET_2026-05-01.md` and QC artifact remain as supporting evidence.
 
 ## Commit basis

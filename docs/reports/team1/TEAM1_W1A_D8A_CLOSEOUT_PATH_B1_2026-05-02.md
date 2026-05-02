@@ -17,7 +17,7 @@
 | Marked monorepo `apps/root` as experimental | `apps/root/STATUS.md` | yes |
 | Created canonical source-of-truth map | `docs/SURFACE_SOURCE_OF_TRUTH.md` | yes |
 | Plan v2 §6 next-actions rewritten | `docs/reports/team1/TEAM1_ALL_WEB_COMPLETION_PLAN_V2_2026-05-01.md` | yes (prior commit `a577593`) |
-| W1A packet status string update | (next commit) | (in this batch) |
+| W1A packet status string update | `docs/release-evidence/{iai.one,home.iai.one}/` | yes (this batch) |
 
 ---
 

@@ -3,7 +3,7 @@
 Wave: W1A
 Surface: home.iai.one
 QC green: yes
-Deferred items addressed: D2, D3
+Deferred items addressed: D2, D3, D8a (closed via path B1)
 Founder review status: pending
 Founder sign-off date: pending
 

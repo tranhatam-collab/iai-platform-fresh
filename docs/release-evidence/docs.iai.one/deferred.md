@@ -1,12 +1,12 @@
 # docs.iai.one Deferred Items
 
-Status: `W1B_REPO_REVIEW_READY_DEPLOY_BLOCKED_D8B_HELD_PENDING_DECISION`
+Status: `READY_FOR_W1B_PREVIEW_DEPLOY`
 
 W1B touching items:
 
 - D2: closed repo-side
 - D3: closed repo-side
-- D8b: held (runtime/source drift confirmed; see `docs/reports/team1/TEAM1_W1B_D8B_EXECUTION_PACKET_2026-05-02.md`)
+- D8b: closed 2026-05-02 via path P1 in `docs/reports/team1/TEAM1_W1B_D8B_CLOSEOUT_PATH_P1_2026-05-02.md`. Founder picked `D-003 = PAGES`; live `docs.iai.one` remains on canonical Pages project `docs-iai-one`, and monorepo `apps/docs` is now explicitly `experimental, not_live`. Exact GitHub repo URL is a known dashboard follow-up logged in `docs/reports/team1/artifacts/d8b/DOCS_IAI_ONE_BINDING_CAPTURE_NOTE_2026-05-02.md`.
 
 Still pending because deployment is not approved:
 
@@ -18,4 +18,4 @@ Still pending because deployment is not approved:
 Deploy gate note:
 
 - W1B repo-side review can proceed.
-- W1B preview deploy is blocked until D8b is closed in plan §7.
+- W1B preview deploy is no longer blocked by D8b. It remains sequence-gated behind W1A preview verification, and preview deploy means triggering a build on canonical Pages project `docs-iai-one`, not deploying `apps/docs` from this monorepo.

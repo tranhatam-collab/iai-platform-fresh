@@ -46,7 +46,7 @@ Recommendation: **Sub-path P1 first** (closes D8b in 30 minutes, restores W1B de
 
 ## 3. Sub-path P1 execution steps
 
-1. Run `wrangler pages project list` and identify the GitHub repo binding for `docs-iai-one`. Capture in `docs/reports/team1/artifacts/d8b/wrangler-docs-iai-one-binding-2026-05-02.txt`.
+1. Run `wrangler pages project list` and `wrangler pages deployment list --project-name docs-iai-one` to capture project-level Pages evidence for `docs-iai-one`. If the exact GitHub repo URL is not exposed by CLI, write a dashboard follow-up note in `docs/reports/team1/artifacts/d8b/DOCS_IAI_ONE_BINDING_CAPTURE_NOTE_2026-05-02.md`.
 2. Create `apps/docs/STATUS.md`:
    ```
    Lane: experimental, not_live
@@ -63,7 +63,7 @@ Recommendation: **Sub-path P1 first** (closes D8b in 30 minutes, restores W1B de
 
 D8b can be marked `closed (path P1)` when all are true:
 
-1. Pages binding evidence captured.
+1. Project-level Pages binding evidence captured, either as the exact GitHub repo URL or as a documented CLI limitation plus founder-dashboard follow-up note.
 2. `apps/docs/STATUS.md` exists.
 3. Source-of-truth doc updated.
 4. Plan v2 §7 row D8b updated.

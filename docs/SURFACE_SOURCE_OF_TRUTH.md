@@ -15,7 +15,7 @@ This document exists because live surfaces and monorepo lanes drifted apart. It 
 |---|---|---|---|---|
 | `home.iai.one` | Next.js | `tranhatam-collab/Home.iai.one` | Pages `home-iai-one` | `apps/home` = `experimental, not_live` |
 | `iai.one` | Next.js | `tranhatam-collab/Home.iai.one` | Pages `home-iai-one` | `apps/root` = `experimental, not_live` |
-| `docs.iai.one` | static / Pages | (binding to be captured per D8b path P1) | Pages `docs-iai-one` | `apps/docs` = `experimental, not_live` |
+| `docs.iai.one` | static / Pages | separate legacy repo (exact GitHub URL pending founder dashboard read; see `docs/reports/team1/artifacts/d8b/DOCS_IAI_ONE_BINDING_CAPTURE_NOTE_2026-05-02.md`) | Pages `docs-iai-one` | `apps/docs` = `experimental, not_live` |
 | `developer.iai.one` | TBD | TBD | TBD | `apps/developer` = `unknown` (Team A pending) |
 | `app.iai.one` | Next.js (live) | TBD (drift open per D8d) | TBD | `apps/app` = `experimental, not_live` until D8d closes |
 | `flow.iai.one` | static (live) | TBD (drift open per D8c) | Pages `flow-iai-one` | `apps/flow` = `experimental, not_live` until D8c closes |

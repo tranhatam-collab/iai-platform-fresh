@@ -1,7 +1,7 @@
 # apps/docs — STATUS
 
 - Lane: `experimental, not_live`
-- Reason: Founder picked `DOCS_PAGES_CANONICAL` (D-003 = `PAGES`) on 2026-05-02. Live `docs.iai.one` is served from Cloudflare Pages project `docs-iai-one` with a separate canonical source repo (binding to be captured under `docs/reports/team1/artifacts/d8b/`). This Node TS server is **not** the live source.
+- Reason: Founder picked `DOCS_PAGES_CANONICAL` (D-003 = `PAGES`) on 2026-05-02. Live `docs.iai.one` is served from Cloudflare Pages project `docs-iai-one` with a separate canonical source. The exact bound GitHub repo URL is a known dashboard follow-up logged under `docs/reports/team1/artifacts/d8b/`, but this Node TS server is already confirmed **not** to be the live source.
 - Authority: `docs/reports/FOUNDER_REPLY_BATCH_2026-05-02.md`
 - Source-of-truth map: `docs/SURFACE_SOURCE_OF_TRUTH.md`
 

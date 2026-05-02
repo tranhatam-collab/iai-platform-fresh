@@ -24,4 +24,4 @@ PASS 5/5
 
 ## Deploy Gate Note
 
-W1B preview deploy remains blocked until D8b is closed (Pages source reconciliation for `docs-iai-one` to monorepo `apps/docs`).
+W1B preview deploy is no longer blocked by D8b. The canonical runtime is Pages project `docs-iai-one`; `apps/docs` is explicitly `experimental, not_live`. W1B still follows W1A in sequence.
