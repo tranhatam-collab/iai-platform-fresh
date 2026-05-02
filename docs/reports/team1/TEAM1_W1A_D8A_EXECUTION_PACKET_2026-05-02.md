@@ -5,7 +5,10 @@
 - Source audit: `docs/reports/team1/AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md` §B1, §C3
 - Plan reference: `docs/reports/team1/TEAM1_ALL_WEB_COMPLETION_PLAN_V2_2026-05-01.md` §7 row D8
 - Wave gated: `W1A` preview deploy
-- Status: `OPEN_EXECUTION_PACKET_READY`
+- Status: `HELD — DO NOT EXECUTE pending architecture decision`
+- Hold reason: `NEXT_VS_NODE_DRIFT_2026-05-02.md` confirmed two-codebase technology drift between live (Next.js) and monorepo (Node TS). The §3 dashboard playbook below assumes "switch Pages source to monorepo `apps/home`" works, but `apps/home` is not a Next.js project; running this playbook now would either fail to build or replace live UX with the Node server shell without founder approval.
+
+**Execution permission:** this packet may only be executed after founder picks an architecture target in `NEXT_VS_NODE_DRIFT_2026-05-02.md` §4 (Next.js canonical vs Node canonical) AND that decision is recorded in this repo. Until then, treat §3 below as reference, not action.
 
 ---
 

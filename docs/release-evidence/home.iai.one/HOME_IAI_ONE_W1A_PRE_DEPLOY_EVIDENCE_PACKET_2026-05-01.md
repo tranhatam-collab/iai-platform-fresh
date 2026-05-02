@@ -3,7 +3,7 @@
 - Date: `2026-05-01`
 - Surface: `home.iai.one`
 - Wave: `W1A`
-- Status: `PRE_DEPLOY_REVIEW_READY_DEPLOY_BLOCKED_D8A`
+- Status: `PRE_DEPLOY_REVIEW_READY_DEPLOY_BLOCKED_D8A_PAUSED_PENDING_DRIFT_DECISION`
 - Global state: `PRODUCTION_PUBLICATION_HOLD`
 - Working repo: `/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh`
 - Current commit basis: `62931a9` (`docs(team1): refresh commit basis to aaa0c05 in W1A/W1B packets`, 2026-05-02). Previous bases were `aaa0c05`, `97ee825`, and `3048195`.
