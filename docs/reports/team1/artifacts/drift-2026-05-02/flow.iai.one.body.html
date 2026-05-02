@@ -1,0 +1,1581 @@
+<!doctype html>
+<html lang="vi" class="lang-vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+
+  <title>IAI Flow V1.0.1 — Nền tảng điều phối AI workflows, agents và runtime</title>
+  <meta name="description" content="IAI Flow là nền tảng điều phối AI workflows, agents, runtime và automation infrastructure cho developer, startup và doanh nghiệp." />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="theme-color" content="#071019" />
+  <meta name="color-scheme" content="dark" />
+
+  <link rel="canonical" href="https://flow.iai.one/" />
+  <link rel="alternate" hreflang="vi" href="https://flow.iai.one/" />
+  <link rel="alternate" hreflang="en" href="https://flow.iai.one/?lang=en" />
+  <link rel="alternate" hreflang="x-default" href="https://flow.iai.one/" />
+  <link rel="icon" href="/icon.png" />
+  <link rel="apple-touch-icon" href="/icon.png" />
+
+  <link rel="preconnect" href="https://flow.iai.one" />
+  <link rel="dns-prefetch" href="https://flow.iai.one" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="IAI Flow V1.0.1 — AI Workflow Orchestration Platform" />
+  <meta property="og:description" content="Build, run and scale AI workflows, agent systems and automation runtime in one platform." />
+  <meta property="og:url" content="https://flow.iai.one/" />
+  <meta property="og:site_name" content="IAI Flow" />
+  <meta property="og:image" content="https://flow.iai.one/assets/og.jpg" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="IAI Flow V1.0.1 — AI Workflow Orchestration Platform" />
+  <meta name="twitter:description" content="Visual builder, runtime engine, node ecosystem and AI agent orchestration in one platform." />
+  <meta name="twitter:image" content="https://flow.iai.one/assets/og.jpg" />
+
+  <meta name="iai-flow-api-base" content="https://api.flow.iai.one" />
+
+  <link rel="stylesheet" href="/assets/ui.css" />
+  <link rel="stylesheet" href="/assets/layout.css" />
+
+  <style>
+    .brand{
+      gap:14px;
+    }
+
+    .brand-mark{
+      width:58px;
+      height:58px;
+      border-radius:18px;
+      object-fit:cover;
+      flex:0 0 auto;
+      box-shadow:0 18px 40px rgba(215,181,109,.16);
+      background:linear-gradient(135deg,#d7b56d,#f2ddaa);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .brand-copy{
+      display:flex;
+      flex-direction:column;
+      min-width:0;
+      line-height:1.05;
+    }
+
+    .brand-title{
+      font-size:19px;
+      font-weight:800;
+      letter-spacing:-.04em;
+    }
+
+    .brand-subtitle{
+      margin-top:4px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.3;
+      letter-spacing:.01em;
+    }
+
+    .site-header{
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+
+    .site-header-inner{
+      min-height:92px;
+      gap:18px;
+    }
+
+    .nav{
+      gap:14px;
+      flex:1 1 auto;
+      justify-content:center;
+    }
+
+    .nav a{
+      padding:0 2px 14px;
+      font-size:15px;
+      white-space:nowrap;
+    }
+
+    .nav a::after{
+      bottom:2px;
+      height:2px;
+      background:linear-gradient(90deg, rgba(215,181,109,.12), rgba(215,181,109,.95), rgba(215,181,109,.12));
+    }
+
+    .header-actions{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      gap:12px;
+    }
+
+    .lang-switch{
+      flex:0 0 auto;
+      border-color:rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+    }
+
+    .lang-switch button{
+      min-width:48px;
+      font-weight:700;
+    }
+
+    .hero{
+      padding:34px 0 18px;
+    }
+
+    .hero-main{
+      min-height:auto;
+      padding-bottom:0;
+    }
+
+    .hero-primary-nav{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:16px;
+      margin-top:26px;
+      padding-top:18px;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+
+    .hero-primary-link{
+      min-height:104px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:0 18px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+      color:var(--text);
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:-.03em;
+      transition:transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+
+    .hero-primary-link:hover{
+      transform:translateY(-2px);
+      border-color:rgba(127,211,255,.28);
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.025));
+      box-shadow:0 14px 26px rgba(0,0,0,.18);
+    }
+
+    .hero-primary-link.is-featured{
+      color:#071019;
+      border-color:transparent;
+      background:linear-gradient(135deg, rgba(127,211,255,.96), rgba(110,231,200,.88));
+      box-shadow:0 20px 38px rgba(127,211,255,.20);
+    }
+
+    .hero-primary-link small{
+      display:block;
+      margin-top:6px;
+      font-size:12px;
+      font-weight:600;
+      letter-spacing:.02em;
+      opacity:.82;
+    }
+
+    .hero-side{
+      align-content:start;
+    }
+
+    .section{
+      margin-top:56px;
+    }
+
+    .section:first-of-type{
+      margin-top:0;
+    }
+
+    .section-head h2{
+      font-size:clamp(28px,4vw,42px);
+    }
+
+    .runtime-preview-actions,
+    .node-marketplace-actions,
+    .playground-actions,
+    .builder-demo-actions{
+      width:100%;
+    }
+
+    .architecture-grid{
+      margin-top:22px;
+    }
+
+    .arch-card ul{
+      margin:14px 0 0;
+    }
+
+    .noos-preview{
+      display:grid;
+      grid-template-columns:minmax(0,1.12fr) minmax(320px,.88fr);
+      gap:18px;
+      align-items:stretch;
+    }
+
+    .noos-preview-main,
+    .noos-preview-side{
+      display:grid;
+      gap:18px;
+    }
+
+    .noos-preview-band{
+      padding:24px;
+      border-radius:24px;
+      border:1px solid var(--line);
+      background:
+        radial-gradient(circle at top left, rgba(127,211,255,.12), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow:var(--shadow-soft);
+    }
+
+    .noos-preview-band h3,
+    .noos-preview-card h3{
+      margin:0 0 10px;
+      font-size:20px;
+      letter-spacing:-.03em;
+    }
+
+    .noos-preview-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:18px;
+    }
+
+    .noos-preview-card{
+      padding:20px;
+      border-radius:22px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      box-shadow:var(--shadow-soft);
+    }
+
+    .noos-preview-card .badge{
+      margin-bottom:12px;
+    }
+
+    @media (max-width: 1280px){
+      .site-header-inner{
+        flex-wrap:wrap;
+        row-gap:10px;
+        gap:14px;
+      }
+
+      .nav{
+        order:3;
+        flex:1 1 100%;
+        justify-content:flex-start;
+        overflow-x:auto;
+        padding-bottom:4px;
+        gap:12px;
+      }
+
+      .nav a{
+        font-size:14px;
+      }
+    }
+
+    @media (max-width: 1180px){
+      .hero-primary-nav{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+
+      .noos-preview,
+      .noos-preview-grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 900px){
+      .brand-mark{
+        width:52px;
+        height:52px;
+        border-radius:16px;
+      }
+
+      .brand-title{
+        font-size:18px;
+      }
+
+      .site-header-inner{
+        min-height:84px;
+      }
+
+      .nav{
+        justify-content:flex-start;
+      }
+    }
+
+    @media (max-width: 760px){
+      .hero-primary-nav{
+        grid-template-columns:1fr;
+        gap:12px;
+      }
+
+      .hero-primary-link{
+        min-height:78px;
+        font-size:17px;
+        border-radius:26px;
+      }
+
+      .brand-subtitle{
+        font-size:11px;
+      }
+    }
+
+    @media (max-width: 520px){
+      .brand-copy{
+        max-width:160px;
+      }
+
+      .brand-title{
+        font-size:17px;
+      }
+    }
+  </style>
+
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"SoftwareApplication",
+    "name":"IAI Flow",
+    "applicationCategory":"BusinessApplication",
+    "operatingSystem":"Web",
+    "url":"https://flow.iai.one/",
+    "description":"AI workflow orchestration platform for automation workflows, agents and runtime infrastructure.",
+    "inLanguage":["vi","en"]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"Organization",
+    "name":"IAI Flow",
+    "url":"https://flow.iai.one",
+    "logo":"https://flow.iai.one/icon.png"
+  }
+  </script>
+</head>
+<body class="home-page">
+  <div class="site-shell">
+    <header class="site-header">
+      <div class="shell site-header-inner">
+        <a class="brand" href="/" aria-label="IAI Flow home">
+          <img class="brand-mark" src="/icon.png" alt="IAI Flow logo" />
+          <span class="brand-copy">
+            <span class="brand-title">IAI Flow</span>
+            <span class="brand-subtitle">
+              <span data-lang="vi">Nền tảng điều phối AI • IAI.one</span>
+              <span data-lang="en">AI orchestration platform • IAI.one</span>
+            </span>
+          </span>
+        </a>
+
+        <button
+          class="menu-toggle"
+          type="button"
+          aria-label="Toggle navigation"
+          aria-expanded="false"
+          data-nav-toggle
+        >
+          ☰
+        </button>
+
+        <nav class="nav" aria-label="Main navigation" data-nav>
+          <a href="/" class="is-active">
+            <span data-lang="vi">Trang chủ</span>
+            <span data-lang="en">Home</span>
+          </a>
+          <a href="/docs/civilization-os/">
+            <span data-lang="vi">NOOS</span>
+            <span data-lang="en">NOOS</span>
+          </a>
+          <a href="/modules/">
+            <span data-lang="vi">Giới thiệu nền tảng</span>
+            <span data-lang="en">Platform overview</span>
+          </a>
+          <a href="/nodes/">
+            <span data-lang="vi">Node library</span>
+            <span data-lang="en">Node library</span>
+          </a>
+          <a href="/developers/">
+            <span data-lang="vi">Developer hub</span>
+            <span data-lang="en">Developer hub</span>
+          </a>
+          <a href="/docs/">
+            <span data-lang="vi">Tài liệu</span>
+            <span data-lang="en">Documentation</span>
+          </a>
+          <a href="/community/">
+            <span data-lang="vi">Cộng đồng</span>
+            <span data-lang="en">Community</span>
+          </a>
+        </nav>
+
+        <div class="header-actions">
+          <div class="lang-switch" aria-label="Language switch">
+            <button type="button" data-set-lang="vi" aria-pressed="true">VI</button>
+            <button type="button" data-set-lang="en" aria-pressed="false">EN</button>
+          </div>
+
+          <a class="btn" href="https://dash.iai.one/" target="_blank" rel="noopener noreferrer">
+            <span data-lang="vi">Dashboard (chạy thật)</span>
+            <span data-lang="en">Dashboard (live)</span>
+          </a>
+
+          <a class="btn btn-primary" href="/app/">
+            <span data-lang="vi">Mở ứng dụng</span>
+            <span data-lang="en">Launch app</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" role="main" class="site-main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="shell hero-grid">
+          <article class="panel hero-main">
+            <div>
+              <div class="eyebrow">
+                <span data-lang="vi">Phiên bản V1.0.1 • AI • Workflow • Agent Orchestration</span>
+                <span data-lang="en">Version V1.0.1 • AI • Workflow • Agent Orchestration</span>
+              </div>
+
+              <h1 id="hero-title" class="hero-title">
+                <span data-lang="vi">Nền tảng điều phối AI workflows, agents và runtime cho hệ thống tự động hóa thế hệ mới</span>
+                <span data-lang="en">The orchestration platform for AI workflows, agents and runtime systems at production scale</span>
+              </h1>
+
+              <p class="hero-desc">
+                <span data-lang="vi">IAI Flow giúp developer, startup và doanh nghiệp xây dựng, chạy và mở rộng các workflows trực quan, agent systems và data pipelines trong một nền tảng thống nhất, song ngữ ngay từ lõi hệ thống.</span>
+                <span data-lang="en">IAI Flow helps developers, startups and enterprises build, run and scale visual workflows, agent systems and data pipelines in one unified platform, bilingual from the system core.</span>
+              </p>
+
+              <div class="hero-actions">
+                <a class="btn btn-primary" href="https://dash.iai.one/" target="_blank" rel="noopener noreferrer">
+                  <span data-lang="vi">Chạy hệ thống thật</span>
+                  <span data-lang="en">Run live system</span>
+                </a>
+
+                <a class="btn" href="/app/">
+                  <span data-lang="vi">Mở app (demo)</span>
+                  <span data-lang="en">Open app (demo)</span>
+                </a>
+
+                <a class="btn" href="/docs/">
+                  <span data-lang="vi">Đọc tài liệu</span>
+                  <span data-lang="en">Read docs</span>
+                </a>
+
+                <a class="btn" href="/nodes/">
+                  <span data-lang="vi">Khám phá nodes</span>
+                  <span data-lang="en">Explore nodes</span>
+                </a>
+
+                <a class="btn" href="/developers/">
+                  <span data-lang="vi">Dành cho developer</span>
+                  <span data-lang="en">For developers</span>
+                </a>
+
+                <a class="btn" href="https://ai.muonnoi.org/agents/demo-support/" target="_blank" rel="noopener noreferrer">
+                  <span data-lang="vi">Agent Demo 1 (public)</span>
+                  <span data-lang="en">Agent Demo 1 (public)</span>
+                </a>
+
+                <a class="btn" href="https://ai.muonnoi.org/agents/demo-sales/" target="_blank" rel="noopener noreferrer">
+                  <span data-lang="vi">Agent Demo 2 (public)</span>
+                  <span data-lang="en">Agent Demo 2 (public)</span>
+                </a>
+              </div>
+
+              <div class="hero-kpis">
+                <div class="kpi">
+                  <strong>Visual</strong>
+                  <span>
+                    <span data-lang="vi">Builder trực quan cho workflows và agent flows</span>
+                    <span data-lang="en">Visual builder for workflows and agent flows</span>
+                  </span>
+                </div>
+
+                <div class="kpi">
+                  <strong>Runtime</strong>
+                  <span>
+                    <span data-lang="vi">Execution layer cho queue, logs, monitoring và orchestration</span>
+                    <span data-lang="en">Execution layer for queue, logs, monitoring and orchestration</span>
+                  </span>
+                </div>
+
+                <div class="kpi">
+                  <strong>Nodes</strong>
+                  <span>
+                    <span data-lang="vi">Node ecosystem mở rộng cho AI, integrations và data pipelines</span>
+                    <span data-lang="en">Extensible node ecosystem for AI, integrations and data pipelines</span>
+                  </span>
+                </div>
+
+                <div class="kpi">
+                  <strong>VI/EN</strong>
+                  <span>
+                    <span data-lang="vi">Song ngữ ngay từ lõi hệ thống</span>
+                    <span data-lang="en">Bilingual from the platform core</span>
+                  </span>
+                </div>
+              </div>
+
+              <div class="hero-primary-nav" aria-label="Quick access">
+                <a class="hero-primary-link is-featured" href="https://dash.iai.one/" target="_blank" rel="noopener noreferrer">
+                  <span data-lang="vi">Dashboard<small>Không gian chạy thật sau đăng ký</small></span>
+                  <span data-lang="en">Dashboard<small>Live workspace after sign-in</small></span>
+                </a>
+
+                <a class="hero-primary-link" href="/docs/">
+                  <span data-lang="vi">Đọc tài liệu<small>Tài liệu nền tảng và cấu trúc</small></span>
+                  <span data-lang="en">Read docs<small>Platform documentation and structure</small></span>
+                </a>
+
+                <a class="hero-primary-link" href="/nodes/">
+                  <span data-lang="vi">Khám phá nodes<small>Hệ sinh thái node mở rộng</small></span>
+                  <span data-lang="en">Explore nodes<small>Extensible node ecosystem</small></span>
+                </a>
+
+                <a class="hero-primary-link" href="/developers/">
+                  <span data-lang="vi">Dành cho developer<small>SDK, chuẩn mở rộng và docs</small></span>
+                  <span data-lang="en">For developers<small>SDK, extension standards and docs</small></span>
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <aside class="panel hero-side">
+            <div class="side-card">
+              <h3>
+                <span data-lang="vi">Dành cho developer</span>
+                <span data-lang="en">Built for developers</span>
+              </h3>
+              <p>
+                <span data-lang="vi">Điểm mạnh của IAI Flow nằm ở giao điểm giữa visual builder, runtime API, hệ sinh thái node và hệ thống tài liệu mở. Developer có thể vừa sử dụng ngay để xây workflow, vừa mở rộng hệ thống bằng cách phát triển node, tích hợp dịch vụ hoặc xây dựng các lớp automation phức tạp hơn trên cùng nền tảng.</span>
+                <span data-lang="en">The strength of IAI Flow lies at the intersection of a visual workflow builder, runtime APIs, a modular node ecosystem and open documentation. Developers can use it immediately to build workflows while also extending the platform by creating nodes, integrating external services or building advanced automation layers on top of the same system.</span>
+              </p>
+              <div class="side-badges">
+                <span class="badge">Docs</span>
+                <span class="badge">Runtime API</span>
+                <span class="badge">Node Library</span>
+                <span class="badge">Builder</span>
+              </div>
+            </div>
+
+            <div class="side-card">
+              <h3>
+                <span data-lang="vi">Dành cho doanh nghiệp</span>
+                <span data-lang="en">Ready for enterprise</span>
+              </h3>
+              <p>
+                <span data-lang="vi">Nền tảng phù hợp để xây các quy trình AI automation nội bộ, multi step pipelines, agent based operations và runtime quan sát được.</span>
+                <span data-lang="en">Suitable for internal AI automation, multi step pipelines, agent based operations and observable runtime infrastructure.</span>
+              </p>
+            </div>
+
+            <div class="side-card">
+              <h3>
+                <span data-lang="vi">Tư duy platform</span>
+                <span data-lang="en">Platform mindset</span>
+              </h3>
+              <p>
+                <span data-lang="vi">IAI Flow không chỉ là một giao diện builder, mà là một lớp điều phối cho automation, AI orchestration, node ecosystem và runtime infrastructure.</span>
+                <span data-lang="en">IAI Flow is not just a builder interface, but an orchestration layer for automation, AI orchestration, node ecosystem and runtime infrastructure.</span>
+              </p>
+              <a class="mini-link" href="/modules/">
+                <span data-lang="vi">Xem kiến trúc nền tảng</span>
+                <span data-lang="en">View platform architecture</span>
+              </a>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="runtime-preview-title">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <h2 id="runtime-preview-title">
+                <span data-lang="vi">Runtime dashboard preview</span>
+                <span data-lang="en">Runtime dashboard preview</span>
+              </h2>
+              <p>
+                <span data-lang="vi">Xem trước cách runtime layer theo dõi queue, throughput, success rate, recent runs và logs để cho thấy IAI Flow không chỉ là visual builder mà là một orchestration platform hoàn chỉnh.</span>
+                <span data-lang="en">Preview how the runtime layer tracks queue, throughput, success rate, recent runs and logs to show that IAI Flow is not just a visual builder, but a complete orchestration platform.</span>
+              </p>
+            </div>
+
+            <div class="runtime-preview-actions">
+              <button class="btn btn-small is-active" type="button" data-runtime-mode="live">
+                <span data-lang="vi">Live</span>
+                <span data-lang="en">Live</span>
+              </button>
+              <button class="btn btn-small" type="button" data-runtime-mode="stable">
+                <span data-lang="vi">Stable</span>
+                <span data-lang="en">Stable</span>
+              </button>
+              <button class="btn btn-small" type="button" data-runtime-mode="peak">
+                <span data-lang="vi">Peak</span>
+                <span data-lang="en">Peak</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="runtime-preview">
+            <div class="runtime-preview-main">
+              <div class="runtime-preview-kpis">
+                <article class="runtime-metric-card">
+                  <span class="runtime-metric-label">
+                    <span data-lang="vi">Queue depth</span>
+                    <span data-lang="en">Queue depth</span>
+                  </span>
+                  <strong class="runtime-metric-value" data-runtime-metric="queue">0</strong>
+                  <span class="runtime-metric-note">
+                    <span data-lang="vi">Pending executions</span>
+                    <span data-lang="en">Pending executions</span>
+                  </span>
+                </article>
+
+                <article class="runtime-metric-card">
+                  <span class="runtime-metric-label">
+                    <span data-lang="vi">Throughput</span>
+                    <span data-lang="en">Throughput</span>
+                  </span>
+                  <strong class="runtime-metric-value" data-runtime-metric="throughput">0/s</strong>
+                  <span class="runtime-metric-note">
+                    <span data-lang="vi">Workflow events</span>
+                    <span data-lang="en">Workflow events</span>
+                  </span>
+                </article>
+
+                <article class="runtime-metric-card">
+                  <span class="runtime-metric-label">
+                    <span data-lang="vi">Success rate</span>
+                    <span data-lang="en">Success rate</span>
+                  </span>
+                  <strong class="runtime-metric-value" data-runtime-metric="success">0%</strong>
+                  <span class="runtime-metric-note">
+                    <span data-lang="vi">Runtime health</span>
+                    <span data-lang="en">Runtime health</span>
+                  </span>
+                </article>
+
+                <article class="runtime-metric-card">
+                  <span class="runtime-metric-label">
+                    <span data-lang="vi">Active workers</span>
+                    <span data-lang="en">Active workers</span>
+                  </span>
+                  <strong class="runtime-metric-value" data-runtime-metric="workers">0</strong>
+                  <span class="runtime-metric-note">
+                    <span data-lang="vi">Execution capacity</span>
+                    <span data-lang="en">Execution capacity</span>
+                  </span>
+                </article>
+              </div>
+
+              <div class="runtime-preview-panels">
+                <article class="runtime-panel-card">
+                  <div class="runtime-panel-head">
+                    <h3>
+                      <span data-lang="vi">Recent runs</span>
+                      <span data-lang="en">Recent runs</span>
+                    </h3>
+                    <span class="runtime-panel-pill" data-runtime-mode-label>live</span>
+                  </div>
+
+                  <div class="runtime-runs-list" data-runtime-runs>
+                    <div class="runtime-run-row is-placeholder">Loading runs…</div>
+                  </div>
+                </article>
+
+                <article class="runtime-panel-card">
+                  <div class="runtime-panel-head">
+                    <h3>
+                      <span data-lang="vi">Live logs</span>
+                      <span data-lang="en">Live logs</span>
+                    </h3>
+                    <span class="runtime-panel-pill runtime-panel-pill-accent">
+                      <span data-lang="vi">preview</span>
+                      <span data-lang="en">preview</span>
+                    </span>
+                  </div>
+
+                  <div class="runtime-log-console" data-runtime-logs>
+                    <div class="runtime-log-line is-muted">Waiting for runtime events…</div>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <aside class="runtime-preview-side">
+              <article class="runtime-side-card">
+                <h3>
+                  <span data-lang="vi">Execution topology</span>
+                  <span data-lang="en">Execution topology</span>
+                </h3>
+                <div class="runtime-topology">
+                  <div class="runtime-topology-node" data-topology-node="ingest">
+                    <strong>Ingress</strong>
+                    <span>Trigger</span>
+                  </div>
+                  <div class="runtime-topology-node" data-topology-node="queue">
+                    <strong>Queue</strong>
+                    <span>Dispatch</span>
+                  </div>
+                  <div class="runtime-topology-node" data-topology-node="workers">
+                    <strong>Workers</strong>
+                    <span>Process</span>
+                  </div>
+                  <div class="runtime-topology-node" data-topology-node="storage">
+                    <strong>Logs</strong>
+                    <span>Persist</span>
+                  </div>
+                </div>
+              </article>
+
+              <article class="runtime-side-card">
+                <h3>
+                  <span data-lang="vi">Runtime notes</span>
+                  <span data-lang="en">Runtime notes</span>
+                </h3>
+                <ul class="runtime-notes-list">
+                  <li>
+                    <span data-lang="vi">Queue, retry, logs và worker health được mô phỏng như một dashboard orchestration thật.</span>
+                    <span data-lang="en">Queue, retry, logs and worker health are simulated as a real orchestration dashboard.</span>
+                  </li>
+                  <li>
+                    <span data-lang="vi">Các mode Live, Stable, Peak giúp người xem thấy platform scale ra sao trong các tải khác nhau.</span>
+                    <span data-lang="en">Live, Stable and Peak modes help users see how the platform scales across different loads.</span>
+                  </li>
+                  <li>
+                    <span data-lang="vi">Trang chủ được thiết kế để đi từ visual builder sang runtime thật, không chỉ dừng ở phần giới thiệu.</span>
+                    <span data-lang="en">The homepage is designed to move from visual builder toward real runtime capabilities, not stop at introduction.</span>
+                  </li>
+                </ul>
+              </article>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="noos-preview-title">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <h2 id="noos-preview-title">
+                <span data-lang="vi">NOOS: lớp kiến trúc phía trên IAI Flow</span>
+                <span data-lang="en">NOOS: the architecture layer above IAI Flow</span>
+              </h2>
+              <p>
+                <span data-lang="vi">IAI Flow là orchestration core cho workflows, agents và runtime execution. NOOS đặt lớp đó vào một hệ lớn hơn: mission graph, digital twins, gateways, robotics, NTN, energy, trust và governance.</span>
+                <span data-lang="en">IAI Flow is the orchestration core for workflows, agents and runtime execution. NOOS places that layer inside a larger system: mission graphs, digital twins, gateways, robotics, NTN, energy, trust and governance.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="noos-preview">
+            <div class="noos-preview-main">
+              <article class="noos-preview-band">
+                <h3>
+                  <span data-lang="vi">Civilization operating system, not a single app</span>
+                  <span data-lang="en">Civilization operating system, not a single app</span>
+                </h3>
+                <p>
+                  <span data-lang="vi">NOOS mô tả cách một nền văn minh số có thể vận hành hạ tầng sống: AI được giới hạn bằng policy, edge gateways giữ trí tuệ cục bộ, robot và cảm biến tạo ra twin của thế giới vật lý, còn Flow thực thi những intent đó qua runtime có log, queue, approvals và rollback.</span>
+                  <span data-lang="en">NOOS describes how a digital civilization can operate living infrastructure: AI is bounded by policy, edge gateways hold local intelligence, robots and sensors build twins of the physical world, and Flow executes those intents through a runtime with logs, queueing, approvals and rollback.</span>
+                </p>
+                <div class="hero-actions">
+                  <a class="btn btn-primary" href="/docs/civilization-os/">
+                    <span data-lang="vi">Mở Civilization OS</span>
+                    <span data-lang="en">Open Civilization OS</span>
+                  </a>
+                  <a class="btn" href="/docs/architecture/">
+                    <span data-lang="vi">Xem kiến trúc Flow</span>
+                    <span data-lang="en">View Flow architecture</span>
+                  </a>
+                </div>
+              </article>
+
+              <div class="noos-preview-grid">
+                <article class="noos-preview-card">
+                  <span class="badge">NOOS</span>
+                  <h3>
+                    <span data-lang="vi">Mission and policy fabric</span>
+                    <span data-lang="en">Mission and policy fabric</span>
+                  </h3>
+                  <p>
+                    <span data-lang="vi">Định nghĩa mission graphs, zones, command envelopes, trust boundaries và risk controls cho toàn hệ.</span>
+                    <span data-lang="en">Defines mission graphs, zones, command envelopes, trust boundaries and risk controls for the system.</span>
+                  </p>
+                </article>
+
+                <article class="noos-preview-card">
+                  <span class="badge">Flow</span>
+                  <h3>
+                    <span data-lang="vi">Execution and orchestration</span>
+                    <span data-lang="en">Execution and orchestration</span>
+                  </h3>
+                  <p>
+                    <span data-lang="vi">Chạy workflow, agents, scheduler, approvals, logs và runtime state trong phạm vi đã được policy giới hạn.</span>
+                    <span data-lang="en">Runs workflows, agents, schedulers, approvals, logs and runtime state within policy-bounded execution.</span>
+                  </p>
+                </article>
+
+                <article class="noos-preview-card">
+                  <span class="badge">Field</span>
+                  <h3>
+                    <span data-lang="vi">Gateways, robots and NTN</span>
+                    <span data-lang="en">Gateways, robots and NTN</span>
+                  </h3>
+                  <p>
+                    <span data-lang="vi">Kết nối AI biên, cảm biến, UGV/UAV, satellite continuity và energy fabric thành cùng một hạ tầng quan sát được.</span>
+                    <span data-lang="en">Connects edge AI, sensors, UGV/UAV fleets, satellite continuity and energy fabric into one observable infrastructure.</span>
+                  </p>
+                </article>
+              </div>
+            </div>
+
+            <aside class="noos-preview-side">
+              <article class="card">
+                <h3>
+                  <span data-lang="vi">Vì sao NOOS quan trọng</span>
+                  <span data-lang="en">Why NOOS matters</span>
+                </h3>
+                <p>
+                  <span data-lang="vi">Nếu chỉ có builder và runtime, platform mới điều phối phần mềm. Nếu có thêm twins, gateways, policy envelopes và evidence anchors, platform bắt đầu chạm đến hạ tầng vật lý thật. NOOS là ngôn ngữ kiến trúc cho bước chuyển đó.</span>
+                  <span data-lang="en">With only a builder and runtime, the platform orchestrates software. Once twins, gateways, policy envelopes and evidence anchors are added, it starts to touch real physical infrastructure. NOOS is the architectural language for that transition.</span>
+                </p>
+              </article>
+
+              <article class="card">
+                <h3>
+                  <span data-lang="vi">Phase 1 public surface</span>
+                  <span data-lang="en">Phase 1 public surface</span>
+                </h3>
+                <p>
+                  <span data-lang="vi">Pha hiện tại công bố blueprint: system map, device matrix, standards, governance và roadmap. Nó cho thấy Flow nằm ở đâu trong kiến trúc dài hạn của hệ sinh thái `iai.one`.</span>
+                  <span data-lang="en">The current phase publishes the blueprint: system map, device matrix, standards, governance and roadmap. It shows where Flow sits inside the long-term `iai.one` architecture.</span>
+                </p>
+                <a class="mini-link" href="/docs/civilization-os/">
+                  <span data-lang="vi">Đọc flagship page</span>
+                  <span data-lang="en">Read the flagship page</span>
+                </a>
+              </article>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section architecture" aria-labelledby="architecture-title">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <h2 id="architecture-title">
+                <span data-lang="vi">IAI Flow Architecture</span>
+                <span data-lang="en">IAI Flow Architecture</span>
+              </h2>
+              <p>
+                <span data-lang="vi">IAI Flow được thiết kế như một lớp điều phối automation thế hệ mới. Kiến trúc của hệ thống cho phép workflow được xây dựng trực quan, chạy trên runtime engine mạnh mẽ và mở rộng thông qua hệ sinh thái node do developer hoặc cộng đồng phát triển.</span>
+                <span data-lang="en">IAI Flow is designed as a next generation automation orchestration layer. The architecture allows workflows to be built visually, executed by a scalable runtime engine and extended through a modular node ecosystem created by developers and the community.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="architecture-grid">
+            <article class="arch-card">
+              <div class="arch-icon">🧠</div>
+              <h3>
+                <span data-lang="vi">Visual Workflow Layer</span>
+                <span data-lang="en">Visual Workflow Layer</span>
+              </h3>
+              <p>
+                <span data-lang="vi">Giao diện builder trực quan cho phép tạo workflow bằng cách kéo thả các node. Mỗi workflow là một đồ thị xử lý gồm nhiều bước logic, AI task, integration hoặc data pipeline.</span>
+                <span data-lang="en">The visual builder allows workflows to be created using drag and drop nodes. Each workflow represents an execution graph composed of logic steps, AI tasks, integrations and data pipelines.</span>
+              </p>
+            </article>
+
+            <article class="arch-card">
+              <div class="arch-icon">⚙️</div>
+              <h3>
+                <span data-lang="vi">Runtime Execution Engine</span>
+                <span data-lang="en">Runtime Execution Engine</span>
+              </h3>
+              <p>
+                <span data-lang="vi">Runtime engine chịu trách nhiệm chạy workflow trong môi trường production. Engine quản lý execution state, retry logic, scheduling và event driven triggers.</span>
+                <span data-lang="en">The runtime engine executes workflows in production environments. It manages execution state, retry logic, scheduling and event driven triggers.</span>
+              </p>
+            </article>
+
+            <article class="arch-card">
+              <div class="arch-icon">🔗</div>
+              <h3>
+                <span data-lang="vi">Node Ecosystem</span>
+                <span data-lang="en">Node Ecosystem</span>
+              </h3>
+              <p>
+                <span data-lang="vi">IAI Flow sử dụng kiến trúc node modular. Developer có thể tạo node mới để kết nối API, AI model, database hoặc hệ thống bên ngoài.</span>
+                <span data-lang="en">IAI Flow uses a modular node architecture. Developers can create nodes to connect APIs, AI models, databases and external systems.</span>
+              </p>
+            </article>
+
+            <article class="arch-card">
+              <div class="arch-icon">📚</div>
+              <h3>
+                <span data-lang="vi">Developer Platform</span>
+                <span data-lang="en">Developer Platform</span>
+              </h3>
+              <p>
+                <span data-lang="vi">IAI Flow cung cấp hệ thống tài liệu và SDK để developer mở rộng platform. Các node, workflow template và integration đều có thể được đóng gói và chia sẻ trong hệ sinh thái.</span>
+                <span data-lang="en">IAI Flow provides documentation and SDKs that allow developers to extend the platform. Nodes, workflow templates and integrations can be packaged and shared across the ecosystem.</span>
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="node-marketplace-title">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <h2 id="node-marketplace-title">
+                <span data-lang="vi">Node marketplace preview</span>
+                <span data-lang="en">Node marketplace preview</span>
+              </h2>
+              <p>
+                <span data-lang="vi">Xem trước lớp hệ sinh thái node của IAI Flow với khả năng lọc theo nhóm, tìm kiếm nhanh và đọc metadata cốt lõi để chuẩn bị cho registry và marketplace mở rộng sau này.</span>
+                <span data-lang="en">Preview the IAI Flow node ecosystem with category filters, quick search and core metadata designed for future registry and marketplace expansion.</span>
+              </p>
+            </div>
+
+            <div class="node-marketplace-actions">
+              <div class="node-marketplace-filters" role="tablist" aria-label="Node categories">
+                <button class="btn btn-small is-active" type="button" data-node-filter="all">
+                  <span data-lang="vi">Tất cả</span>
+                  <span data-lang="en">All</span>
+                </button>
+                <button class="btn btn-small" type="button" data-node-filter="ai">
+                  <span data-lang="vi">AI</span>
+                  <span data-lang="en">AI</span>
+                </button>
+                <button class="btn btn-small" type="button" data-node-filter="integration">
+                  <span data-lang="vi">Kết nối</span>
+                  <span data-lang="en">Integrations</span>
+                </button>
+                <button class="btn btn-small" type="button" data-node-filter="data">
+                  <span data-lang="vi">Dữ liệu</span>
+                  <span data-lang="en">Data</span>
+                </button>
+                <button class="btn btn-small" type="button" data-node-filter="control">
+                  <span data-lang="vi">Điều phối</span>
+                  <span data-lang="en">Control</span>
+                </button>
+                <button class="btn btn-small" type="button" data-node-filter="memory">
+                  <span data-lang="vi">Memory</span>
+                  <span data-lang="en">Memory</span>
+                </button>
+              </div>
+
+              <label class="node-marketplace-search">
+                <span class="sr-only">Search nodes</span>
+                <input
+                  type="search"
+                  data-node-search
+                  placeholder="Search nodes"
+                  data-i18n-vi="Tìm node"
+                  data-i18n-en="Search nodes"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div class="node-marketplace">
+            <div class="node-marketplace-grid" data-node-grid>
+              <article class="node-market-card is-placeholder">Loading nodes…</article>
+            </div>
+
+            <aside class="node-marketplace-panel">
+              <article class="node-panel-card">
+                <div class="node-panel-head">
+                  <h3>
+                    <span data-lang="vi">Selected node</span>
+                    <span data-lang="en">Selected node</span>
+                  </h3>
+                  <span class="node-panel-pill" data-node-selected-category>AI</span>
+                </div>
+
+                <strong class="node-panel-title" data-node-selected-title>Agent Router</strong>
+                <p class="node-panel-copy" data-node-selected-copy>Route tasks across agent roles and runtime conditions.</p>
+
+                <div class="node-panel-meta">
+                  <div class="node-panel-meta-item">
+                    <span class="label">
+                      <span data-lang="vi">Compatibility</span>
+                      <span data-lang="en">Compatibility</span>
+                    </span>
+                    <strong data-node-selected-compatibility>Builder + Runtime</strong>
+                  </div>
+
+                  <div class="node-panel-meta-item">
+                    <span class="label">
+                      <span data-lang="vi">Trust level</span>
+                      <span data-lang="en">Trust level</span>
+                    </span>
+                    <strong data-node-selected-trust>Verified</strong>
+                  </div>
+
+                  <div class="node-panel-meta-item">
+                    <span class="label">
+                      <span data-lang="vi">Use case</span>
+                      <span data-lang="en">Use case</span>
+                    </span>
+                    <strong data-node-selected-usecase>Agent orchestration</strong>
+                  </div>
+                </div>
+
+                <div class="node-panel-tags" data-node-selected-tags>
+                  <span class="node-panel-tag">routing</span>
+                  <span class="node-panel-tag">agents</span>
+                </div>
+              </article>
+
+              <article class="node-panel-card">
+                <h3>
+                  <span data-lang="vi">Marketplace notes</span>
+                  <span data-lang="en">Marketplace notes</span>
+                </h3>
+                <ul class="node-panel-notes">
+                  <li>
+                    <span data-lang="vi">Giao diện này được thiết kế để nâng cấp thành node registry thật với install, enable, trust và permission model.</span>
+                    <span data-lang="en">This interface is designed to evolve into a real node registry with install, enable, trust and permission layers.</span>
+                  </li>
+                  <li>
+                    <span data-lang="vi">Tìm kiếm và lọc hiện tại là client side preview, nhưng cấu trúc đã sẵn sàng để nối dữ liệu thật từ API.</span>
+                    <span data-lang="en">Current search and filtering are client side preview features, but the structure is ready for real API backed data.</span>
+                  </li>
+                  <li>
+                    <span data-lang="vi">Bước tiếp theo có thể bổ sung permission scopes, dependency graph và khả năng gợi ý node bằng AI.</span>
+                    <span data-lang="en">Next steps can include permission scopes, dependency graphs and AI assisted node suggestions.</span>
+                  </li>
+                </ul>
+              </article>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="developer-playground-title">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <h2 id="developer-playground-title">
+                <span data-lang="vi">Developer playground</span>
+                <span data-lang="en">Developer playground</span>
+              </h2>
+              <p>
+                <span data-lang="vi">Một khối playground tương tác để thử flow JSON, kiểm tra cấu trúc cơ bản và xem preview execution ngay trên trang chủ. Đây là lớp nền để sau này nâng lên schema validator, AI assisted builder và runtime binding thật.</span>
+                <span data-lang="en">An interactive playground for trying flow JSON, checking the basic structure and previewing execution directly on the homepage. This is the foundation for future schema validation, AI assisted builder and real runtime bindings.</span>
+              </p>
+            </div>
+
+            <div class="playground-actions">
+              <button class="btn btn-small is-active" type="button" data-playground-preset="support">
+                <span data-lang="vi">Support</span>
+                <span data-lang="en">Support</span>
+              </button>
+              <button class="btn btn-small" type="button" data-playground-preset="analytics">
+                <span data-lang="vi">Analytics</span>
+                <span data-lang="en">Analytics</span>
+              </button>
+              <button class="btn btn-small" type="button" data-playground-preset="ops">
+                <span data-lang="vi">Ops</span>
+                <span data-lang="en">Ops</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="playground-shell">
+            <div class="playground-editor-card">
+              <div class="playground-editor-head">
+                <h3>
+                  <span data-lang="vi">Flow JSON</span>
+                  <span data-lang="en">Flow JSON</span>
+                </h3>
+
+                <div class="playground-editor-tools">
+                  <button class="btn btn-small" type="button" data-playground-validate>
+                    <span data-lang="vi">Kiểm tra</span>
+                    <span data-lang="en">Validate</span>
+                  </button>
+                  <button class="btn btn-small btn-primary" type="button" data-playground-run>
+                    <span data-lang="vi">Chạy preview</span>
+                    <span data-lang="en">Run preview</span>
+                  </button>
+                </div>
+              </div>
+
+              <label class="sr-only" for="playground-json">Flow JSON editor</label>
+              <textarea
+                id="playground-json"
+                class="playground-editor"
+                data-playground-editor
+                spellcheck="false"
+              ></textarea>
+
+              <div class="playground-status">
+                <span class="playground-status-pill" data-playground-status>idle</span>
+                <span class="playground-status-copy" data-playground-message>
+                  Ready to validate flow structure.
+                </span>
+              </div>
+            </div>
+
+            <aside class="playground-side">
+              <article class="playground-panel-card">
+                <div class="playground-panel-head">
+                  <h3>
+                    <span data-lang="vi">Execution preview</span>
+                    <span data-lang="en">Execution preview</span>
+                  </h3>
+                  <span class="playground-panel-pill">
+                    <span data-lang="vi">sandbox</span>
+                    <span data-lang="en">sandbox</span>
+                  </span>
+                </div>
+
+                <div class="playground-console" data-playground-console>
+                  <div class="playground-console-line is-muted">Waiting for flow input…</div>
+                </div>
+              </article>
+
+              <article class="playground-panel-card">
+                <h3>
+                  <span data-lang="vi">Parsed summary</span>
+                  <span data-lang="en">Parsed summary</span>
+                </h3>
+
+                <div class="playground-summary">
+                  <div class="playground-summary-item">
+                    <span class="label">
+                      <span data-lang="vi">Flow name</span>
+                      <span data-lang="en">Flow name</span>
+                    </span>
+                    <strong data-playground-summary="name">-</strong>
+                  </div>
+
+                  <div class="playground-summary-item">
+                    <span class="label">
+                      <span data-lang="vi">Nodes</span>
+                      <span data-lang="en">Nodes</span>
+                    </span>
+                    <strong data-playground-summary="nodes">0</strong>
+                  </div>
+
+                  <div class="playground-summary-item">
+                    <span class="label">
+                      <span data-lang="vi">Edges</span>
+                      <span data-lang="en">Edges</span>
+                    </span>
+                    <strong data-playground-summary="edges">0</strong>
+                  </div>
+
+                  <div class="playground-summary-item">
+                    <span class="label">
+                      <span data-lang="vi">Entry</span>
+                      <span data-lang="en">Entry</span>
+                    </span>
+                    <strong data-playground-summary="entry">-</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="playground-panel-card">
+                <h3>
+                  <span data-lang="vi">Playground notes</span>
+                  <span data-lang="en">Playground notes</span>
+                </h3>
+                <ul class="playground-notes">
+                  <li>
+                    <span data-lang="vi">Playground hiện hỗ trợ validate JSON cơ bản, đếm nodes và edges, và mô phỏng execution preview.</span>
+                    <span data-lang="en">The playground currently supports basic JSON validation, counting nodes and edges, and simulating execution preview.</span>
+                  </li>
+                  <li>
+                    <span data-lang="vi">Bước sau có thể nối schema chuẩn của IAI Flow, autocomplete fields và flow suggestion bằng AI.</span>
+                    <span data-lang="en">The next step can connect to the official IAI Flow schema, autocomplete fields and add AI assisted flow suggestions.</span>
+                  </li>
+                  <li>
+                    <span data-lang="vi">Thiết kế này là nền để nâng lên builder lite, import export và runtime test thật.</span>
+                    <span data-lang="en">This design is the base for builder lite, import export and real runtime testing later.</span>
+                  </li>
+                </ul>
+              </article>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="builder-demo-title">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <h2 id="builder-demo-title">
+                <span data-lang="vi">Live builder demo</span>
+                <span data-lang="en">Live builder demo</span>
+              </h2>
+              <p>
+                <span data-lang="vi">Một mini builder tương tác ngay trên trang chủ để thêm node, chọn preset, xem flow path và đọc summary tức thời. Đây là lớp cuối cùng để biến homepage từ trang giới thiệu thành điểm vào của platform thực sự.</span>
+                <span data-lang="en">A live mini builder on the homepage for adding nodes, choosing presets, previewing flow paths and reading instant summaries. This is the final layer that turns the homepage from a landing surface into a true platform entry point.</span>
+              </p>
+            </div>
+
+            <div class="builder-demo-actions">
+              <button class="btn btn-small is-active" type="button" data-builder-preset="starter">
+                <span data-lang="vi">Starter</span>
+                <span data-lang="en">Starter</span>
+              </button>
+              <button class="btn btn-small" type="button" data-builder-preset="support">
+                <span data-lang="vi">Support</span>
+                <span data-lang="en">Support</span>
+              </button>
+              <button class="btn btn-small" type="button" data-builder-preset="analytics">
+                <span data-lang="vi">Analytics</span>
+                <span data-lang="en">Analytics</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="builder-demo-shell">
+            <aside class="builder-demo-sidebar">
+              <article class="builder-demo-card">
+                <div class="builder-demo-card-head">
+                  <h3>
+                    <span data-lang="vi">Node palette</span>
+                    <span data-lang="en">Node palette</span>
+                  </h3>
+                </div>
+
+                <div class="builder-palette" data-builder-palette>
+                  <button class="builder-palette-item" type="button" data-builder-add="trigger">
+                    <strong>Trigger</strong>
+                    <span>Entry</span>
+                  </button>
+                  <button class="builder-palette-item" type="button" data-builder-add="agent">
+                    <strong>Agent</strong>
+                    <span>AI</span>
+                  </button>
+                  <button class="builder-palette-item" type="button" data-builder-add="transform">
+                    <strong>Transform</strong>
+                    <span>Data</span>
+                  </button>
+                  <button class="builder-palette-item" type="button" data-builder-add="api">
+                    <strong>API</strong>
+                    <span>Integration</span>
+                  </button>
+                  <button class="builder-palette-item" type="button" data-builder-add="runtime">
+                    <strong>Runtime</strong>
+                    <span>Queue</span>
+                  </button>
+                  <button class="builder-palette-item" type="button" data-builder-add="logs">
+                    <strong>Logs</strong>
+                    <span>Trace</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="builder-demo-card">
+                <div class="builder-demo-card-head">
+                  <h3>
+                    <span data-lang="vi">Builder controls</span>
+                    <span data-lang="en">Builder controls</span>
+                  </h3>
+                </div>
+
+                <div class="builder-control-stack">
+                  <button class="btn btn-primary" type="button" data-builder-simulate>
+                    <span data-lang="vi">Chạy path preview</span>
+                    <span data-lang="en">Run path preview</span>
+                  </button>
+                  <button class="btn" type="button" data-builder-reset>
+                    <span data-lang="vi">Reset flow</span>
+                    <span data-lang="en">Reset flow</span>
+                  </button>
+                </div>
+              </article>
+            </aside>
+
+            <div class="builder-demo-main">
+              <article class="builder-demo-card">
+                <div class="builder-demo-card-head">
+                  <h3>
+                    <span data-lang="vi">Canvas preview</span>
+                    <span data-lang="en">Canvas preview</span>
+                  </h3>
+                  <span class="builder-demo-pill">
+                    <span data-lang="vi">interactive</span>
+                    <span data-lang="en">interactive</span>
+                  </span>
+                </div>
+
+                <div class="builder-canvas-preview" data-builder-canvas>
+                  <div class="builder-canvas-empty">
+                    <span data-lang="vi">Chọn preset hoặc thêm node để bắt đầu.</span>
+                    <span data-lang="en">Choose a preset or add nodes to begin.</span>
+                  </div>
+                </div>
+              </article>
+
+              <article class="builder-demo-card">
+                <div class="builder-demo-card-head">
+                  <h3>
+                    <span data-lang="vi">Path output</span>
+                    <span data-lang="en">Path output</span>
+                  </h3>
+                </div>
+
+                <div class="builder-output" data-builder-output>
+                  <div class="builder-output-line is-muted">Waiting for builder actions…</div>
+                </div>
+              </article>
+            </div>
+
+            <aside class="builder-demo-sidepanel">
+              <article class="builder-demo-card">
+                <div class="builder-demo-card-head">
+                  <h3>
+                    <span data-lang="vi">Builder summary</span>
+                    <span data-lang="en">Builder summary</span>
+                  </h3>
+                </div>
+
+                <div class="builder-summary">
+                  <div class="builder-summary-item">
+                    <span class="label">
+                      <span data-lang="vi">Flow name</span>
+                      <span data-lang="en">Flow name</span>
+                    </span>
+                    <strong data-builder-summary="name">-</strong>
+                  </div>
+                  <div class="builder-summary-item">
+                    <span class="label">
+                      <span data-lang="vi">Nodes</span>
+                      <span data-lang="en">Nodes</span>
+                    </span>
+                    <strong data-builder-summary="nodes">0</strong>
+                  </div>
+                  <div class="builder-summary-item">
+                    <span class="label">
+                      <span data-lang="vi">Entry</span>
+                      <span data-lang="en">Entry</span>
+                    </span>
+                    <strong data-builder-summary="entry">-</strong>
+                  </div>
+                  <div class="builder-summary-item">
+                    <span class="label">
+                      <span data-lang="vi">Last action</span>
+                      <span data-lang="en">Last action</span>
+                    </span>
+                    <strong data-builder-summary="action">-</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="builder-demo-card">
+                <h3>
+                  <span data-lang="vi">Builder notes</span>
+                  <span data-lang="en">Builder notes</span>
+                </h3>
+                <ul class="builder-notes">
+                  <li>
+                    <span data-lang="vi">Mini builder này là bước chuyển từ preview sang builder lite tương tác thật.</span>
+                    <span data-lang="en">This mini builder is the transition from preview into a real interactive builder lite layer.</span>
+                  </li>
+                  <li>
+                    <span data-lang="vi">Bước tiếp theo có thể thêm drag and drop, edge editing, node config và export flow.</span>
+                    <span data-lang="en">Next steps can add drag and drop, edge editing, node config and flow export.</span>
+                  </li>
+                  <li>
+                    <span data-lang="vi">Canvas hiện là preview logic first để đồng bộ với runtime, node registry và playground.</span>
+                    <span data-lang="en">The canvas is currently logic first so it stays aligned with runtime, node registry and the playground.</span>
+                  </li>
+                </ul>
+              </article>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="shell">
+          <div class="section-head">
+            <div>
+              <h2>
+                <span data-lang="vi">Nền tảng cốt lõi</span>
+                <span data-lang="en">Core platform</span>
+              </h2>
+              <p>
+                <span data-lang="vi">Trang chủ phải cho người dùng hiểu ngay IAI Flow gồm những lớp nào, dùng để làm gì và lộ trình đi từ builder tới runtime thực tế.</span>
+                <span data-lang="en">The homepage should immediately explain the major layers of IAI Flow and how users move from builder to runtime execution.</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-4">
+            <article class="platform-card">
+              <h3>
+                <span data-lang="vi">Workflow Engine</span>
+                <span data-lang="en">Workflow Engine</span>
+              </h3>
+              <p>
+                <span data-lang="vi">Thiết kế và điều phối execution graph cho các workflows nhiều bước, từ business automation đến AI assisted pipelines.</span>
+                <span data-lang="en">Design and orchestrate execution graphs for multi step workflows, from business automation to AI assisted pipelines.</span>
+              </p>
+              <a class="mini-link" href="/modules/">
+                <span data-lang="vi">Khám phá modules</span>
+                <span data-lang="en">Explore modules</span>
+              </a>
+            </article>
+
+            <article class="platform-card">
+              <h3>
+                <span data-lang="vi">Node Ecosystem</span>
+                <span data-lang="en">Node Ecosystem</span>
+              </h3>
+              <p>
+                <span data-lang="vi">Xây node AI, node integration, data nodes và future marketplace để cộng đồng có thể đóng góp khả năng mới.</span>
+                <span data-lang="en">Build AI nodes, integration nodes, data nodes and future marketplace layers so the community can contribute new capabilities.</span>
+              </p>
+              <a class="mini-link" href="/nodes/">
+                <span data-lang="vi">Duyệt node library</span>
+                <span data-lang="en">Browse node library</span>
+              </a>
+            </article>
+
+            <article class="platform-card">
+              <h3>
+                <span data-lang="vi">AI Agents</span>
+                <span data-lang="en">AI Agents</span>
+              </h3>
+              <p>
+                <span data-lang="vi">Điều phối nhiều agents theo role, tool access và runtime execution để tạo ra các hệ thống tự động hóa thông minh hơn.</span>
+                <span data-lang="en">Coordinate multiple agents by role, tool access and runtime execution to create smarter automation systems.</span>
+              </p>
+              <a class="mini-link" href="/app/agents/">
+                <span data-lang="vi">Mở agents</span>
+                <span data-lang="en">Open agents</span>
+              </a>
+            </article>
+
+            <article class="platform-card">
+              <h3>
+                <span data-lang="vi">Execution Runtime</span>
+                <span data-lang="en">Execution Runtime</span>
+              </h3>
+              <p>
+                <span data-lang="vi">Lớp runtime cho queue, scheduler, logs, monitoring và future distributed execution.</span>
+                <span data-lang="en">Runtime layer for queue, scheduler, logs, monitoring and future distributed execution.</span>
+              </p>
+              <a class="mini-link" href="/app/runtime/">
+                <span data-lang="vi">Xem runtime</span>
+                <span data-lang="en">View runtime</span>
+              </a>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="shell footer-grid">
+        <div>
+          <h3>IAI Flow</h3>
+          <p>
+            <span data-lang="vi">Nền tảng điều phối AI workflows, agents và runtime cho hệ sinh thái automation thế hệ mới.</span>
+            <span data-lang="en">The orchestration platform for AI workflows, agents and runtime systems in the next generation automation stack.</span>
+          </p>
+        </div>
+
+        <div>
+          <h3>
+            <span data-lang="vi">Đi nhanh</span>
+            <span data-lang="en">Quick links</span>
+          </h3>
+          <div class="footer-links">
+            <a href="https://dash.iai.one/" target="_blank" rel="noopener noreferrer">
+              <span data-lang="vi">Dashboard</span>
+              <span data-lang="en">Dashboard</span>
+            </a>
+            <a href="/app/">
+              <span data-lang="vi">Ứng dụng</span>
+              <span data-lang="en">App</span>
+            </a>
+            <a href="/docs/">Docs</a>
+            <a href="/docs/civilization-os/">
+              <span data-lang="vi">NOOS</span>
+              <span data-lang="en">NOOS</span>
+            </a>
+            <a href="/nodes/">Nodes</a>
+            <a href="/developers/">Developers</a>
+          </div>
+        </div>
+
+        <div>
+          <h3>
+            <span data-lang="vi">Hệ sinh thái</span>
+            <span data-lang="en">Ecosystem</span>
+          </h3>
+          <div class="footer-links">
+            <a href="/modules/">
+              <span data-lang="vi">Platform modules</span>
+              <span data-lang="en">Platform modules</span>
+            </a>
+            <a href="/docs/">
+              <span data-lang="vi">Tài liệu</span>
+              <span data-lang="en">Documentation</span>
+            </a>
+            <a href="/docs/civilization-os/">
+              <span data-lang="vi">NOOS</span>
+              <span data-lang="en">NOOS</span>
+            </a>
+            <a href="/developers/">
+              <span data-lang="vi">Developers</span>
+              <span data-lang="en">Developers</span>
+            </a>
+            <a href="/nodes/">
+              <span data-lang="vi">Node library</span>
+              <span data-lang="en">Node library</span>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h3>
+            <span data-lang="vi">Cộng đồng</span>
+            <span data-lang="en">Community</span>
+          </h3>
+          <div class="footer-links">
+            <a href="https://github.com/tranhatam-collab/flow.iai.one" target="_blank" rel="noopener">GitHub</a>
+            <a href="/community/">
+              <span data-lang="vi">Community hub</span>
+              <span data-lang="en">Community hub</span>
+            </a>
+            <a href="/community/#discord">Discord</a>
+            <a href="/community/#telegram">Telegram</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/assets/iai-flow-api.js" defer></script>
+  <script src="/assets/ui.js" defer></script>
+  <script src="/assets/home-runtime-preview.js" defer></script>
+  <script src="/assets/home-node-marketplace.js" defer></script>
+  <script src="/assets/home-developer-playground.js" defer></script>
+  <script src="/assets/live-builder-demo.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+
+ ⛅️ wrangler 4.75.0 (update available 4.87.0)
+─────────────────────────────────────────────
+Created:     2026-05-01T08:36:31.395Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) 2d1e68da-6a47-4cdc-afce-59e914d95f41
+                 Created:  2026-05-01T08:36:31.395Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T08:38:53.582Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) 5b787068-d850-4537-a460-4fbdc057cc1e
+                 Created:  2026-05-01T08:38:53.582Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T08:39:48.547Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) 33c583d8-2bac-4426-91a9-a3ce60db3aef
+                 Created:  2026-05-01T08:39:48.547Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T08:41:06.840Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) d201e33c-90cc-4a1d-abfb-330d9c9b22e8
+                 Created:  2026-05-01T08:41:06.840Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T08:41:58.598Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) 2ced7bdd-7751-4ebb-9908-4f264209e614
+                 Created:  2026-05-01T08:41:58.598Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T08:43:43.798Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) a5377d57-5081-47d3-87f3-704abac7a6e5
+                 Created:  2026-05-01T08:43:43.798Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T08:44:39.896Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) 1775c0ed-d434-4ed5-bdae-3a8f9cfdab15
+                 Created:  2026-05-01T08:44:39.896Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T08:46:41.272Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) 471a96b4-6157-402e-9133-56285fb513d5
+                 Created:  2026-05-01T08:46:41.272Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T10:28:46.354Z
+Author:      tranhatam@gmail.com
+Source:      Unknown (deployment)
+Message:     -
+Version(s):  (100%) 053c8cb9-9f09-40fb-9063-2bd62f9c9559
+                 Created:  2026-05-01T10:28:44.989Z
+                     Tag:  -
+                 Message:  -
+
+Created:     2026-05-01T11:51:03.725Z
+Author:      tranhatam@gmail.com
+Source:      Secret Change
+Message:     -
+Version(s):  (100%) 89f23fe7-db22-4655-b699-e62f7bf6cfec
+                 Created:  2026-05-01T11:51:03.725Z
+                     Tag:  -
+                 Message:  -

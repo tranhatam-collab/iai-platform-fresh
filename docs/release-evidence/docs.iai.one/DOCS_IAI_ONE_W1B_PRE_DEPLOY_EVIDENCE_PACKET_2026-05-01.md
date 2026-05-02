@@ -3,7 +3,7 @@
 - Date: `2026-05-01`
 - Surface: `docs.iai.one`
 - Wave: `W1B`
-- Status: `PRE_DEPLOY_REVIEW_READY_DEPLOY_BLOCKED_D8B`
+- Status: `PRE_DEPLOY_REVIEW_READY_DEPLOY_BLOCKED_D8B_HELD`
 - Global state: `PRODUCTION_PUBLICATION_HOLD`
 - Working repo: `/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh`
 - Current commit basis: `62931a9` (`docs(team1): refresh commit basis to aaa0c05 in W1A/W1B packets`, 2026-05-02). Previous bases were `aaa0c05`, `97ee825`, and `3048195`.
@@ -61,7 +61,7 @@ Out of scope:
 | Screenshot pack | PENDING_PREVIEW | To run after founder approves preview deploy |
 | Lighthouse | PENDING_PREVIEW | Applies after preview URL exists |
 | Live monitoring | NOT_STARTED | Production deploy not approved yet |
-| D8b source-of-truth gate | BLOCKED | `docs-iai-one` Pages source reconciliation is required before preview deploy |
+| D8b source-of-truth gate | BLOCKED_HELD | `docs-iai-one` Pages source drift is confirmed; execution is held pending founder runtime-model decision (`TEAM1_W1B_D8B_EXECUTION_PACKET_2026-05-02.md`) |
 
 ## 5. Risk Notes
 

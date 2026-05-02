@@ -1,0 +1,20 @@
+HTTP/2 200 
+date: Sat, 02 May 2026 03:58:32 GMT
+content-type: text/html; charset=utf-8
+access-control-allow-origin: *
+cache-control: public, max-age=300
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+content-security-policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+permissions-policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=UfIHAORMzz2OmPRS%2B%2FpbmOv%2F0aoGtlfmIE1UwmpWsAZkURC2FRwzMUuBNuOffz7E0vQZzPCpUAqkZU%2FvPuQuaT0iUcMRwzzvzfJEb%2FaKxzrg84LKWQD1MwNQLiax9%2FXiJVq2r4NHc4SOiek%3D"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+server: cloudflare
+cf-cache-status: DYNAMIC
+cf-ray: 9f541badab3e0fe2-SIN
+alt-svc: h3=":443"; ma=86400
+
