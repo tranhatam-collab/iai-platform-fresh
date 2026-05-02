@@ -2,7 +2,7 @@
 
 - Surface: `docs.iai.one`
 - Wave: `W1B`
-- Status: `PRE_DEPLOY_REPO_SIDE_READY_DEPLOY_BLOCKED_D8B`
+- Status: `READY_FOR_W1B_PREVIEW_DEPLOY` (D8b closed via path P1 on 2026-05-02 per `docs/reports/team1/TEAM1_W1B_D8B_CLOSEOUT_PATH_P1_2026-05-02.md`; W1B preview deploy executes against canonical legacy `docs-iai-one` Pages binding via Cloudflare dashboard, not against this monorepo. Exact bound repo URL pending founder dashboard read per `docs/reports/team1/artifacts/d8b/DOCS_IAI_ONE_BINDING_CAPTURE_NOTE_2026-05-02.md`. Global hold `PRODUCTION_PUBLICATION_HOLD` still applies; this status only authorizes a preview build.)
 - Global state: `PRODUCTION_PUBLICATION_HOLD`
 - Plan: `docs/reports/team1/TEAM1_ALL_WEB_COMPLETION_PLAN_V2_2026-05-01.md`
 
