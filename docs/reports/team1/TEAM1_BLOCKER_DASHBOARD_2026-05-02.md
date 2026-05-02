@@ -10,7 +10,7 @@
 
 ## 0. Câu chốt 1 dòng
 
-Hệ đang dừng vì 8 quyết định nằm ở founder. Không team nào tự mở được bằng code. Reply 1 batch là cả hệ chạy.
+Hệ đang dừng vì 9 quyết định nằm ở founder. Không team nào tự mở được bằng code. Reply 1 batch là cả hệ chạy.
 
 ---
 
@@ -127,7 +127,7 @@ D-008 (tramsaigon receivers):          [reuse / company-new / wait]
 D-009 (Slack/Notion connector):        [credentials / defer]
 ```
 
-8 dòng reply là đủ để cả hệ chạy lại.
+8 dòng reply (D-001..D-009 trừ D-004 cần điền tên owner) là đủ để cả hệ chạy lại.
 
 ---
 

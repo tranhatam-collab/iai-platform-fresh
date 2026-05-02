@@ -229,20 +229,20 @@ Applies to:
 
 ## 6. Immediate next actions
 
-State as of 2026-05-02: `Batch 1.1` is committed at `3048195` (`docs(web): lock Batch 1.1 and W1 evidence`). D2 and D3 are closed repo-side. Live infrastructure audit landed (`AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`) and added D7–D12 to §7.
+State as of 2026-05-02 (post founder reply batch): `Batch 1.1` is committed at `3048195`. D2, D3, D7, D12 closed. Live infrastructure audit landed (`AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`). Cross-surface drift matrix landed (`AUDIT_RUNTIME_SOURCE_DRIFT_MATRIX_2026-05-02.md`). Founder reply batch landed (`docs/reports/FOUNDER_REPLY_BATCH_2026-05-02.md`): D-002 = `B` (Next.js canonical); D-003 = `PAGES`; D-005 = `DROP`; D-006 = `T4`; D-007 = `Codex`; D-001 = `yes` (founder push payOS).
 
 State refresh: §7 audit patch is already committed (`aaa0c05`) and packet commit-basis refresh is committed (`62931a9`).
 
 Next, in order:
 
-1. founder repo-side review of §7 (D7–D12) and `AUDIT_LIVE_INFRASTRUCTURE_2026-05-02.md`
-2. close `W1A`-deploy-blocking items before any preview deploy:
-   - **D7** — push `iai-platform-fresh` to GitHub `tranhatam-collab` — **closed 2026-05-02** (`TEAM1_W1A_D7_CLOSEOUT_2026-05-02.md`)
-   - **D8a** — reconcile Cloudflare Pages source-of-truth for `home-iai-one`. **Paused 2026-05-02** pending architecture decision: live `home.iai.one`/`iai.one` are Next.js, monorepo `apps/home`/`apps/root` are Node TS servers. See `NEXT_VS_NODE_DRIFT_2026-05-02.md`. Execution packet `TEAM1_W1A_D8A_EXECUTION_PACKET_2026-05-02.md` is held; must NOT be executed before founder picks Next.js-canonical or Node-canonical.
-   - **D12** — `root.iai.one` DNS / trust-state decision — **closed 2026-05-02 via path B** (`TEAM1_W1A_D12_CLOSEOUT_2026-05-02.md`)
-3. before D8a can re-open, founder must answer the architecture question in `NEXT_VS_NODE_DRIFT_2026-05-02.md` §4 (Next.js canonical vs Node canonical)
-4. once D8a is closed, request founder approval for `W1A` preview deploy
-5. only after `W1A` is clean and verified live, process D8b according to its own held packet (`TEAM1_W1B_D8B_EXECUTION_PACKET_2026-05-02.md`) and founder docs-runtime decision, then request founder approval for `W1B` preview deploy
+1. execute `D8a` via path `B1` per `TEAM1_W1A_D8A_EXECUTION_PACKET_v2_PATH_B_2026-05-02.md` — declare `tranhatam-collab/Home.iai.one` (Next.js) as canonical source for `home.iai.one`/`iai.one`; mark `apps/home` + `apps/root` as `experimental, not_live`; add `docs/SURFACE_SOURCE_OF_TRUTH.md`.
+2. file closeout `TEAM1_W1A_D8A_CLOSEOUT_PATH_B1_2026-05-02.md` and update `docs/release-evidence/iai.one/` + `home.iai.one/` packet status to `READY_FOR_W1A_PREVIEW_DEPLOY`.
+3. request founder approval for `W1A` preview deploy of legacy Next.js repo.
+4. after `W1A` is clean, execute `D8b` via path `P1` per `TEAM1_W1B_D8B_EXECUTION_PACKET_v2_PATH_PAGES_2026-05-02.md`; file `TEAM1_W1B_D8B_CLOSEOUT_PATH_P1_2026-05-02.md`; update `docs/release-evidence/docs.iai.one/` packet status; request `W1B` preview deploy.
+5. on the pay lane in parallel: founder pushes payOS per `TEAM2_PAYOS_BUSINESS_VERIFICATION_PUSH_2026-05-02.md`; Team 2 stays standby until provider responds.
+6. Team 4 may now own `life.iai.one` per `LIFE_IAI_ONE_OWNER_LOCK_T4_2026-05-02.md`; Codex retains launch wave authority.
+7. Pay+Email closes `BLK-PAYEMAIL-002` and `DEC-PAYEMAIL-INVOICE-001` via `INVOICE_IAI_ONE_DROP_RESOLUTION_2026-05-02.md`; cross-team report patches happen in their next review cycle.
+8. `D-004` (4 team agent identification) remains pending; Team A, Team B-CDN, Team B-Flows, Team C remain `READ-ONLY` until founder fills names.
 
 ## 7. Known deferred items
 
