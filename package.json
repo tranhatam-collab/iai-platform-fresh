@@ -47,6 +47,7 @@
     "test:noos-web": "pnpm --filter @iai/noos-web build && node --test tests/integration/noos-commerce-surface.test.mjs",
     "report:lane": "node scripts/team1-lane-status-check.mjs",
     "report:team1-language": "node scripts/team1-language-compliance-check.mjs",
+    "guard:iai-github-doc-assets": "node scripts/team1-no-github-iai-one-doc-assets-check.mjs",
     "report:nogo-packets": "node scripts/team1-nogo-packet-status-check.mjs",
     "report:abcd-nogo-precheck": "node scripts/team1-abcd-nogo-precheck.mjs",
     "report:pay-prod-gate": "node scripts/team1-pay-prod-gate-check.mjs",

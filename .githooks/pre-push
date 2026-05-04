@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "Team 1 GitHub IAI docs/assets guard: pre-push"
+node scripts/team1-no-github-iai-one-doc-assets-check.mjs

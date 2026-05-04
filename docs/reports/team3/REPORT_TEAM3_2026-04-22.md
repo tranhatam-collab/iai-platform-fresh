@@ -1,7 +1,0 @@
-# REPORT_TEAM3_2026-04-22
-DONE: Team 3 đã thực thi vòng monitor + remediation 2026-04-22 đúng chỉ đạo Team 1; đã vá `noos-web` để dùng key-based i18n cho nav/button/footer và nối shared language source anchors; rerun test + audit cho thấy chất lượng bilingual/SEO của `noos-web` cải thiện rõ (5 issue -> 1 issue).
-IN PROGRESS: tiếp tục xử lý hard-coded public copy còn sót trong `apps/noos-web/src/render.ts`; đồng thời theo dõi lane runtime Team 2 cho `checkout-success/library` để bảo đảm session continuity không lệch contract.
-BLOCK: blocker hiện tại gồm (1) upstream `pay.iai.one` production gate còn `FAIL` 8 tín hiệu với probe `401 / API_KEY_REQUIRED`, (2) Team 3 còn 1 issue audit ở `noos-web` về hard-coded public text nên trạng thái `Du chuan live` toàn hệ chưa đạt.
-NEXT: tiếp tục dọn hard-coded copy còn lại của `noos-web` và rerun `report:language-rebuild`; giữ monitor-only đối với runtime/pay gate, chỉ patch theo delta hợp lệ từ Team 1/2.
-TEST PROOF: `pnpm test:noos-commerce-contracts` PASS; `node --test tests/integration/noos-commerce-surface.test.mjs` PASS (14/14); `pnpm test:noos-web` PASS (14/14); `pnpm report:control-tower -- --date=2026-04-22` => `READY/PASS`; `pnpm report:language-rebuild -- --date=2026-04-22` => `noos-web` còn 1 issue, toàn cục `Du chuan tieng Viet/Anh/SEO = YES`, `Du chuan live = NO`.
-COMMIT HASH: `2f6f889` (HEAD hiện tại của workspace; chưa có commit mới từ Team 3 trong vòng monitor-only).

@@ -8,3 +8,33 @@ coverage
 !.env.example
 .wrangler/
 *.log
+
+# Team 1 local-only GitHub guard for iai.one docs/plans/evidence.
+# Existing tracked files are not removed by .gitignore; this blocks new leaks.
+docs/**
+pay.iai.one/docs/**
+pay.iai.one/plans/**
+AI_TEAM_AUTO_ORCHESTRATOR.md
+AUTO_CREDIT_MANAGER_FOR_AI_DEVELOPMENT.md
+IAI_FLOW_DASK_TUYET_DOI.md
+PROJECT_STATUS_SNAPSHOT.md
+*_PLAN*.md
+*_LOCK*.md
+*_BOARD*.md
+*_REPORT*.md
+*_PACKET*.md
+*_RUNBOOK*.md
+*_MATRIX*.md
+*_EVIDENCE*.md
+*.doc
+*.docx
+*.epub
+*.pdf
+*.zip
+*.kpf
+*.pages
+*.key
+*.ppt
+*.pptx
+*.xls
+*.xlsx

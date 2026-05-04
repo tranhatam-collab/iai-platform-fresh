@@ -1,0 +1,16 @@
+# Team 1 GitHub guard: do not let local-only docs/assets use Git LFS as a bypass.
+docs/** -filter -diff -merge
+pay.iai.one/docs/** -filter -diff -merge
+pay.iai.one/plans/** -filter -diff -merge
+*.doc -filter -diff -merge
+*.docx -filter -diff -merge
+*.epub -filter -diff -merge
+*.pdf -filter -diff -merge
+*.zip -filter -diff -merge
+*.kpf -filter -diff -merge
+*.pages -filter -diff -merge
+*.key -filter -diff -merge
+*.ppt -filter -diff -merge
+*.pptx -filter -diff -merge
+*.xls -filter -diff -merge
+*.xlsx -filter -diff -merge
