@@ -48,6 +48,8 @@ export interface RouteResponse {
 
 type CollectionKey = "all" | "documents" | "programs";
 
+const brandLabel = "NOOS";
+
 const legacyBoundaryRoutes = [
   { test: /^\/docs\/investment-programs$/, target: "/documents" },
   { test: /^\/docs\/investment-programs\/.+$/, target: "/documents" },
@@ -1088,7 +1090,7 @@ function nav(active: string, buyerId: string, locale: Locale, currentPath: strin
 
   return `
     <header class="site-header">
-      <a class="brand" href="/products">NOOS</a>
+      <a class="brand" href="/products">${brandLabel}</a>
       <nav>
         ${links
           .map(([href, label]) => {
@@ -1122,6 +1124,7 @@ function layout({
   noindex?: boolean;
 }): string {
   const canonical = canonicalUrl(locale, canonicalPath);
+  const socialImage = "https://picsum.photos/seed/noos-commerce-og/1200/630";
   const localizedNav = localizeMarkup(nav(active, buyerId, locale, canonicalPath), locale);
   const localizedBody = localizeMarkup(body, locale);
   const alternateLinks = noindex
@@ -1149,9 +1152,11 @@ function layout({
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:url" content="${escapeHtml(canonical)}" />
     <meta property="og:locale" content="${escapeHtml(localeMeta[locale].htmlLang)}" />
+    <meta property="og:image" content="${socialImage}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeHtml(pageTitle(title))}" />
     <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${socialImage}" />
     <style>
       :root {
         color-scheme: light;

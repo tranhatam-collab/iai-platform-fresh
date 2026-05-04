@@ -3,6 +3,8 @@
   "private": true,
   "packageManager": "pnpm@10.0.0",
   "scripts": {
+    "prepare": "node scripts/install-git-hooks.mjs",
+    "quality:gate": "node scripts/universal-quality-gate.mjs",
     "build": "pnpm --filter @iai/config build && pnpm --filter @iai/mail-core build && pnpm --filter @iai/mail-api build && pnpm --filter @iai/root build && pnpm --filter @iai/home build && pnpm --filter @iai/app build && pnpm --filter @iai/flow build && pnpm --filter @iai/docs build && pnpm --filter @iai/nft build && pnpm --filter @iai/pay build && pnpm --filter @iai/web build && pnpm --filter @iai/dash build && pnpm --filter @iai/mail-web build && pnpm --filter @iai/mail-smtp build && pnpm --filter @iai/mail-worker build",
     "build:root": "pnpm --filter @iai/root build",
     "build:home": "pnpm --filter @iai/home build",
@@ -61,6 +63,8 @@
     "report:team5-live-sync-loop": "pnpm report:team5-gate-flow && pnpm report:team5-live-sync-readiness && pnpm report:team5-live-sync-packet",
     "review:team5-language": "node scripts/team5-language-review-check.mjs",
     "review:team4-checkpoint": "node scripts/team4-checkpoint-review.mjs",
+    "gate:precommit": "pnpm quality:gate",
+    "setup:hooks": "node scripts/install-git-hooks.mjs",
     "proof:pay-docs-integration": "pnpm test:docs && pnpm report:pay-docs-integration",
     "proof:team4-checkpoint": "node scripts/team4-checkpoint-proof.mjs",
     "smoke:team5-web-kpi": "pnpm --filter @iai/mail-core build && pnpm --filter @iai/mail-api build && pnpm --filter @iai/web build && node scripts/team5-web-kpi-smoke.mjs",
@@ -79,7 +83,12 @@
     "typecheck:noos-web": "pnpm --filter @iai/noos-web typecheck",
     "typecheck:web": "pnpm --filter @iai/web typecheck",
     "typecheck": "pnpm --filter @iai/config build && pnpm --filter @iai/mail-core build && pnpm --filter @iai/mail-core typecheck && pnpm --filter @iai/mail-api typecheck && pnpm --filter @iai/root typecheck && pnpm --filter @iai/home typecheck && pnpm --filter @iai/app typecheck && pnpm --filter @iai/flow typecheck && pnpm --filter @iai/docs typecheck && pnpm --filter @iai/nft typecheck && pnpm --filter @iai/pay typecheck && pnpm --filter @iai/web typecheck && pnpm --filter @iai/dash typecheck && pnpm --filter @iai/mail-web typecheck && pnpm --filter @iai/mail-smtp typecheck && pnpm --filter @iai/mail-worker typecheck",
-    "dev:mail-smtp": "pnpm --filter @iai/mail-smtp dev"
+    "dev:mail-smtp": "pnpm --filter @iai/mail-smtp dev",
+    "quality:team2:static": "node scripts/team2-quality-static-check.mjs",
+    "quality:team2:semantic": "pnpm typecheck:pay && pnpm typecheck:dash",
+    "quality:team2:surface": "pnpm test:pay && pnpm test:dash",
+    "quality:team2:gate": "pnpm quality:team2:static && pnpm quality:team2:semantic && pnpm quality:team2:surface",
+    "precommit": "pnpm quality:gate"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
