@@ -16,10 +16,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Universal Quality Gate
+        run: pnpm quality:gate
 
       - name: Guard AI review
         run: |
@@ -39,4 +51,3 @@ jobs:
           echo "AI PR review scaffold active."
           echo "PR number: ${PR_NUMBER}"
           echo "Run Reviewer AI using docs/AI_TEAM_EXECUTION_SYSTEM.md and docs/PROJECT_CONTEXT_ENGINE.md here."
-

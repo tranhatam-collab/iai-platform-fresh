@@ -51,6 +51,8 @@
     "report:nogo-packets": "node scripts/team1-nogo-packet-status-check.mjs",
     "report:abcd-nogo-precheck": "node scripts/team1-abcd-nogo-precheck.mjs",
     "report:pay-prod-gate": "node scripts/team1-pay-prod-gate-check.mjs",
+    "report:pay-continuous": "node scripts/iai-pay-continuous-dev-loop.mjs",
+    "report:pay-continuous:loop": "node scripts/iai-pay-continuous-dev-loop.mjs --loop --interval-minutes=10",
     "report:pay-gate-loop": "node scripts/team1-pay-gate-loop.mjs",
     "report:pay-docs-integration": "node scripts/pay-docs-integration-check.mjs",
     "report:tramsaigon-evidence": "node scripts/pay-team-d-tramsaigon-evidence-check.mjs",
