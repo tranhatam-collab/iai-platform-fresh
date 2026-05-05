@@ -72,7 +72,7 @@ import {
   escalateReconciliationCase
 } from "./lib/reconciliation";
 import { sendPaymentEmailWithEvidence } from "./lib/email-evidence";
-import { readJsonBody, sha256Hex, stringValue, integerValue } from "./lib/utils";
+import { readJsonBody, scalarValue, sha256Hex, stringValue, integerValue } from "./lib/utils";
 
 export interface Env {
   PAYMENTS_DB?: D1Database;
@@ -1246,7 +1246,7 @@ export default {
         const result = await handlePayOSWebhook(env, new Request(request.url, { method: "POST", headers: request.headers, body: rawBody }), tenantCode);
         const payload = readJsonBody(result.body.raw);
         const webhookData = readJsonBody(payload.data);
-        const providerOrderId = stringValue(webhookData.orderCode);
+        const providerOrderId = scalarValue(webhookData.orderCode);
         const providerEventId = await sha256Hex(rawBody);
         const existingProviderEvent = await getProviderEventByEventId(db, "payos", providerEventId);
         const attempt = providerOrderId ? await findPaymentIntentByProviderOrderId(db, "payos", providerOrderId) : null;

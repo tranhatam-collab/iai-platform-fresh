@@ -101,6 +101,45 @@ export function resolveRerunBundlePreflight(env = process.env) {
   };
 }
 
+export function resolveArtifactRerunBundlePreflight(runtimeProbe) {
+  const keyProvided = runtimeProbe?.auth?.keyProvided === true;
+  const keyHeaderName = runtimeProbe?.auth?.keyHeaderName ?? null;
+  const keySource = runtimeProbe?.auth?.keySource ?? "artifact";
+  const tenantCode = runtimeProbe?.request?.tenant_code ?? null;
+  const siteCode = runtimeProbe?.request?.site_code ?? null;
+
+  const checks = [
+    {
+      name: "auth_key_present",
+      pass: keyProvided,
+      note: keyProvided
+        ? `Artifact-derived proof: ${keyHeaderName ?? "auth header"} was provided from ${keySource}. Raw key is not stored.`
+        : "Runtime probe artifact does not prove a key was provided."
+    },
+    {
+      name: "tenant_code_explicit",
+      pass: Boolean(tenantCode),
+      note: tenantCode
+        ? `artifact tenant=${tenantCode}`
+        : "Runtime probe artifact does not include request.tenant_code."
+    },
+    {
+      name: "site_code_explicit",
+      pass: Boolean(siteCode),
+      note: siteCode
+        ? `artifact site=${siteCode}`
+        : "Runtime probe artifact does not include request.site_code."
+    }
+  ];
+
+  return {
+    authKeyHeaderName: keyProvided ? keyHeaderName : null,
+    authKeySource: keySource,
+    checks,
+    ready: checks.every((check) => check.pass)
+  };
+}
+
 export function deriveRerunBundleStatus({
   preflight,
   gateSnapshot,
@@ -192,7 +231,8 @@ async function main() {
   const date = getArg("date") ?? todayInTimezone(timezone);
   const preflightOnly = hasFlag("--preflight-only");
   const skipTests = hasFlag("--skip-tests");
-  const preflight = resolveRerunBundlePreflight(process.env);
+  const artifactOnly = hasFlag("--artifact-only");
+  const envPreflight = resolveRerunBundlePreflight(process.env);
   const reportDir = path.join(root, "docs", "reports", "team2");
 
   const runtimeProbeJsonPath = path.join(reportDir, `TEAM2_PAY_PROD_RUNTIME_PROBE_${date}.json`);
@@ -204,7 +244,7 @@ async function main() {
 
   const commands = [];
 
-  if (!preflightOnly && preflight.ready) {
+  if (!artifactOnly && !preflightOnly && envPreflight.ready) {
     commands.push(
       runCommand(
         root,
@@ -240,6 +280,10 @@ async function main() {
     readJsonOrNull(gateJsonPath)
   ]);
 
+  const preflight = artifactOnly
+    ? resolveArtifactRerunBundlePreflight(runtimeProbe)
+    : envPreflight;
+
   const status = deriveRerunBundleStatus({
     commands,
     gateSnapshot,
@@ -262,6 +306,7 @@ async function main() {
     timezone,
     date,
     status,
+    artifactOnly,
     preflightOnly,
     skipTests,
     preflight,
@@ -315,6 +360,7 @@ async function main() {
     `- Generated at: ${bundle.generatedAt}`,
     `- Timezone: ${timezone}`,
     `- Status: \`${status}\``,
+    `- Artifact only: \`${artifactOnly ? "yes" : "no"}\``,
     `- Preflight only: \`${preflightOnly ? "yes" : "no"}\``,
     `- Skip tests: \`${skipTests ? "yes" : "no"}\``,
     "",

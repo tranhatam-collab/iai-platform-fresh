@@ -242,7 +242,16 @@ async function main() {
   const checkoutUrl = firstByKeys(checkoutBody, new Set(["checkout_url", "checkoutUrl", "redirect_url", "redirectUrl", "url"]));
   const paymentLinkId = firstByKeys(
     checkoutBody,
-    new Set(["payment_link_id", "paymentLinkId", "payment_link", "paymentLink", "link_id", "linkId"])
+    new Set([
+      "payment_link_id",
+      "paymentLinkId",
+      "payment_link",
+      "paymentLink",
+      "link_id",
+      "linkId",
+      "provider_payment_id",
+      "providerPaymentId"
+    ])
   );
   const providerCodes = collectNumericProviderCodes(checkoutBody);
   const has214 = providerCodes.includes(214);

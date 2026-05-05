@@ -142,6 +142,30 @@
           "PAYOS_CHECKSUM_KEY"
         ]
       }
+    },
+    "sandbox": {
+      "name": "pay-iai-one-sandbox",
+      "vars": {
+        "PAY_ENV": "sandbox",
+        "PAY_API_BASE_URL": "https://pay-iai-one-sandbox.tranhatam.workers.dev"
+      },
+      "d1_databases": [
+        {
+          "binding": "PAYMENTS_DB",
+          "database_name": "pay-iai-one-sandbox",
+          "database_id": "3395a632-b3f7-4b36-b577-f0fdefe2db70",
+          "migrations_dir": "./database",
+          "remote": true
+        }
+      ],
+      "secrets": {
+        "required": [
+          "PAYOS_CLIENT_ID",
+          "PAYOS_API_KEY",
+          "PAYOS_CHECKSUM_KEY",
+          "PAY_IAI_ONE_WEBHOOK_SECRET"
+        ]
+      }
     }
   }
 }
