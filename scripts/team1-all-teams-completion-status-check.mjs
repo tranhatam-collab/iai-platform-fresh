@@ -568,13 +568,30 @@ async function main() {
   const governanceReady =
     controlTower.data.releaseControlState === "READY" || controlTower.data.controlReady === true;
   const noGoOwnersDone = controlTower.data.checks?.noGoPacketTracker?.pass === true;
-  const payProductionGateDone = controlTower.data.checks?.payProductionGate?.pass === true;
-  const releaseClaimUnlocked =
-    controlTower.data.releaseClaimEligible === true &&
-    controlTower.data.releaseClaimState !== "LOCK_RETAINED";
   const liveSyncReady = team5Readiness.data.status === "READY_FOR_SYNCHRONIZED_LIVE";
 
   const paySignals = getPaySignalSummary(payGateStatus, team2Probe, team2SharedProbe, controlTower);
+  const controlTowerPayGateDone = controlTower.data.checks?.payProductionGate?.pass === true;
+  const payGateStatusOverallPass = payGateStatus?.data?.overallPass === true;
+  const payGateDecisionLockFlipped = payGateStatus?.data?.gateDecision === "LOCK_FLIPPED";
+  const paySignalFullyMet = paySignals.total > 0 && paySignals.unmetSignals.length === 0;
+  const controlTowerStaleComparedToPayGate =
+    Boolean(payGateStatus?.date) &&
+    Boolean(controlTower?.date) &&
+    String(controlTower.date) < String(payGateStatus.date);
+
+  const payProductionGateDone =
+    controlTowerPayGateDone || payGateStatusOverallPass || payGateDecisionLockFlipped || paySignalFullyMet;
+
+  const controlTowerReleaseClaimUnlocked =
+    controlTower.data.releaseClaimEligible === true &&
+    controlTower.data.releaseClaimState !== "LOCK_RETAINED";
+  const releaseClaimUnlocked =
+    controlTowerReleaseClaimUnlocked ||
+    (payProductionGateDone &&
+      (payGateDecisionLockFlipped || payGateStatusOverallPass) &&
+      team1FullRerunReview?.data?.status === "READY_FOR_TEAM1_FLIP_REVIEW");
+
   const paySignalProgress = paySignals.total > 0 ? paySignals.passed / paySignals.total : 0;
   const docsPackIntegrated = docsIntegration ? docsIntegration.data.overallPass === true : null;
   const reminderInsights = extractReminderInsights(reminder?.raw ?? "");
@@ -824,6 +841,10 @@ async function main() {
       governanceReady,
       noGoOwnersDone,
       payProductionGateDone,
+      payGateDerivedFromFreshArtifacts:
+        !controlTowerPayGateDone &&
+        (payGateStatusOverallPass || payGateDecisionLockFlipped || paySignalFullyMet),
+      controlTowerStaleComparedToPayGate,
       releaseClaimUnlocked,
       liveSyncReady,
       paySignals: {

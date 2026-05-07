@@ -22,71 +22,79 @@ function boolStatus(value) {
   return value ? "PASS" : "FAIL";
 }
 
-async function resolveControlTowerSnapshot(root, requestedDate) {
-  const reportsDir = path.join(root, "docs", "reports", "team1");
-  const requestedPath = path.join(
-    reportsDir,
-    `CONTROL_TOWER_AUTOMATION_STATUS_${requestedDate}.json`
-  );
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-  try {
-    const source = await readFile(requestedPath, "utf8");
-    return {
-      source,
-      sourceDate: requestedDate,
-      sourcePath: requestedPath
-    };
-  } catch (error) {
-    const isMissingFile =
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      error.code === "ENOENT";
+async function resolveJsonSnapshot(root, relativeDir, prefix, requestedDate) {
+  const reportsDir = path.join(root, relativeDir);
+  const entries = await readdir(reportsDir);
+  const pattern = new RegExp(`^${escapeRegex(prefix)}_(\\d{4}-\\d{2}-\\d{2})\\.json$`);
+  const availableDates = entries
+    .flatMap((entry) => {
+      const match = pattern.exec(entry);
+      return match ? [match[1]] : [];
+    })
+    .sort((left, right) => right.localeCompare(left));
+  const selectedDate = availableDates.find((date) => date <= requestedDate) ?? availableDates[0];
 
-    if (!isMissingFile) {
-      throw error;
-    }
-
-    const entries = await readdir(reportsDir);
-    const availableDates = entries
-      .flatMap((entry) => {
-        const match = /^CONTROL_TOWER_AUTOMATION_STATUS_(\d{4}-\d{2}-\d{2})\.json$/.exec(entry);
-        return match ? [match[1]] : [];
-      })
-      .sort((left, right) => right.localeCompare(left));
-
-    const fallbackDate =
-      availableDates.find((date) => date <= requestedDate) ?? availableDates[0];
-
-    if (!fallbackDate) {
-      throw new Error("Không tìm thấy CONTROL_TOWER_AUTOMATION_STATUS_*.json.");
-    }
-
-    const fallbackPath = path.join(
-      reportsDir,
-      `CONTROL_TOWER_AUTOMATION_STATUS_${fallbackDate}.json`
-    );
-    const source = await readFile(fallbackPath, "utf8");
-    return {
-      source,
-      sourceDate: fallbackDate,
-      sourcePath: fallbackPath
-    };
+  if (!selectedDate) {
+    return null;
   }
+
+  const absolutePath = path.join(reportsDir, `${prefix}_${selectedDate}.json`);
+  const source = await readFile(absolutePath, "utf8");
+  return {
+    sourceDate: selectedDate,
+    sourcePath: absolutePath,
+    data: JSON.parse(source)
+  };
 }
 
 async function main() {
   const root = process.cwd();
   const date = parseArg("--date") ?? todayInTimezone(timezone);
-  const controlTowerSnapshot = await resolveControlTowerSnapshot(root, date);
-  const controlTower = JSON.parse(controlTowerSnapshot.source);
+  const controlTowerSnapshot = await resolveJsonSnapshot(
+    root,
+    path.join("docs", "reports", "team1"),
+    "CONTROL_TOWER_AUTOMATION_STATUS",
+    date
+  );
+  const teamAdminSnapshot = await resolveJsonSnapshot(
+    root,
+    path.join("docs", "reports", "team1"),
+    "TEAM_ADMIN_ALL_TEAMS_COMPLETION_STATUS",
+    date
+  );
+  const payGateSnapshot = await resolveJsonSnapshot(
+    root,
+    path.join("docs", "reports", "team1"),
+    "TEAM1_PAY_PROD_GATE_STATUS",
+    date
+  );
+
+  if (!controlTowerSnapshot) {
+    throw new Error("Không tìm thấy CONTROL_TOWER_AUTOMATION_STATUS_*.json.");
+  }
+
+  const controlTower = controlTowerSnapshot.data;
 
   const governanceReady = controlTower.releaseControlState === "READY" || controlTower.controlReady === true;
-  const noGoOwnersDone = controlTower.checks?.noGoPacketTracker?.pass === true;
-  const payProdGateDone = controlTower.checks?.payProductionGate?.pass === true;
-  const releaseClaimUnlocked =
-    controlTower.releaseClaimEligible === true &&
-    controlTower.releaseClaimState !== "LOCK_RETAINED";
+  const noGoOwnersDone =
+    controlTower.checks?.noGoPacketTracker?.pass === true ||
+    teamAdminSnapshot?.data?.checks?.noGoOwnersDone === true;
+
+  const payProdGateDone =
+    controlTower.checks?.payProductionGate?.pass === true ||
+    teamAdminSnapshot?.data?.checks?.payProductionGateDone === true ||
+    payGateSnapshot?.data?.overallPass === true ||
+    payGateSnapshot?.data?.gateDecision === "LOCK_FLIPPED";
+
+  const releaseClaimUnlocked = Boolean(
+    (controlTower.releaseClaimEligible === true &&
+      controlTower.releaseClaimState !== "LOCK_RETAINED") ||
+      teamAdminSnapshot?.data?.checks?.releaseClaimUnlocked === true
+  );
 
   const readyForSynchronizedLive =
     governanceReady &&
@@ -122,7 +130,9 @@ async function main() {
     requestedDate: date,
     date: controlTowerSnapshot.sourceDate,
     source: {
-      controlTowerPath: path.relative(root, controlTowerSnapshot.sourcePath)
+      controlTowerPath: path.relative(root, controlTowerSnapshot.sourcePath),
+      teamAdminPath: teamAdminSnapshot ? path.relative(root, teamAdminSnapshot.sourcePath) : null,
+      payGatePath: payGateSnapshot ? path.relative(root, payGateSnapshot.sourcePath) : null
     },
     status: readyForSynchronizedLive
       ? "READY_FOR_SYNCHRONIZED_LIVE"
@@ -147,6 +157,14 @@ async function main() {
         releaseClaimEligible: controlTower.releaseClaimEligible === true
       }
     },
+    derivedTruth: {
+      noGoOwnersDoneFromTeamAdmin: teamAdminSnapshot?.data?.checks?.noGoOwnersDone === true,
+      payGateDoneFromTeamAdmin: teamAdminSnapshot?.data?.checks?.payProductionGateDone === true,
+      releaseClaimUnlockedFromTeamAdmin:
+        teamAdminSnapshot?.data?.checks?.releaseClaimUnlocked === true,
+      payGateOverallPass: payGateSnapshot?.data?.overallPass === true,
+      payGateDecision: payGateSnapshot?.data?.gateDecision ?? null
+    },
     blockers
   };
 
@@ -165,6 +183,8 @@ async function main() {
     `- Ngày checkpoint Team 5: ${date}`,
     `- Ngày snapshot Team 1 dùng để đối chiếu: ${result.date}`,
     `- Nguồn control-tower: ${result.source.controlTowerPath}`,
+    ...(result.source.teamAdminPath ? [`- Nguồn Team Admin completion: ${result.source.teamAdminPath}`] : []),
+    ...(result.source.payGatePath ? [`- Nguồn Team 1 pay gate: ${result.source.payGatePath}`] : []),
     `- Kết luận: ${result.status}`,
     "",
     "## Gate checks",

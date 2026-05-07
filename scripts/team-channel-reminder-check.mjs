@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const timezone = "Asia/Ho_Chi_Minh";
@@ -33,6 +33,63 @@ function normalize(value) {
 
 function markdownStatus(pass) {
   return pass ? "PASS" : "FAIL";
+}
+
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function resolveDatedSchedule(root, requestedDate) {
+  const reportDir = path.join(root, "docs", "reports", "team1");
+  const requestedPath = path.join(reportDir, `TEAM_CHANNEL_REMINDER_SCHEDULE_${requestedDate}.json`);
+
+  try {
+    const raw = await readFile(requestedPath, "utf8");
+    return {
+      requestedDate,
+      sourceDate: requestedDate,
+      sourcePath: requestedPath,
+      schedule: JSON.parse(raw)
+    };
+  } catch (error) {
+    const isMissingFile =
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT";
+
+    if (!isMissingFile) {
+      throw error;
+    }
+  }
+
+  const entries = await readdir(reportDir);
+  const pattern = new RegExp(
+    `^${escapeRegex("TEAM_CHANNEL_REMINDER_SCHEDULE")}(\\_\\d{4}-\\d{2}-\\d{2})\\.json$`
+  );
+  const availableDates = entries
+    .flatMap((entry) => {
+      const match = pattern.exec(entry);
+      if (!match) {
+        return [];
+      }
+      return [match[1].slice(1)];
+    })
+    .sort((left, right) => right.localeCompare(left));
+
+  const fallbackDate = availableDates.find((date) => date <= requestedDate) ?? availableDates[0];
+  if (!fallbackDate) {
+    throw new Error("Missing TEAM_CHANNEL_REMINDER_SCHEDULE_*.json");
+  }
+
+  const fallbackPath = path.join(reportDir, `TEAM_CHANNEL_REMINDER_SCHEDULE_${fallbackDate}.json`);
+  const raw = await readFile(fallbackPath, "utf8");
+  return {
+    requestedDate,
+    sourceDate: fallbackDate,
+    sourcePath: fallbackPath,
+    schedule: JSON.parse(raw)
+  };
 }
 
 function validateSchedule(schedule) {
@@ -147,14 +204,14 @@ function renderReminderPacket(schedule, date) {
   ].join("\n");
 }
 
-function renderStatus(schedule, validation, date) {
+function renderStatus(schedule, validation, date, scheduleSourcePath) {
   const heartbeat = isRecord(schedule.thread_heartbeat) ? schedule.thread_heartbeat : null;
 
   return [
     `# TEAM_CHANNEL_REMINDER_STATUS_${date}`,
     `- Generated at: ${new Date().toISOString()}`,
     `- Timezone: ${timezone}`,
-    `- Schedule source: \`docs/reports/team1/TEAM_CHANNEL_REMINDER_SCHEDULE_${date}.json\``,
+    `- Schedule source: \`${scheduleSourcePath}\``,
     `- Cadence minutes: \`${schedule.cadence_minutes ?? "MISSING"}\``,
     `- Active rows: \`${validation.activeRows ?? 0}\``,
     `- Overall: ${validation.overallPass ? "PASS" : "FAIL"}`,
@@ -186,20 +243,15 @@ function renderStatus(schedule, validation, date) {
 async function main() {
   const date = getDateArg();
   const root = process.cwd();
-  const schedulePath = path.join(
-    root,
-    "docs",
-    "reports",
-    "team1",
-    `TEAM_CHANNEL_REMINDER_SCHEDULE_${date}.json`
-  );
-  const schedule = JSON.parse(await readFile(schedulePath, "utf8"));
+  const resolvedSchedule = await resolveDatedSchedule(root, date);
+  const schedule = resolvedSchedule.schedule;
   const validation = validateSchedule(schedule);
+  const scheduleSourcePath = path.relative(root, resolvedSchedule.sourcePath);
 
   if (hasFlag("--emit")) {
     console.log(renderReminderPacket(schedule, date));
   } else {
-    console.log(renderStatus(schedule, validation, date));
+    console.log(renderStatus(schedule, validation, date, scheduleSourcePath));
   }
 
   if (hasFlag("--write")) {
@@ -207,7 +259,7 @@ async function main() {
     await mkdir(reportDir, { recursive: true });
     await writeFile(
       path.join(reportDir, `TEAM_CHANNEL_REMINDER_STATUS_${date}.md`),
-      `${renderStatus(schedule, validation, date)}\n`
+      `${renderStatus(schedule, validation, date, scheduleSourcePath)}\n`
     );
   }
 

@@ -3,6 +3,8 @@
 - Date: `2026-05-07`
 - Team: `Team 1 Program Root / Gate Authority`
 - Mode: `15_MIN_HEARTBEAT_UNTIL_COMPLETE`
+- Automation ID: `team-reminders-15m`
+- Heartbeat RRULE: `FREQ=MINUTELY;INTERVAL=15`
 - Scope: `pay gate`, `Team 5 live sync`, `Team D payment proof`, `founder preview handoff`, `repo-wide QA gate`
 
 DONE:
@@ -16,48 +18,47 @@ DONE:
 
 IN PROGRESS:
 - Continuous 15-minute Team 1 automation loop.
-- Monitoring for a new Team Pay/provider truth update that clears payOS blocker `214`.
-- Monitoring for founder-triggered preview URLs for `W1A` and `W1B`.
-- Monitoring Team D payment-email proof completion for `tranhatam.com` and `omdalat.com`.
+- Team 5 rerun flow (`gate-flow -> readiness -> final packet`) theo checkpoint mới nhất.
+- Monitoring Team Email SMTP wave-close evidence clusters.
+- Monitoring Team B CDN/Flows production evidence and Team C bilingual/CIOS closure.
+- Monitoring Team D payment-email proof completion for `tranhatam.com` và `omdalat.com`.
 
 BLOCK:
-- Single active pay blocker remains `Team Pay / payOS merchant owner`.
-- Latest locked gate state remains `LOCK_RETAINED_WITH_REASON`.
-- Latest blocked provider signals remain:
-  - `checkout_status != 201`
-  - `checkout_url = null`
-  - `payment_link_id = null`
-  - `no_214 = FAIL`
-- Team 5 remains `NOT_READY_FOR_SYNCHRONIZED_LIVE` until pay gate flips.
-- Founder preview deploys for `W1A` and `W1B` have not yet returned preview URLs.
-- Team D live payment evidence remains incomplete for runtime/payment proof.
+- NO-GO owner sign-off chưa complete ở control tower.
+- Team 5 vẫn `NOT_READY_FOR_SYNCHRONIZED_LIVE` vì thiếu NO-GO closure.
+- Team Email SMTP chưa close đủ 5 cụm evidence Wave 1.
+- Team B CDN/Flows chưa nộp đủ production evidence domain-specific.
+- Team C còn open issue ở bilingual (`noos-web`) và CIOS closure.
+- Team D live payment evidence vẫn thiếu chuỗi proof external đầy đủ.
 
 NEXT:
-1. Every 15 minutes, re-check Team 1 pay gate authority files, Team 2 production probe files, Team 5 live-sync readiness, Team D payment evidence status, and founder handoff progress.
-2. If Team Pay clears merchant/channel/package truth, Team 2 must run the canonical one-shot and then the full rerun bundle.
-3. If pay rerun turns green, Team 1 must publish a fresh verdict and Team 5 must rerun readiness/final packet immediately.
-4. If founder posts `W1A` preview URL, Team 1 resumes screenshot/Lighthouse/domain proof without delay.
-5. If Team D evidence reaches complete state and Team 1 accepts it, remove that lane from the active blocker set.
+1. Every 15 minutes, re-check Team 1 completion status, Team 5 rerun packet, Team Email SMTP lane status, Team B CDN/Flows evidence, Team C bilingual/CIOS closure, Team D activation evidence.
+2. Keep Team 5 packet regenerated from current sources so readiness never drifts on stale snapshots.
+3. Keep reminder cadence locked at 15 minutes and publish due reminders by logical channel only (no fake Slack/Teams delivery claim).
+4. Remove each blocker lane only after checker/Team 1 acceptance is reflected in source artifacts.
+5. Pause automation only when all stop conditions are true in the latest Team 1 completion snapshot.
 
 AUTO STOP CONDITION:
 - Automation may stop only when all conditions below are true:
-  - pay gate verdict is no longer `LOCK_RETAINED_WITH_REASON`
-  - production pay signals are green
-  - Team 5 synchronized live readiness is no longer blocked
-  - founder preview handoff has returned the required preview URLs and Team 1 has verified them
+  - NO-GO owner sign-off is complete
+  - pay production gate stays green on latest snapshot
+  - release claim is unlocked and Team 5 synchronized live readiness is no longer blocked
+  - Team Email SMTP wave-close evidence is accepted
+  - Team B CDN/Flows production evidence is accepted
+  - Team C bilingual + CIOS closure checks are accepted
   - Team D payment evidence for active domains is accepted or explicitly closed as out-of-scope
   - no remaining Team 1 gate-critical blocker is unresolved
 
 TEST PROOF:
 - `pnpm quality:gate` = PASS on `2026-05-07`
 - `pnpm quality:team2:gate` = PASS on `2026-05-07`
-- Team 2 latest owner packet:
-  - `docs/reports/team2/DAILY_TEAM2_2026-05-04.md`
-  - `docs/reports/team2/TEAM2_EXECUTION_REPORT_2026-05-04.md`
-- Team 1 latest gate review:
-  - `docs/reports/team1/TEAM1_PAY_FULL_RERUN_REVIEW_STATUS_2026-05-01.md`
-  - `docs/reports/team1/TEAM1_PAY_GATE_REMAINING_WORK_PLAN_2026-05-01.md`
-  - `docs/reports/team1/TEAM1_PAY_FINAL_ACTIVE_OWNER_STATUS_2026-05-01.md`
+- Team 1 latest completion snapshot:
+  - `docs/reports/team1/TEAM_ADMIN_ALL_TEAMS_COMPLETION_STATUS_2026-05-07.json`
+- Team 5 latest rerun packet:
+  - `docs/reports/team5/TEAM5_LIVE_SYNC_READINESS_2026-05-07.json`
+  - `docs/reports/team5/TEAM5_LIVE_SYNC_FINAL_PACKET_2026-05-07.json`
+- Team 1 latest pay gate truth:
+  - `docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-05-06.json`
 
 COMMIT HASH:
 - `PENDING`
