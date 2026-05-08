@@ -1,0 +1,103 @@
+{
+  "contract_version": "2026-05-09",
+  "tenant_code": "nhachung",
+  "site_code": "nhachung-app",
+  "source_contract": "nhachung.org/docs/api/API_CONTRACTS_V1.md#4-payment-webhook",
+  "checkout_provider_policy": {
+    "live_provider": "payos",
+    "live_currency": "VND",
+    "subscription_status": "planned_not_live",
+    "reason": "pay.iai.one live internal contract currently supports payOS, VND, one_time checkout only. Nhà Chung USD subscriptions stay locked as catalog contract until Phase 2 Stripe or subscription rail is provisioned."
+  },
+  "skus": {
+    "nc_starter": {
+      "sku": "nc_starter",
+      "tier": "starter",
+      "monthly_usd_cents": 500,
+      "annual_usd_cents": 5000,
+      "points_per_usd": 2,
+      "public_financial_promise": false,
+      "entitlements": [
+        "learn_basic",
+        "project_view",
+        "community"
+      ]
+    },
+    "nc_builder": {
+      "sku": "nc_builder",
+      "tier": "builder",
+      "monthly_usd_cents": 1900,
+      "annual_usd_cents": 19000,
+      "points_per_usd": 2,
+      "public_financial_promise": false,
+      "entitlements": [
+        "learn_basic",
+        "project_view",
+        "community",
+        "ai_tools",
+        "project_invite",
+        "learn_advanced"
+      ]
+    },
+    "nc_pro": {
+      "sku": "nc_pro",
+      "tier": "pro",
+      "monthly_usd_cents": 4900,
+      "annual_usd_cents": 49000,
+      "points_per_usd": 2,
+      "public_financial_promise": false,
+      "entitlements": [
+        "learn_basic",
+        "project_view",
+        "community",
+        "ai_tools",
+        "project_invite",
+        "learn_advanced",
+        "cross_house_projects",
+        "circles_ownership"
+      ]
+    },
+    "nc_master": {
+      "sku": "nc_master",
+      "tier": "master",
+      "monthly_usd_cents": 9900,
+      "annual_usd_cents": 99000,
+      "points_per_usd": 2,
+      "public_financial_promise": false,
+      "entitlements": [
+        "learn_basic",
+        "project_view",
+        "community",
+        "ai_tools",
+        "project_invite",
+        "learn_advanced",
+        "cross_house_projects",
+        "circles_ownership",
+        "multi_house_ops",
+        "mentor",
+        "lead_programs"
+      ]
+    }
+  },
+  "webhook_events": [
+    "checkout.completed",
+    "subscription.renewed",
+    "subscription.cancelled",
+    "refund"
+  ],
+  "webhook_destination": {
+    "url": "https://app.nhachung.org/api/payment-webhook",
+    "method": "POST",
+    "signature_header": "X-Signature",
+    "timestamp_header": "X-Timestamp",
+    "idempotency_header": "X-Idempotency-Key",
+    "secret_runtime_key": "PAY_NHACHUNG_HMAC",
+    "retry_policy": "1s,4s,16s,64s,256s"
+  },
+  "points_policy": {
+    "checkout_completed": "award floor(amount_usd * 2) contribution points",
+    "renewed": "award floor(amount_usd * 2) contribution points",
+    "cancelled": "revert to free after effective_at when no active paid subscription remains",
+    "refund": "record refund event and queue manual points review"
+  }
+}

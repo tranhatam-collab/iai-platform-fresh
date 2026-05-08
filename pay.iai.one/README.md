@@ -97,11 +97,12 @@ pay.iai.one/
 - `/docs`, `/openapi.json`, and `/internal/checkout-session` are now first-class routes
 - `/api/v1/checkout/session` is now reserved for the Về Tương Lai checkout brief
 - Ready for trusted internal consumers, with payOS-first/VND/one_time constraints and mandatory API-key auth clearly documented
+- Nhà Chung's four-SKU catalog contract is locked in `config/nhachung-catalog.json` with a local gate, but live subscription checkout remains blocked until a subscription-capable rail is provisioned
 
 ## Local Development
 
 ```bash
-cd '/Users/tranhatam/Documents/Devnewproject/pay.iai.one'
+cd '/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh/pay.iai.one'
 npm install
 npm run dev
 ```
@@ -121,6 +122,10 @@ Health endpoints:
 - `POST /v1/providers/payos/payment-requests/:id/cancel`
 - `POST /v1/webhooks/payos/:tenant_code`
 - `GET /v1/payments/:internal_order_id`
+
+Contract gates:
+
+- `npm run check:nhachung-catalog`
 
 ## Security Principles
 
