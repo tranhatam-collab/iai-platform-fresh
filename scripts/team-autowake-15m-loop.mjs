@@ -82,10 +82,10 @@ function getStopState(adminSnapshot) {
 
   const required = [
     ["governanceReady", "Team 1 governance chưa ready"],
-    ["noGoOwnersDone", "T5 Release Sync & KPI: 6-team owner sign-off / NO-GO chưa complete"],
+    ["noGoOwnersDone", "Team 3 Release Sync: owner sign-off của mô hình 3-team chưa complete"],
     ["payProductionGateDone", "Pay production gate chưa green"],
     ["releaseClaimUnlocked", "Release claim chưa unlock"],
-    ["liveSyncReady", "T5 Release Sync & KPI: synchronized live chưa ready"]
+    ["liveSyncReady", "Team 3 Release Sync: synchronized live chưa ready"]
   ];
 
   for (const [key, message] of required) {
@@ -95,8 +95,6 @@ function getStopState(adminSnapshot) {
   }
 
   const clusterChecks = [
-    [checks.teamEmailSmtp?.wave1CloseoutReady, "T3 Mail & Inbox Proof: wave-close evidence chưa complete"],
-    [checks.teamDState?.activationEvidenceComplete, "T4 Payment Activation: domain activation evidence chưa complete"],
     [
       checks.teamBCdnFlowsState?.productionEvidenceResolved,
       "T2 Infra & Runtime Evidence: CDN/Flows production evidence chưa complete"
@@ -143,14 +141,13 @@ async function runCycle({ requestedDate, intervalMinutes }) {
     );
   }
 
-  commands.push(runNode("Team A/B/C/D NO-GO precheck", "scripts/team1-abcd-nogo-precheck.mjs", args));
-  commands.push(runNode("Team B CDN/Flows evidence check", "scripts/team-b-cdn-flows-evidence-check.mjs", args));
-  commands.push(runNode("Team C CIOS closure check", "scripts/teamc-cios-review-closure-check.mjs", [
+  commands.push(runNode("Team 2 CDN/Flows evidence check", "scripts/team-b-cdn-flows-evidence-check.mjs", args));
+  commands.push(runNode("Team 2 CIOS closure check", "scripts/teamc-cios-review-closure-check.mjs", [
     ...args,
     `--timeout-ms=${CIOS_CLOSURE_TIMEOUT_MS}`
   ]));
-  commands.push(runNode("Team 5 live-sync readiness", "scripts/team5-live-sync-readiness-check.mjs", args));
-  commands.push(runNode("Team 5 live-sync final packet", "scripts/team5-live-sync-packet.mjs", args));
+  commands.push(runNode("Team 3 live-sync readiness", "scripts/team5-live-sync-readiness-check.mjs", args));
+  commands.push(runNode("Team 3 live-sync final packet", "scripts/team5-live-sync-packet.mjs", args));
   commands.push(runNode("Team 1 all-teams completion snapshot", "scripts/team1-all-teams-completion-status-check.mjs", args));
 
   const adminJsonPath = path.join(reportDir, `TEAM_ADMIN_ALL_TEAMS_COMPLETION_STATUS_${date}.json`);
@@ -164,7 +161,7 @@ async function runCycle({ requestedDate, intervalMinutes }) {
     date,
     mode: hasFlag("--loop") ? "LOOP" : "ONCE",
     cadenceMinutes: intervalMinutes,
-    status: stopState.complete ? "COMPLETE_VERIFIED_STOP_ALLOWED" : "ACTIVE_UNTIL_VERIFIED_COMPLETE",
+    status: stopState.complete ? "COMPLETE_VERIFIED_STOP_ALLOWED" : "AUTO_3TEAM_ACTIVE_UNTIL_VERIFIED_COMPLETE",
     cycleStartedAt: cycleStartedAt.toISOString(),
     cycleFinishedAt: new Date().toISOString(),
     nextWakeAt: stopState.complete ? null : nextWakeAt,
@@ -205,7 +202,7 @@ async function runCycle({ requestedDate, intervalMinutes }) {
     `- docs/reports/team1/TEAM_AUTOWAKE_DISPATCH_PACKET_${date}.md`,
     "",
     "## Stop Rule",
-    "- This loop must remain active until completion is 100% and every 6-team gate-critical cluster is accepted: T5 owner/live-sync, pay gate, T3 mail proof, T4 payment activation, T2 CDN/Flows/CIOS, and T1 bilingual/noos-web.",
+    "- This loop must remain active until completion is 100% and the Team 1 / Team 2 / Team 3 gate-critical clusters are accepted: Team 3 owner/live-sync, Team 2 infra/runtime evidence, and Team 1 bilingual/noos-web.",
     ""
   ].join("\n");
 

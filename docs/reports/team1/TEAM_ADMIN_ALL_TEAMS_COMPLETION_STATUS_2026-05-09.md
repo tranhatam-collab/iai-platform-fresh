@@ -1,7 +1,7 @@
 # TEAM_ADMIN_ALL_TEAMS_COMPLETION_STATUS_2026-05-09
-- Generated at: 2026-05-09T03:23:56.235Z
+- Generated at: 2026-05-09T05:05:34.961Z
 - Timezone: Asia/Ho_Chi_Minh
-- Gate state: READY_FOR_TEAM5_RERUN
+- Gate state: READY_FOR_TEAM3_RERUN
 - Completion: 60%
 - Remaining: 40%
 - Completion band: IN_PROGRESS
@@ -13,7 +13,7 @@
 - NO-GO owners done: FAIL
 - Pay production gate done: PASS
 - Release claim unlocked: PASS
-- Team 5 live-sync ready: FAIL
+- Team 3 live-sync ready: FAIL
 - Pay signal progress: 10/10 (team1-pay-prod-gate-status)
 - Pay unmet signals: none
 - Pay runtime probe source present: PASS
@@ -29,23 +29,23 @@
 - Team Email SMTP internal inbox proof done: FAIL
 - Team channel reminder schedule available: PASS
 - Team channel reminder cadence is 15 minutes: PASS
-- Team channel reminder active rows: 4
+- Team channel reminder active rows: 3
 - Team channel reminder overall pass: PASS
 - Team D evidence status available: PASS
 - Team D state: `PROOF_CHAIN_COMPLETE_GATE_LOCKED`
 - Team D activation evidence complete: FAIL
 - Team D live claim blocked: PASS
-- Team B CDN/Flows evidence status available: PASS
-- Team B CDN/Flows state: `FORMAL_NOT_PUBLIC_READY`
-- Team B CDN evidence complete: FAIL
-- Team B Flows evidence complete: FAIL
-- Team B CDN/Flows production evidence complete: FAIL
-- Team B CDN/Flows formal NOT_PUBLIC_READY accepted: PASS
-- Team B CDN/Flows production evidence resolved: PASS
-- Team B CDN/Flows checker overall pass: PASS
-- Universal bilingual live ready: FAIL
-- Universal bilingual pending surfaces: noos-web
-- Team C review closure ready: PASS
+- Team 2 CDN/Flows evidence status available: PASS
+- Team 2 CDN/Flows state: `FORMAL_NOT_PUBLIC_READY`
+- Team 2 CDN evidence complete: FAIL
+- Team 2 Flows evidence complete: FAIL
+- Team 2 CDN/Flows production evidence complete: FAIL
+- Team 2 CDN/Flows formal NOT_PUBLIC_READY accepted: PASS
+- Team 2 CDN/Flows production evidence resolved: PASS
+- Team 2 CDN/Flows checker overall pass: PASS
+- Universal bilingual live ready: PASS
+- Universal bilingual pending surfaces: none
+- Team 2 CIOS review closure ready: PASS
 - Pay docs integration pass: PASS
 - Domain verdict (developer reopen): PASS
 - Domain verdict (cdn pending owner evidence): PASS
@@ -55,16 +55,14 @@
 - Domain verdict (flows pending route/runtime): PASS
 - Domain verdict (flows TS5083 cleared): PASS
 - Domain verdict (cios evidence pending): PASS
-- Team C open issues: 0
+- Team 2 open issues: 0
 
 ## Remaining actions
-1. Team 5 must rerun live-sync readiness and final packet immediately.
-2. Team B CDN/Flows has been formally locked as NOT_PUBLIC_READY; keep both domains out of public-live claims until external owner evidence is supplied.
-3. Team 1 must accept or reject the Team C CIOS closure packet; checker is PASS, Team C stays monitor-only until the verdict is recorded.
+1. Team 3 must rerun live-sync readiness and final packet immediately.
+2. Team 2 has formally locked CDN/Flows as NOT_PUBLIC_READY; keep both domains out of public-live claims until external owner evidence is supplied.
+3. Team 1 must accept or reject the Team 2 CIOS closure packet; checker is PASS, and Team 2 stays monitor-only until the verdict is recorded.
 4. Team Email SMTP must close 5 evidence clusters before live-close: mailbox/alias truth, inbound routing truth, Gmail proof, Outlook proof, internal inbox proof.
-5. Team 1 ops must keep channel reminder protocol locked at 15-minute cadence with all required active team channels until COMPLETE_VERIFIED.
-6. Team D must close tranhatam.com external activation evidence (mailbox/alias, runtime bindings, provider_ref, message_id, D1 row, inbox proof) before any READY_FOR_LIVE claim.
-7. Team C language lane must remove remaining hard-coded bilingual copy and metadata drift (pending surfaces: noos-web).
+5. Team D must close tranhatam.com external activation evidence (mailbox/alias, runtime bindings, provider_ref, message_id, D1 row, inbox proof) before any READY_FOR_LIVE claim.
 
 ## Sources
 - Control tower (2026-04-28): docs/reports/team1/CONTROL_TOWER_AUTOMATION_STATUS_2026-04-28.json
@@ -73,7 +71,7 @@
 - Team 2 rerun bundle: 2026-05-06 / docs/reports/team2/TEAM2_PAY_PROD_RERUN_BUNDLE_STATUS_2026-05-06.json
 - Team 1 full rerun review: 2026-05-06 / docs/reports/team1/TEAM1_PAY_FULL_RERUN_REVIEW_STATUS_2026-05-06.json
 - Team 1 pay gate status: 2026-05-06 / docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-05-06.json
-- Team 5 readiness (2026-05-09): docs/reports/team5/TEAM5_LIVE_SYNC_READINESS_2026-05-09.json
+- Team 3 readiness (2026-05-09): docs/reports/team5/TEAM5_LIVE_SYNC_READINESS_2026-05-09.json
 - Team D evidence status: 2026-04-24 / docs/reports/teamd/TRANHATAM_COM_PAYMENT_ACTIVATION_EVIDENCE_STATUS_2026-04-24.json
 - Team B CDN/Flows evidence status: 2026-05-09 / docs/reports/team1/TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_STATUS_2026-05-09.json
 - Team channel reminder schedule: 2026-05-09 / docs/reports/team1/TEAM_CHANNEL_REMINDER_SCHEDULE_2026-05-09.json
@@ -89,10 +87,10 @@
 - CDN delta evidence: 2026-04-22 / docs/release-evidence/cdn.iai.one/CDN_IAI_ONE_DELTA_EVIDENCE_2026-04-22.md
 
 ## Git scope
-- Dirty files: 16
-- Out-of-scope files: 14
+- Dirty files: 27
+- Out-of-scope files: 12
 - Commit scope locked: FAIL
-- Out-of-scope sample: apps/noos-web/src/i18n.ts, apps/noos-web/src/render.ts, content/en.json, content/seo-registry.csv, content/vi.json, scripts/team-b-cdn-flows-evidence-check.mjs, scripts/teamc-cios-review-closure-check.mjs, scripts/universal-bilingual-language-rebuild-audit.mjs
+- Out-of-scope sample: apps/noos-web/src/i18n.ts, apps/noos-web/src/render.ts, content/en.json, content/seo-registry.csv, content/vi.json, scripts/team-autowake-15m-loop.mjs, scripts/universal-bilingual-language-rebuild-audit.mjs, tests/integration/noos-commerce-surface.test.mjs
 
 ## Runbook
 - `pnpm report:team-admin-completion -- --date=YYYY-MM-DD`

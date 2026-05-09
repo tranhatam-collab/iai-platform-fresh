@@ -702,13 +702,13 @@ async function main() {
   }
 
   if (releaseClaimUnlocked && !liveSyncReady) {
-    remainingActions.push("Team 5 must rerun live-sync readiness and final packet immediately.");
+    remainingActions.push("Team 3 must rerun live-sync readiness and final packet immediately.");
   }
 
   if (teamBCdnFlowsState.available) {
     if (!teamBCdnFlowsState.productionEvidenceResolved) {
       remainingActions.push(
-        `Team B CDN/Flows must submit domain-specific production evidence (CDN missing: ${
+        `Team 2 must submit domain-specific production evidence (CDN missing: ${
           teamBCdnFlowsState.cdnMissingRefs.length > 0
             ? teamBCdnFlowsState.cdnMissingRefs.join(", ")
             : "none"
@@ -720,7 +720,7 @@ async function main() {
       );
     } else if (teamBCdnFlowsState.formalNotPublicReadyAccepted) {
       remainingActions.push(
-        "Team B CDN/Flows has been formally locked as NOT_PUBLIC_READY; keep both domains out of public-live claims until external owner evidence is supplied."
+        "Team 2 has formally locked CDN/Flows as NOT_PUBLIC_READY; keep both domains out of public-live claims until external owner evidence is supplied."
       );
     }
   } else {
@@ -730,25 +730,25 @@ async function main() {
     ) {
       if (cdnEvidenceState.deltaSubmitted) {
         remainingActions.push(
-          "Team B CDN delta evidence is submitted; Team 1 should keep OPEN until deploy/rule/cache proof is runtime-readable (DNS reachability, asset/header proof, purge/rollback note)."
+          "Team 2 CDN delta evidence is submitted; Team 1 should keep OPEN until deploy/rule/cache proof is runtime-readable (DNS reachability, asset/header proof, purge/rollback note)."
         );
       } else {
         remainingActions.push(
-          "Team B CDN owner must attach domain-specific deploy/rule/cache evidence for cdn.iai.one."
+          "Team 2 must attach domain-specific deploy/rule/cache evidence for cdn.iai.one."
         );
       }
     }
 
     if (domainVerdictState.flowsPendingRouteRuntimeProof) {
       remainingActions.push(
-        "Team B Flows owner must submit production route/runtime proof and refresh the packet with new evidence."
+        "Team 2 must submit production route/runtime proof for flows.iai.one and refresh the packet with new evidence."
       );
     } else if (
       !domainVerdictState.flowsTs5083Cleared &&
       reminderInsights.teamBFlowsBlockedByTs5083
     ) {
       remainingActions.push(
-        "Team B Flows owner must resolve TS5083 and rerun flow-surface with route/runtime proof."
+        "Team 2 must resolve TS5083 and rerun flow-surface with route/runtime proof."
       );
     }
   }
@@ -767,13 +767,13 @@ async function main() {
 
     if (ciosClosureReady && ciosOpenItems.length === 0) {
       remainingActions.push(
-        "Team 1 must accept or reject the Team C CIOS closure packet; checker is PASS, Team C stays monitor-only until the verdict is recorded."
+        "Team 1 must accept or reject the Team 2 CIOS closure packet; checker is PASS, and Team 2 stays monitor-only until the verdict is recorded."
       );
     } else {
       remainingActions.push(
         ciosOpenItems.length > 0
-          ? `Team C must close CIOS packet issues: ${ciosOpenItems.join(", ")}.`
-          : "Team C must close the remaining CIOS evidence-review items."
+          ? `Team 2 must close CIOS packet issues: ${ciosOpenItems.join(", ")}.`
+          : "Team 2 must close the remaining CIOS evidence-review items."
       );
     }
   }
@@ -788,10 +788,10 @@ async function main() {
     teamChannelReminderState.available &&
     (!teamChannelReminderState.overallPass ||
       !teamChannelReminderState.cadenceIs15 ||
-      teamChannelReminderState.activeRows < 10)
+      teamChannelReminderState.activeRows < 3)
   ) {
     remainingActions.push(
-      "Team 1 ops must keep channel reminder protocol locked at 15-minute cadence with all required active team channels until COMPLETE_VERIFIED."
+      "Team 0 ops must keep the 3-team reminder protocol locked at 15-minute cadence for Team 1/2/3 until COMPLETE_VERIFIED."
     );
   }
 
@@ -803,13 +803,13 @@ async function main() {
 
   if (!bilingualLiveReady) {
     remainingActions.push(
-      `Team C language lane must remove remaining hard-coded bilingual copy and metadata drift (pending surfaces: ${bilingualPendingSurfaces.length > 0 ? bilingualPendingSurfaces.join(", ") : "unknown"}).`
+      `Team 1 must remove remaining hard-coded bilingual copy and metadata drift (pending surfaces: ${bilingualPendingSurfaces.length > 0 ? bilingualPendingSurfaces.join(", ") : "unknown"}).`
     );
   }
 
   if (!ciosClosureReady && ciosClosure?.data?.nextActions?.length) {
     for (const action of ciosClosure.data.nextActions) {
-      remainingActions.push(`Team C cios closure: ${action}`);
+      remainingActions.push(`Team 2 CIOS closure: ${action}`);
     }
   }
 
@@ -821,7 +821,7 @@ async function main() {
     ? "READY_FOR_SYNCHRONIZED_LIVE"
     : payProductionGateDone
       ? releaseClaimUnlocked
-        ? "READY_FOR_TEAM5_RERUN"
+        ? "READY_FOR_TEAM3_RERUN"
         : "READY_FOR_TEAM1_LOCK_VERDICT"
       : "BLOCKED_ON_PAY_PRODUCTION_GATE";
 
@@ -1032,7 +1032,7 @@ async function main() {
     `- NO-GO owners done: ${boolStatus(noGoOwnersDone)}`,
     `- Pay production gate done: ${boolStatus(payProductionGateDone)}`,
     `- Release claim unlocked: ${boolStatus(releaseClaimUnlocked)}`,
-    `- Team 5 live-sync ready: ${boolStatus(liveSyncReady)}`,
+    `- Team 3 live-sync ready: ${boolStatus(liveSyncReady)}`,
     `- Pay signal progress: ${paySignals.passed}/${paySignals.total} (${paySignals.source})`,
     `- Pay unmet signals: ${paySignals.unmetSignals.length > 0 ? paySignals.unmetSignals.join(", ") : "none"}`,
     `- Pay runtime probe source present: ${boolStatus(paySignals.runtimeProbeSourcePresent)}`,
@@ -1060,17 +1060,17 @@ async function main() {
     `- Team D state: \`${teamDState.status}\``,
     `- Team D activation evidence complete: ${boolStatus(teamDState.activationEvidenceComplete)}`,
     `- Team D live claim blocked: ${boolStatus(teamDState.liveClaimBlocked)}`,
-    `- Team B CDN/Flows evidence status available: ${boolStatus(teamBCdnFlowsState.available)}`,
-    `- Team B CDN/Flows state: \`${teamBCdnFlowsState.status}\``,
-    `- Team B CDN evidence complete: ${boolStatus(teamBCdnFlowsState.cdnEvidenceComplete)}`,
-    `- Team B Flows evidence complete: ${boolStatus(teamBCdnFlowsState.flowsEvidenceComplete)}`,
-    `- Team B CDN/Flows production evidence complete: ${boolStatus(teamBCdnFlowsState.productionEvidenceComplete)}`,
-    `- Team B CDN/Flows formal NOT_PUBLIC_READY accepted: ${boolStatus(teamBCdnFlowsState.formalNotPublicReadyAccepted)}`,
-    `- Team B CDN/Flows production evidence resolved: ${boolStatus(teamBCdnFlowsState.productionEvidenceResolved)}`,
-    `- Team B CDN/Flows checker overall pass: ${boolStatus(teamBCdnFlowsState.overallPass)}`,
+    `- Team 2 CDN/Flows evidence status available: ${boolStatus(teamBCdnFlowsState.available)}`,
+    `- Team 2 CDN/Flows state: \`${teamBCdnFlowsState.status}\``,
+    `- Team 2 CDN evidence complete: ${boolStatus(teamBCdnFlowsState.cdnEvidenceComplete)}`,
+    `- Team 2 Flows evidence complete: ${boolStatus(teamBCdnFlowsState.flowsEvidenceComplete)}`,
+    `- Team 2 CDN/Flows production evidence complete: ${boolStatus(teamBCdnFlowsState.productionEvidenceComplete)}`,
+    `- Team 2 CDN/Flows formal NOT_PUBLIC_READY accepted: ${boolStatus(teamBCdnFlowsState.formalNotPublicReadyAccepted)}`,
+    `- Team 2 CDN/Flows production evidence resolved: ${boolStatus(teamBCdnFlowsState.productionEvidenceResolved)}`,
+    `- Team 2 CDN/Flows checker overall pass: ${boolStatus(teamBCdnFlowsState.overallPass)}`,
     `- Universal bilingual live ready: ${boolStatus(bilingualLiveReady)}`,
     `- Universal bilingual pending surfaces: ${bilingualPendingSurfaces.length > 0 ? bilingualPendingSurfaces.join(", ") : "none"}`,
-    `- Team C review closure ready: ${boolStatus(ciosClosureReady)}`,
+    `- Team 2 CIOS review closure ready: ${boolStatus(ciosClosureReady)}`,
     `- Pay docs integration pass: ${docsPackIntegrated === null ? "UNKNOWN" : boolStatus(docsPackIntegrated)}`,
     `- Domain verdict (developer reopen): ${boolStatus(domainVerdictState.developerReopenApproved)}`,
     `- Domain verdict (cdn pending owner evidence): ${boolStatus(domainVerdictState.cdnPendingOwnerEvidence)}`,
@@ -1080,7 +1080,7 @@ async function main() {
     `- Domain verdict (flows pending route/runtime): ${boolStatus(domainVerdictState.flowsPendingRouteRuntimeProof)}`,
     `- Domain verdict (flows TS5083 cleared): ${boolStatus(domainVerdictState.flowsTs5083Cleared)}`,
     `- Domain verdict (cios evidence pending): ${boolStatus(domainVerdictState.ciosEvidenceReviewPending)}`,
-    `- Team C open issues: ${ciosIssueState.openCount}`,
+    `- Team 2 open issues: ${ciosIssueState.openCount}`,
     "",
     "## Remaining actions",
     ...snapshot.remainingActions.map((action, index) => `${index + 1}. ${action}`),
@@ -1112,7 +1112,7 @@ async function main() {
         ? `${snapshot.sources.payGateStatus.date} / ${snapshot.sources.payGateStatus.path}`
         : "not found"
     }`,
-    `- Team 5 readiness (${snapshot.sources.team5Readiness.date}): ${snapshot.sources.team5Readiness.path}`,
+    `- Team 3 readiness (${snapshot.sources.team5Readiness.date}): ${snapshot.sources.team5Readiness.path}`,
     `- Team D evidence status: ${
       snapshot.sources.teamDEvidenceStatus
         ? `${snapshot.sources.teamDEvidenceStatus.date} / ${snapshot.sources.teamDEvidenceStatus.path}`

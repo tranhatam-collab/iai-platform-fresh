@@ -17,17 +17,17 @@ DONE:
     - `Production evidence resolved for Team 2 = PASS`
 - Điều phối tổng:
   - snapshot `TEAM_ADMIN_ALL_TEAMS_COMPLETION_STATUS_2026-05-09` đã phản ánh:
-    - `Team B CDN/Flows production evidence resolved = PASS`
-    - `Team C review closure ready = PASS`
+    - `Team 2 CDN/Flows production evidence resolved = PASS`
+    - `Team 2 CIOS review closure ready = PASS`
   - autowake `15m` mới nhất không còn liệt kê blocker Team 2.
 
 BLOCK:
 - Không còn blocker code-level hoặc runtime-level trong phạm vi Team 2.
 - Chỉ còn external owner proof và global release gate ngoài lane Team 2:
-  - T3 Mail & Inbox Proof
-  - T4 Payment Activation
-  - T5 Release Sync & KPI
-  - T1 Surface & Language
+  - Team 3 Release Sync
+  - external mail / inbox proof
+  - external payment activation
+  - Team 1 Surface & Language
 
 DECISION LOCK:
 - `cdn.iai.one` và `flows.iai.one` không được claim public-live trong trạng thái hiện tại.
@@ -36,10 +36,10 @@ DECISION LOCK:
 
 PERCENT:
 - Team 2 trong phạm vi repo/dev/evidence: `100% done`
-- Toàn cục chương trình 6 team: vẫn theo Team 0 snapshot `60% / 40%`
+- Toàn cục chương trình 3 team visible model: vẫn theo Team 0 snapshot `60% / 40%`
 
 NEXT:
-1. Team 0/T5 tiếp nhận verdict Team 2 và bỏ Team 2 khỏi nhóm blocker active.
+1. Team 0/Team 3 tiếp nhận verdict Team 2 và bỏ Team 2 khỏi nhóm blocker active.
 2. Giữ automation 15 phút để theo dõi gate tổng cho tới khi toàn bộ 6 team complete.
 3. Nếu external owner nộp đủ proof cho `cdn.iai.one` hoặc `flows.iai.one`, Team 2 mở đúng domain tương ứng và cập nhật packet mới, không mở rộng scope.
 

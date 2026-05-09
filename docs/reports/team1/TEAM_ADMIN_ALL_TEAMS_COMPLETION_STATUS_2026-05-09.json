@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-05-09T03:23:56.235Z",
+  "generatedAt": "2026-05-09T05:05:34.961Z",
   "timezone": "Asia/Ho_Chi_Minh",
   "requestedDate": "2026-05-09",
-  "gateState": "READY_FOR_TEAM5_RERUN",
+  "gateState": "READY_FOR_TEAM3_RERUN",
   "completion": {
     "percent": 60,
     "remainingPercent": 40,
@@ -73,7 +73,7 @@
     "teamChannelReminder": {
       "available": true,
       "cadenceIs15": true,
-      "activeRows": 4,
+      "activeRows": 3,
       "overallPass": true,
       "scheduleStatus": "ACTIVE_UNTIL_VERIFIED_COMPLETE"
     },
@@ -105,10 +105,8 @@
         "screenshot_production_ref"
       ]
     },
-    "bilingualLiveReady": false,
-    "bilingualPendingSurfaces": [
-      "noos-web"
-    ],
+    "bilingualLiveReady": true,
+    "bilingualPendingSurfaces": [],
     "ciosReviewClosureReady": true,
     "docsPackIntegrated": true,
     "cdnEvidenceState": {
@@ -221,27 +219,25 @@
   },
   "gitScopeStatus": {
     "available": true,
-    "dirtyFiles": 16,
-    "outOfScopeFiles": 14,
+    "dirtyFiles": 27,
+    "outOfScopeFiles": 12,
     "outOfScopeExamples": [
       "apps/noos-web/src/i18n.ts",
       "apps/noos-web/src/render.ts",
       "content/en.json",
       "content/seo-registry.csv",
       "content/vi.json",
-      "scripts/team-b-cdn-flows-evidence-check.mjs",
-      "scripts/teamc-cios-review-closure-check.mjs",
-      "scripts/universal-bilingual-language-rebuild-audit.mjs"
+      "scripts/team-autowake-15m-loop.mjs",
+      "scripts/universal-bilingual-language-rebuild-audit.mjs",
+      "tests/integration/noos-commerce-surface.test.mjs"
     ],
     "commitScopeLocked": false
   },
   "remainingActions": [
-    "Team 5 must rerun live-sync readiness and final packet immediately.",
-    "Team B CDN/Flows has been formally locked as NOT_PUBLIC_READY; keep both domains out of public-live claims until external owner evidence is supplied.",
-    "Team 1 must accept or reject the Team C CIOS closure packet; checker is PASS, Team C stays monitor-only until the verdict is recorded.",
+    "Team 3 must rerun live-sync readiness and final packet immediately.",
+    "Team 2 has formally locked CDN/Flows as NOT_PUBLIC_READY; keep both domains out of public-live claims until external owner evidence is supplied.",
+    "Team 1 must accept or reject the Team 2 CIOS closure packet; checker is PASS, and Team 2 stays monitor-only until the verdict is recorded.",
     "Team Email SMTP must close 5 evidence clusters before live-close: mailbox/alias truth, inbound routing truth, Gmail proof, Outlook proof, internal inbox proof.",
-    "Team 1 ops must keep channel reminder protocol locked at 15-minute cadence with all required active team channels until COMPLETE_VERIFIED.",
-    "Team D must close tranhatam.com external activation evidence (mailbox/alias, runtime bindings, provider_ref, message_id, D1 row, inbox proof) before any READY_FOR_LIVE claim.",
-    "Team C language lane must remove remaining hard-coded bilingual copy and metadata drift (pending surfaces: noos-web)."
+    "Team D must close tranhatam.com external activation evidence (mailbox/alias, runtime bindings, provider_ref, message_id, D1 row, inbox proof) before any READY_FOR_LIVE claim."
   ]
 }
