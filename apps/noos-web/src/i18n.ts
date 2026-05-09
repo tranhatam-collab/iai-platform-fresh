@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import {
   getCopyNotes,
   getProductByCode,
@@ -36,6 +38,51 @@ type LocalizedProduct = Omit<ProductDefinition, "tier" | "defaultLicense" | "upd
 };
 
 type LocalizedCopyNotes = ReturnType<typeof getCopyNotes>;
+
+type Dictionary = Record<string, string>;
+
+interface SeoEntry {
+  canonical: string;
+  descriptionEn: string;
+  descriptionVi: string;
+  role: string;
+  schemaTypes: string[];
+  surface: string;
+  titleEn: string;
+  titleVi: string;
+}
+
+export interface LocalizedChrome {
+  brand: string;
+  buttons: {
+    checkout: string;
+    continue: string;
+    openCatalog: string;
+    openLibrary: string;
+    openProducts: string;
+    updates: string;
+    view: string;
+  };
+  footer: {
+    primary: string;
+    secondary: string;
+  };
+  nav: {
+    documents: string;
+    library: string;
+    licenses: string;
+    operations: string;
+    products: string;
+    programs: string;
+  };
+}
+
+const dictionaries: Record<Locale, Dictionary> = {
+  en: loadDictionary("../../../content/en.json"),
+  vi: loadDictionary("../../../content/vi.json")
+};
+
+const noosSeoEntry = loadSeoEntry("noos.iai.one");
 
 const roleOrder: BuyerRoleProfile[] = [
   {
@@ -542,4 +589,133 @@ function buildVietnameseCopyNotes(product: ProductDefinition): LocalizedCopyNote
 
 export function getLocalizedCopyNotes(product: ProductDefinition, locale: Locale): LocalizedCopyNotes {
   return locale === "en" ? buildEnglishCopyNotes(product) : buildVietnameseCopyNotes(product);
+}
+
+export function t(locale: Locale, key: string, replacements: Record<string, number | string> = {}): string {
+  const template = dictionaries[locale][key] ?? dictionaries.en[key] ?? key;
+  return Object.entries(replacements).reduce((value, [token, replacement]) => {
+    return value.replaceAll(`{{${token}}}`, String(replacement));
+  }, template);
+}
+
+export function getLocalizedChrome(locale: Locale): LocalizedChrome {
+  return {
+    brand: t(locale, "nav.noos"),
+    buttons: {
+      checkout: t(locale, "noos.btn.checkout"),
+      continue: t(locale, "btn.continue"),
+      openCatalog: t(locale, "noos.btn.open_catalog"),
+      openLibrary: t(locale, "noos.btn.open_library"),
+      openProducts: t(locale, "noos.btn.open_products"),
+      updates: t(locale, "noos.btn.updates"),
+      view: t(locale, "btn.view")
+    },
+    footer: {
+      primary: t(locale, "noos.footer.primary"),
+      secondary: t(locale, "noos.footer.secondary")
+    },
+    nav: {
+      documents: t(locale, "noos.nav.documents"),
+      library: t(locale, "noos.nav.library"),
+      licenses: t(locale, "noos.nav.licenses"),
+      operations: t(locale, "noos.nav.operations"),
+      products: t(locale, "noos.nav.products"),
+      programs: t(locale, "noos.nav.programs")
+    }
+  };
+}
+
+export function getPageMetadata(
+  canonicalPath: string,
+  locale: Locale,
+  title?: string,
+  descriptionOverride?: string
+) {
+  const surfaceTitle = locale === "vi" ? noosSeoEntry.titleVi : noosSeoEntry.titleEn;
+  const surfaceDescription = locale === "vi" ? noosSeoEntry.descriptionVi : noosSeoEntry.descriptionEn;
+  const resolvedDescription = descriptionOverride?.trim() || surfaceDescription;
+  const resolvedTitle = title?.trim() ? `${title.trim()} | ${surfaceTitle}` : surfaceTitle;
+
+  return {
+    alternates: {
+      en: buildAbsoluteLocalizedUrl(canonicalPath, "en"),
+      vi: buildAbsoluteLocalizedUrl(canonicalPath, "vi"),
+      xDefault: buildAbsoluteLocalizedUrl(canonicalPath, defaultLocale)
+    },
+    canonical: buildAbsoluteLocalizedUrl(canonicalPath, locale),
+    description: resolvedDescription,
+    htmlLang: localeMeta[locale].htmlLang,
+    schemaTypes: noosSeoEntry.schemaTypes,
+    socialImage: buildSurfaceSocialImageUrl({
+      description: resolvedDescription,
+      locale,
+      surface: noosSeoEntry.surface,
+      title: resolvedTitle
+    }),
+    title: resolvedTitle
+  };
+}
+
+function buildAbsoluteLocalizedUrl(path: string, locale: Locale): string {
+  const normalizedBase = noosSeoEntry.canonical.replace(/\/+$/, "");
+  const normalizedPath = path === "/" ? "" : path;
+  return `${normalizedBase}/${locale}${normalizedPath}`;
+}
+
+function loadDictionary(relativePath: string): Dictionary {
+  const source = readFileSync(new URL(relativePath, import.meta.url), "utf8");
+  return JSON.parse(source) as Dictionary;
+}
+
+function loadSeoEntry(surface: string): SeoEntry {
+  const source = readFileSync(new URL("../../../content/seo-registry.csv", import.meta.url), "utf8")
+    .trim()
+    .split(/\r?\n/);
+  const row = source.find((line) => line.startsWith(`${surface},`));
+
+  if (!row) {
+    throw new Error(`Missing SEO registry row for ${surface}.`);
+  }
+
+  const parts = row.split(",");
+  if (parts.length !== 8) {
+    throw new Error(`Unexpected SEO registry format for ${surface}.`);
+  }
+
+  return {
+    canonical: parts[7] ?? "",
+    descriptionEn: parts[3] ?? "",
+    descriptionVi: parts[5] ?? "",
+    role: parts[1] ?? "",
+    schemaTypes: (parts[6] ?? "")
+      .split("|")
+      .map((part) => part.trim())
+      .filter(Boolean),
+    surface: parts[0] ?? "",
+    titleEn: parts[2] ?? "",
+    titleVi: parts[4] ?? ""
+  };
+}
+
+function buildSurfaceSocialImageUrl(payload: {
+  description: string;
+  locale: Locale;
+  surface: string;
+  title: string;
+}): string {
+  const url = new URL("https://iai.one/og.svg");
+  url.searchParams.set("surface", payload.surface);
+  url.searchParams.set("lang", payload.locale);
+  url.searchParams.set("title", truncateForSocialImage(payload.title, 110));
+  url.searchParams.set("description", truncateForSocialImage(payload.description, 180));
+  return url.toString();
+}
+
+function truncateForSocialImage(value: string, maxLength: number): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}...`;
 }

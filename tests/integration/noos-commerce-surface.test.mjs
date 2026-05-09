@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { getLocalizedChrome, getPageMetadata } from "../../apps/noos-web/dist/i18n.js";
 import { renderRoute } from "../../apps/noos-web/dist/index.js";
 
 const priorityProductSlugs = [
@@ -277,7 +278,7 @@ test("vietnamese operations route exposes launch readiness, KPI thresholds, and 
   assert.match(response.body, /\/vi\/operations\/trace-map\.json/);
   assert.match(response.body, /Chào \[buyer_name\]/);
   assert.match(response.body, /Macro thông báo cập nhật/);
-  assert.match(response.body, /Rollback communication/);
+  assert.match(response.body, /Truyền thông rollback/);
   assert.match(response.body, /Cổng mở launch/);
 });
 
@@ -355,4 +356,22 @@ test("sitemap and product canonicals expose localized SEO endpoints only", async
     productResponse.body,
     /<link rel="alternate" hreflang="vi" href="https:\/\/noos\.iai\.one\/vi\/product\/noos-architecture-system-map-pack"/
   );
+});
+
+test("public chrome and SEO metadata come from localized registries", async () => {
+  const chrome = getLocalizedChrome("vi");
+  const metadata = getPageMetadata("/products", "en", "NOOS Products", "Catalog role view");
+  const response = await renderRoute("/en/products", new URLSearchParams());
+  const head = response.body.match(/<head>[\s\S]*?<\/head>/)?.[0] ?? "";
+
+  assert.equal(chrome.nav.products, "Sản phẩm");
+  assert.equal(chrome.footer.primary, "Bề mặt commerce NOOS song ngữ");
+  assert.equal(metadata.title, "NOOS Products | NOOS Commerce — Bilingual Commerce Surface");
+  assert.equal(metadata.schemaTypes.includes("CollectionPage"), true);
+
+  assert.match(response.body, /<script type="application\/ld\+json">/);
+  assert.match(response.body, /"url":"https:\/\/noos\.iai\.one\/en\/products"/);
+  assert.match(head, /property="og:image" content="https:\/\/iai\.one\/og\.svg\?surface=noos\.iai\.one/);
+  assert.match(head, /name="twitter:image" content="https:\/\/iai\.one\/og\.svg\?surface=noos\.iai\.one/);
+  assert.doesNotMatch(head, /picsum\.photos/);
 });
