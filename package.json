@@ -56,6 +56,9 @@
     "report:pay-gate-loop": "node scripts/team1-pay-gate-loop.mjs",
     "report:pay-docs-integration": "node scripts/pay-docs-integration-check.mjs",
     "report:tramsaigon-evidence": "node scripts/pay-team-d-tramsaigon-evidence-check.mjs",
+    "report:team-email-smtp-evidence": "node scripts/team-email-smtp-evidence-check.mjs",
+    "report:team1-cios-authority": "node scripts/team1-cios-authority-decision-log.mjs",
+    "report:team1-evidence-closeout": "node scripts/team1-evidence-closeout-packet.mjs",
     "report:team2-pay-prod-probe": "node scripts/team2-pay-prod-runtime-probe.mjs",
     "report:team5-web-kpi": "node scripts/team5-web-kpi-snapshot.mjs",
     "report:team5-web-kpi-delta": "node scripts/team5-web-kpi-delta.mjs",
@@ -91,7 +94,10 @@
     "quality:team2:semantic": "pnpm typecheck:pay && pnpm typecheck:dash",
     "quality:team2:surface": "pnpm test:pay && pnpm test:dash",
     "quality:team2:gate": "pnpm quality:team2:static && pnpm quality:team2:semantic && pnpm quality:team2:surface",
-    "precommit": "pnpm quality:gate"
+    "precommit": "pnpm quality:gate",
+    "team:wake:once": "node scripts/team-autowake-15m-loop.mjs --once",
+    "team:wake:loop": "node scripts/team-autowake-15m-loop.mjs --loop --interval-minutes=15",
+    "report:team-autowake": "pnpm team:wake:once"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

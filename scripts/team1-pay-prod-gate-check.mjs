@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const timezone = "Asia/Ho_Chi_Minh";
@@ -58,6 +58,53 @@ function readMachineSignal(markdown, key) {
     pass: value === "PASS",
     value
   };
+}
+
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function resolveDatedFile(root, relativeDir, prefix, extension, requestedDate) {
+  const absoluteDir = path.join(root, relativeDir);
+  const entries = await readdir(absoluteDir).catch(() => []);
+  const pattern = new RegExp(
+    `^${escapeRegex(prefix)}_(\\d{4}-\\d{2}-\\d{2})\\.${escapeRegex(extension)}$`
+  );
+  const dates = entries
+    .flatMap((entry) => {
+      const match = pattern.exec(entry);
+      return match ? [match[1]] : [];
+    })
+    .sort((left, right) => right.localeCompare(left));
+
+  if (dates.length === 0) {
+    return null;
+  }
+
+  const selectedDate = dates.find((entryDate) => entryDate <= requestedDate) ?? dates[0];
+  const absolutePath = path.join(absoluteDir, `${prefix}_${selectedDate}.${extension}`);
+  const raw = await readFile(absolutePath, "utf8");
+
+  return {
+    absolutePath,
+    date: selectedDate,
+    raw,
+    relativePath: path.relative(root, absolutePath)
+  };
+}
+
+async function resolveLatestManualSource(root, requestedDate) {
+  const sources = await Promise.all(
+    ["PAY_IAI_ONE_PROD_GATE_STATUS", "PAY_IAI_ONE_GATE_VERDICT"].map((prefix) =>
+      resolveDatedFile(root, "docs/reports/team1", prefix, "md", requestedDate)
+    )
+  );
+
+  return (
+    sources
+      .filter(Boolean)
+      .sort((left, right) => right.date.localeCompare(left.date))[0] ?? null
+  );
 }
 
 async function readUtf8OrNull(filePath) {
@@ -163,41 +210,45 @@ async function main() {
   const date = getDateArg();
   const root = process.cwd();
   const reportDir = path.join(root, "docs", "reports", "team1");
-  const manualSourceCandidates = [
-    path.join(reportDir, `PAY_IAI_ONE_PROD_GATE_STATUS_${date}.md`),
-    path.join(reportDir, `PAY_IAI_ONE_GATE_VERDICT_${date}.md`)
-  ];
   const team2ReportDir = path.join(root, "docs", "reports", "team2");
-  const team2JsonPath = path.join(team2ReportDir, `TEAM2_PAY_PROD_RUNTIME_PROBE_${date}.json`);
-  const team2MarkdownPath = path.join(team2ReportDir, `TEAM2_PAY_PROD_RUNTIME_PROBE_${date}.md`);
-  const team2SharedRuntimeJsonPath = path.join(
-    team2ReportDir,
-    `TEAM2_PAY_SHARED_RUNTIME_PROBE_${date}.json`
-  );
-  const team2SharedRuntimeMarkdownPath = path.join(
-    team2ReportDir,
-    `TEAM2_PAY_SHARED_RUNTIME_PROBE_${date}.md`
-  );
 
   const requiredSignals = getRequiredSignals(date);
-  const [manualSourceBodies, team2Json, team2Markdown, team2SharedRuntimeJson, team2SharedRuntimeMarkdown] = await Promise.all([
-    Promise.all(manualSourceCandidates.map((candidatePath) => readUtf8OrNull(candidatePath))),
-    readJsonOrNull(team2JsonPath),
-    readUtf8OrNull(team2MarkdownPath),
-    readJsonOrNull(team2SharedRuntimeJsonPath),
-    readUtf8OrNull(team2SharedRuntimeMarkdownPath)
+  const [
+    manualSourceEntry,
+    team2JsonFile,
+    team2MarkdownFile,
+    team2SharedRuntimeJsonFile,
+    team2SharedRuntimeMarkdownFile
+  ] = await Promise.all([
+    resolveLatestManualSource(root, date),
+    resolveDatedFile(root, "docs/reports/team2", "TEAM2_PAY_PROD_RUNTIME_PROBE", "json", date),
+    resolveDatedFile(root, "docs/reports/team2", "TEAM2_PAY_PROD_RUNTIME_PROBE", "md", date),
+    resolveDatedFile(root, "docs/reports/team2", "TEAM2_PAY_SHARED_RUNTIME_PROBE", "json", date),
+    resolveDatedFile(root, "docs/reports/team2", "TEAM2_PAY_SHARED_RUNTIME_PROBE", "md", date)
   ]);
-  const manualSourceEntry =
-    manualSourceCandidates
-      .map((candidatePath, index) => ({
-        absolutePath: candidatePath,
-        relativePath: path.relative(root, candidatePath),
-        body: manualSourceBodies[index]
-      }))
-      .find((entry) => Boolean(entry.body)) ?? null;
+  const team2Json = team2JsonFile ? JSON.parse(team2JsonFile.raw) : null;
+  const team2Markdown = team2MarkdownFile?.raw ?? null;
+  const team2SharedRuntimeJson = team2SharedRuntimeJsonFile
+    ? JSON.parse(team2SharedRuntimeJsonFile.raw)
+    : null;
+  const team2SharedRuntimeMarkdown = team2SharedRuntimeMarkdownFile?.raw ?? null;
   const sourcePresent = Boolean(manualSourceEntry);
-  const sourceMarkdown = manualSourceEntry?.body ?? null;
-  const sourcePathDisplay = manualSourceEntry?.relativePath ?? path.relative(root, manualSourceCandidates[0]);
+  const sourceMarkdown = manualSourceEntry?.raw ?? null;
+  const sourcePathDisplay =
+    manualSourceEntry?.relativePath ??
+    "docs/reports/team1/PAY_IAI_ONE_{PROD_GATE_STATUS|GATE_VERDICT}_<latest<=date>.md";
+  const team2JsonPath =
+    team2JsonFile?.relativePath ??
+    path.relative(root, path.join(team2ReportDir, `TEAM2_PAY_PROD_RUNTIME_PROBE_${date}.json`));
+  const team2MarkdownPath =
+    team2MarkdownFile?.relativePath ??
+    path.relative(root, path.join(team2ReportDir, `TEAM2_PAY_PROD_RUNTIME_PROBE_${date}.md`));
+  const team2SharedRuntimeJsonPath =
+    team2SharedRuntimeJsonFile?.relativePath ??
+    path.relative(root, path.join(team2ReportDir, `TEAM2_PAY_SHARED_RUNTIME_PROBE_${date}.json`));
+  const team2SharedRuntimeMarkdownPath =
+    team2SharedRuntimeMarkdownFile?.relativePath ??
+    path.relative(root, path.join(team2ReportDir, `TEAM2_PAY_SHARED_RUNTIME_PROBE_${date}.md`));
 
   const runtimeProbeSourcePresent = Boolean(team2Json || team2Markdown);
   const sharedRuntimeProbeSourcePresent = Boolean(
@@ -209,14 +260,14 @@ async function main() {
       kind: "json",
       available: Boolean(team2Json),
       body: team2Json,
-      path: path.relative(root, team2JsonPath)
+      path: team2JsonPath
     },
     {
       id: "team2_probe_markdown",
       kind: "markdown",
       available: Boolean(team2Markdown),
       body: team2Markdown,
-      path: path.relative(root, team2MarkdownPath)
+      path: team2MarkdownPath
     }
   ];
   const sharedRuntimeProbeSources = [
@@ -225,14 +276,14 @@ async function main() {
       kind: "json",
       available: Boolean(team2SharedRuntimeJson),
       body: team2SharedRuntimeJson,
-      path: path.relative(root, team2SharedRuntimeJsonPath)
+      path: team2SharedRuntimeJsonPath
     },
     {
       id: "team2_shared_runtime_probe_markdown",
       kind: "markdown",
       available: Boolean(team2SharedRuntimeMarkdown),
       body: team2SharedRuntimeMarkdown,
-      path: path.relative(root, team2SharedRuntimeMarkdownPath)
+      path: team2SharedRuntimeMarkdownPath
     }
   ];
   const manualSources = [
@@ -261,7 +312,7 @@ async function main() {
       value: sourcePresent ? "PRESENT" : "MISSING",
       sourcePath: sourcePresent
         ? sourcePathDisplay
-        : manualSourceCandidates.map((candidatePath) => path.relative(root, candidatePath)).join(", ")
+        : "docs/reports/team1/PAY_IAI_ONE_{PROD_GATE_STATUS|GATE_VERDICT}_<latest<=date>.md"
     },
     {
       name: "team2_runtime_probe_present",
@@ -269,11 +320,14 @@ async function main() {
       present: runtimeProbeSourcePresent,
       value: runtimeProbeSourcePresent ? "PRESENT" : "MISSING",
       sourcePath: runtimeProbeSourcePresent
-        ? [team2JsonPath, team2MarkdownPath]
-            .filter((filePath, index) => (index === 0 ? Boolean(team2Json) : Boolean(team2Markdown)))
-            .map((filePath) => path.relative(root, filePath))
+        ? [
+            { path: team2JsonPath, present: Boolean(team2Json) },
+            { path: team2MarkdownPath, present: Boolean(team2Markdown) }
+          ]
+            .filter((file) => file.present)
+            .map((file) => file.path)
             .join(", ")
-        : path.relative(root, team2JsonPath)
+        : team2JsonPath
     }
   ];
 
@@ -297,13 +351,8 @@ async function main() {
     sourcePresent,
     runtimeProbeSourcePresent,
     sharedRuntimeProbeSourcePresent,
-    runtimeProbeSourcePaths: [team2JsonPath, team2MarkdownPath].map((filePath) =>
-      path.relative(root, filePath)
-    ),
-    sharedRuntimeProbeSourcePaths: [
-      team2SharedRuntimeJsonPath,
-      team2SharedRuntimeMarkdownPath
-    ].map((filePath) => path.relative(root, filePath)),
+    runtimeProbeSourcePaths: [team2JsonPath, team2MarkdownPath],
+    sharedRuntimeProbeSourcePaths: [team2SharedRuntimeJsonPath, team2SharedRuntimeMarkdownPath],
     requiredSignals,
     overallPass,
     gateDecision,
@@ -350,11 +399,11 @@ async function main() {
     ...(unmetSignals.length === 0 ? ["- none"] : unmetSignals.map((signal) => `- ${signal}`)),
     "",
     "## Source",
-    ...manualSourceCandidates.map((candidatePath) => `- ${path.relative(root, candidatePath)}`),
-    `- ${path.relative(root, team2JsonPath)}`,
-    `- ${path.relative(root, team2MarkdownPath)}`,
-    `- ${path.relative(root, team2SharedRuntimeJsonPath)}`,
-    `- ${path.relative(root, team2SharedRuntimeMarkdownPath)}`,
+    `- ${sourcePathDisplay}`,
+    `- ${team2JsonPath}`,
+    `- ${team2MarkdownPath}`,
+    `- ${team2SharedRuntimeJsonPath}`,
+    `- ${team2SharedRuntimeMarkdownPath}`,
     ""
   ].join("\n");
 

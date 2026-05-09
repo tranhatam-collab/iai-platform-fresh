@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const timezone = "Asia/Ho_Chi_Minh";
@@ -62,6 +62,39 @@ function readGateState(gateMarkdown) {
   const gateDecision = gateMarkdown.match(/- Gate decision:\s*([^\n]+)/)?.[1]?.trim();
   const verdict = gateMarkdown.match(/- Verdict:\s*`([^`]+)`/)?.[1]?.trim();
   return gateDecision || verdict || "UNKNOWN";
+}
+
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function resolveDatedFile(root, relativeDir, prefix, extension, requestedDate) {
+  const absoluteDir = path.join(root, relativeDir);
+  const entries = await readdir(absoluteDir).catch(() => []);
+  const pattern = new RegExp(
+    `^${escapeRegex(prefix)}_(\\d{4}-\\d{2}-\\d{2})\\.${escapeRegex(extension)}$`
+  );
+  const dates = entries
+    .flatMap((entry) => {
+      const match = pattern.exec(entry);
+      return match ? [match[1]] : [];
+    })
+    .sort((left, right) => right.localeCompare(left));
+
+  if (dates.length === 0) {
+    return null;
+  }
+
+  const selectedDate = dates.find((entryDate) => entryDate <= requestedDate) ?? dates[0];
+  const absolutePath = path.join(absoluteDir, `${prefix}_${selectedDate}.${extension}`);
+  const raw = await readFile(absolutePath, "utf8");
+
+  return {
+    absolutePath,
+    date: selectedDate,
+    raw,
+    relativePath: path.relative(root, absolutePath)
+  };
 }
 
 function isGateLocked(gateState) {
@@ -128,6 +161,17 @@ export function validateTranhatamEvidence({ evidence, payGateState = "MISSING" }
       present
     };
   });
+  const missingMailboxEvidence = mailboxResults
+    .filter((mailbox) => !mailbox.present || !mailbox.bindingConfirmed || !mailbox.inboundConfirmed || !mailbox.inboxProofPresent)
+    .map((mailbox) => ({
+      address: mailbox.address,
+      missing: {
+        row: !mailbox.present,
+        binding: !mailbox.bindingConfirmed,
+        inboundRouting: !mailbox.inboundConfirmed,
+        inboxProof: !mailbox.inboxProofPresent
+      }
+    }));
   addCheck(
     "required_mailboxes_present",
     mailboxResults.every((mailbox) => mailbox.present),
@@ -186,6 +230,16 @@ export function validateTranhatamEvidence({ evidence, payGateState = "MISSING" }
       valueRefPresent
     };
   });
+  const missingRuntimeEvidence = runtimeResults
+    .filter((binding) => !binding.present || !binding.confirmed || !binding.valueRefPresent)
+    .map((binding) => ({
+      bindingName: binding.bindingName,
+      missing: {
+        row: !binding.present,
+        confirmedStatus: !binding.confirmed,
+        valueRef: !binding.valueRefPresent
+      }
+    }));
   addCheck(
     "runtime_bindings_represented",
     runtimeResults.every((binding) => binding.present),
@@ -202,6 +256,9 @@ export function validateTranhatamEvidence({ evidence, payGateState = "MISSING" }
     field,
     present: Boolean(normalize(paymentProof[field]))
   }));
+  const missingPaymentProofFields = proofResults
+    .filter((proof) => !proof.present)
+    .map((proof) => proof.field);
   addCheck(
     "payment_proof_fields_represented",
     requiredProofFields.every((field) => Object.hasOwn(paymentProof, field)),
@@ -226,9 +283,24 @@ export function validateTranhatamEvidence({ evidence, payGateState = "MISSING" }
   const paymentEvidenceComplete = proofResults.every((proof) => proof.present);
   const activationEvidenceComplete =
     mailboxEvidenceComplete && runtimeEvidenceComplete && paymentEvidenceComplete;
-  const status = normalize(evidence.status);
-  const liveClaimed = status === "READY_FOR_LIVE" || status === "LIVE";
+  const evidenceStatus = normalize(evidence.status);
+  const liveClaimed = evidenceStatus === "READY_FOR_LIVE" || evidenceStatus === "LIVE";
   const liveClaimBlocked = payGateLocked || !activationEvidenceComplete;
+  const status = payGateLocked
+    ? evidenceStatus
+    : activationEvidenceComplete
+      ? "READY_FOR_LIVE"
+      : "PROOF_CHAIN_COMPLETE_EVIDENCE_PENDING";
+  const gapClassification =
+    activationEvidenceComplete && !payGateLocked
+      ? "NONE"
+      : "REAL_EVIDENCE_MISSING";
+  const gapReason =
+    activationEvidenceComplete && !payGateLocked
+      ? "Team D activation evidence is complete and gate is unlocked."
+      : payGateLocked
+        ? "Pay gate remains locked or retained; activation cannot be promoted."
+        : "Activation evidence fields are still incomplete.";
 
   addCheck(
     "no_ready_for_live_while_gate_locked_or_evidence_missing",
@@ -241,12 +313,20 @@ export function validateTranhatamEvidence({ evidence, payGateState = "MISSING" }
   return {
     activationEvidenceComplete,
     checks,
+    evidenceStatus,
+    gapClassification,
+    gapReason,
     liveClaimBlocked,
     mailboxEvidenceComplete,
+    mailboxResults,
+    missingMailboxEvidence,
+    missingPaymentProofFields,
+    missingRuntimeEvidence,
     overallPass: checks.every((check) => check.pass),
     paymentEvidenceComplete,
     payGateLocked,
     payGateState,
+    runtimeResults,
     runtimeEvidenceComplete,
     status
   };
@@ -257,40 +337,32 @@ async function main() {
   const writeOutputs = shouldWriteOutputs();
   const root = process.cwd();
   const reportDir = path.join(root, "docs", "reports", "teamd");
-  const evidencePath = path.join(
-    reportDir,
-    `TRANHATAM_COM_PAYMENT_ACTIVATION_EVIDENCE_${date}.json`
-  );
-  const team1GatePath = path.join(
-    root,
-    "docs",
-    "reports",
-    "team1",
-    `TEAM1_PAY_PROD_GATE_STATUS_${date}.md`
-  );
-  const fallbackGatePath = path.join(
-    root,
-    "docs",
-    "reports",
-    "team1",
-    `PAY_IAI_ONE_GATE_VERDICT_${date}.md`
-  );
-
-  const [evidenceBody, gateBody, fallbackGateBody] = await Promise.all([
-    readFile(evidencePath, "utf8"),
-    readFile(team1GatePath, "utf8").catch(() => null),
-    readFile(fallbackGatePath, "utf8").catch(() => null)
+  const [evidenceFile, team1GateFile, fallbackGateFile] = await Promise.all([
+    resolveDatedFile(
+      root,
+      "docs/reports/teamd",
+      "TRANHATAM_COM_PAYMENT_ACTIVATION_EVIDENCE",
+      "json",
+      date
+    ),
+    resolveDatedFile(root, "docs/reports/team1", "TEAM1_PAY_PROD_GATE_STATUS", "md", date),
+    resolveDatedFile(root, "docs/reports/team1", "PAY_IAI_ONE_GATE_VERDICT", "md", date)
   ]);
-  const evidence = JSON.parse(evidenceBody);
-  const payGateState = readGateState(gateBody ?? fallbackGateBody);
+  if (!evidenceFile) {
+    throw new Error(`No Team D evidence file found on or before ${date}.`);
+  }
+
+  const gateFile = team1GateFile ?? fallbackGateFile;
+  const evidence = JSON.parse(evidenceFile.raw);
+  const payGateState = readGateState(gateFile?.raw ?? null);
   const validation = validateTranhatamEvidence({ evidence, payGateState });
   const generatedAt = new Date().toISOString();
   const snapshot = {
     generatedAt,
     timezone,
     date,
-    evidencePath: path.relative(root, evidencePath),
-    gatePath: path.relative(root, gateBody ? team1GatePath : fallbackGatePath),
+    evidencePath: evidenceFile.relativePath,
+    gatePath: gateFile?.relativePath ?? "docs/reports/team1/<missing-pay-gate-source>.md",
     ...validation
   };
   const markdown = [
@@ -316,6 +388,31 @@ async function main() {
     `- runtime evidence complete: ${markdownStatus(validation.runtimeEvidenceComplete)}`,
     `- payment proof complete: ${markdownStatus(validation.paymentEvidenceComplete)}`,
     `- pay gate locked: ${markdownStatus(validation.payGateLocked)}`,
+    `- gap classification: \`${validation.gapClassification}\``,
+    `- gap reason: ${validation.gapReason}`,
+    `- missing mailbox evidence rows: ${validation.missingMailboxEvidence.length}`,
+    `- missing runtime evidence rows: ${validation.missingRuntimeEvidence.length}`,
+    `- missing payment proof fields: ${
+      validation.missingPaymentProofFields.length > 0
+        ? validation.missingPaymentProofFields.join(", ")
+        : "none"
+    }`,
+    "",
+    "## Missing Mailbox Evidence",
+    ...(validation.missingMailboxEvidence.length === 0
+      ? ["- none"]
+      : validation.missingMailboxEvidence.map(
+          (entry) =>
+            `- ${entry.address}: row=${entry.missing.row ? "missing" : "ok"}, binding=${entry.missing.binding ? "missing" : "ok"}, inbound=${entry.missing.inboundRouting ? "missing" : "ok"}, inbox_proof=${entry.missing.inboxProof ? "missing" : "ok"}`
+        )),
+    "",
+    "## Missing Runtime Evidence",
+    ...(validation.missingRuntimeEvidence.length === 0
+      ? ["- none"]
+      : validation.missingRuntimeEvidence.map(
+          (entry) =>
+            `- ${entry.bindingName}: row=${entry.missing.row ? "missing" : "ok"}, confirmed_status=${entry.missing.confirmedStatus ? "missing" : "ok"}, value_ref=${entry.missing.valueRef ? "missing" : "ok"}`
+        )),
     ""
   ].join("\n");
 

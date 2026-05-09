@@ -80,6 +80,67 @@ async function resolveJsonSnapshot(root, relativeDir, prefix, requestedDate) {
   };
 }
 
+function isUsablePayGateSnapshot(data) {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+
+  if (data.sourcePresent === true) {
+    return true;
+  }
+
+  if (data.runtimeProbeSourcePresent === true || data.sharedRuntimeProbeSourcePresent === true) {
+    return true;
+  }
+
+  const checks = Array.isArray(data.checks) ? data.checks : [];
+  if (checks.some((entry) => entry?.present === true || entry?.pass === true)) {
+    return true;
+  }
+
+  const sourceChecks = Array.isArray(data.sourceChecks) ? data.sourceChecks : [];
+  if (sourceChecks.some((entry) => entry?.present === true || entry?.pass === true)) {
+    return true;
+  }
+
+  return false;
+}
+
+async function resolveUsablePayGateSnapshot(root, requestedDate) {
+  const absoluteDir = path.join(root, "docs", "reports", "team1");
+  const entries = await readdir(absoluteDir).catch(() => []);
+  const dates = entries
+    .flatMap((entry) => {
+      const match = /^TEAM1_PAY_PROD_GATE_STATUS_(\d{4}-\d{2}-\d{2})\.json$/.exec(entry);
+      return match ? [match[1]] : [];
+    })
+    .sort((left, right) => right.localeCompare(left))
+    .filter((date) => date <= requestedDate);
+
+  for (const date of dates) {
+    const absolutePath = path.join(absoluteDir, `TEAM1_PAY_PROD_GATE_STATUS_${date}.json`);
+    const raw = await readFile(absolutePath, "utf8").catch(() => null);
+    if (!raw) {
+      continue;
+    }
+
+    const data = JSON.parse(raw);
+    if (!isUsablePayGateSnapshot(data)) {
+      continue;
+    }
+
+    return {
+      date,
+      absolutePath,
+      relativePath: path.relative(root, absolutePath),
+      raw,
+      data
+    };
+  }
+
+  return resolveJsonSnapshot(root, "docs/reports/team1", "TEAM1_PAY_PROD_GATE_STATUS", requestedDate);
+}
+
 function getPaySignalSummary(payGateStatus, team2Probe, team2SharedProbe, controlTower) {
   if (payGateStatus?.data) {
     const signalEntries = [];
@@ -355,6 +416,8 @@ function extractMailLaneStateFromEvidenceStatus(mailLaneEvidenceStatus) {
 
   return {
     statusLabel: String(data.statusLabel ?? data.status ?? "UNKNOWN"),
+    gapClassification: String(data.gapClassification ?? "UNKNOWN"),
+    gapReason: String(data.gapReason ?? ""),
     mailboxAliasTruthDone: data.mailboxAliasTruthDone === true,
     inboundRoutingTruthDone: data.inboundRoutingTruthDone === true,
     gmailProofDone: data.gmailProofDone === true,
@@ -477,6 +540,7 @@ async function main() {
     docsIntegration,
     languageAudit,
     ciosClosure,
+    ciosAuthorityDecision,
     mailLaneEvidenceStatus,
     mailLaneStatus,
     reminder,
@@ -486,7 +550,7 @@ async function main() {
     cdnDelta
   ] = await Promise.all([
     resolveJsonSnapshot(root, "docs/reports/team1", "CONTROL_TOWER_AUTOMATION_STATUS", requestedDate),
-    resolveJsonSnapshot(root, "docs/reports/team1", "TEAM1_PAY_PROD_GATE_STATUS", requestedDate),
+    resolveUsablePayGateSnapshot(root, requestedDate),
     resolveJsonSnapshot(
       root,
       "docs/reports/team1",
@@ -549,6 +613,12 @@ async function main() {
       root,
       "docs/reports/team1",
       "TEAMC_CIOS_REVIEW_CLOSURE_STATUS",
+      requestedDate
+    ),
+    resolveJsonSnapshot(
+      root,
+      "docs/reports/team1",
+      "TEAM1_CIOS_AUTHORITY_DECISION",
       requestedDate
     ),
     resolveJsonSnapshot(
@@ -664,13 +734,37 @@ async function main() {
     channelReminderSchedule
   );
   const ciosClosureReady = ciosClosure?.data?.reviewClosureReady === true;
+  const ciosAuthorityDecisionRecorded =
+    ciosAuthorityDecision?.data?.authorityDecisionRecorded === true;
   const teamDState = {
     available: Boolean(teamDEvidenceStatus),
     status: String(teamDEvidenceStatus?.data?.status ?? "UNKNOWN"),
     activationEvidenceComplete:
       teamDEvidenceStatus?.data?.activationEvidenceComplete === true,
-    liveClaimBlocked: teamDEvidenceStatus?.data?.liveClaimBlocked !== false
+    liveClaimBlocked: teamDEvidenceStatus?.data?.liveClaimBlocked !== false,
+    gapClassification: String(teamDEvidenceStatus?.data?.gapClassification ?? "UNKNOWN"),
+    gapReason: String(teamDEvidenceStatus?.data?.gapReason ?? ""),
+    missingMailboxEvidence: Array.isArray(teamDEvidenceStatus?.data?.missingMailboxEvidence)
+      ? teamDEvidenceStatus.data.missingMailboxEvidence
+      : [],
+    missingRuntimeEvidence: Array.isArray(teamDEvidenceStatus?.data?.missingRuntimeEvidence)
+      ? teamDEvidenceStatus.data.missingRuntimeEvidence
+      : [],
+    missingPaymentProofFields: Array.isArray(teamDEvidenceStatus?.data?.missingPaymentProofFields)
+      ? teamDEvidenceStatus.data.missingPaymentProofFields
+      : []
   };
+  const teamDGapClassification =
+    teamDState.activationEvidenceComplete && teamDState.liveClaimBlocked === false
+      ? "NONE"
+      : teamDState.gapClassification !== "UNKNOWN"
+        ? teamDState.gapClassification
+        : "REAL_EVIDENCE_MISSING";
+  const teamDGapReason =
+    teamDState.activationEvidenceComplete && teamDState.liveClaimBlocked === false
+      ? "No Team D evidence gap."
+      : teamDState.gapReason ||
+        "Team D activation evidence chain is incomplete or gate remains locked.";
   const teamBCdnFlowsState = {
     available: Boolean(teamBCdnFlowsEvidenceStatus),
     status: String(teamBCdnFlowsEvidenceStatus?.data?.status ?? "UNKNOWN"),
@@ -708,6 +802,17 @@ async function main() {
     teamBCdnFlowsState.productionEvidenceResolved && ciosClosureReady;
   const noGoOwnersDone =
     noGoFromControlTower || noGoFromAbcdPrecheck || noGoFromReducedModel;
+  const mailLaneGapClassification =
+    mailLaneState.wave1CloseoutReady
+      ? "NONE"
+      : String(mailLaneState.gapClassification ?? "REAL_EVIDENCE_MISSING");
+  const mailLaneGapReason =
+    mailLaneState.wave1CloseoutReady
+      ? "No Team Email SMTP wave1 gap."
+      : String(
+          mailLaneState.gapReason ??
+            "Team Email SMTP wave1 clusters/rows are not complete yet."
+        );
   const synchronizedLiveReady =
     governanceReady &&
     noGoOwnersDone &&
@@ -853,9 +958,11 @@ async function main() {
     }
 
     if (ciosClosureReady && ciosOpenItems.length === 0) {
-      remainingActions.push(
-        "Team 1 must accept or reject the Team 2 CIOS closure packet; checker is PASS, and Team 2 stays monitor-only until the verdict is recorded."
-      );
+      if (!ciosAuthorityDecisionRecorded) {
+        remainingActions.push(
+          "Team 1 must accept or reject the Team 2 CIOS closure packet; checker is PASS, and Team 2 stays monitor-only until the verdict is recorded."
+        );
+      }
     } else {
       remainingActions.push(
         ciosOpenItems.length > 0
@@ -863,6 +970,12 @@ async function main() {
           : "Team 2 must close the remaining CIOS evidence-review items."
       );
     }
+  }
+
+  if (ciosClosureReady && !ciosAuthorityDecisionRecorded) {
+    remainingActions.push(
+      "Team 1 must record authority decision for CIOS closure (APPROVED/REJECTED) with evidence ref in TEAM1_CIOS_AUTHORITY_DECISION."
+    );
   }
 
   if (!mailLaneState.wave1CloseoutReady) {
@@ -883,8 +996,21 @@ async function main() {
   }
 
   if (teamDState.available && (!teamDState.activationEvidenceComplete || teamDState.liveClaimBlocked)) {
+    const missingMailboxList = teamDState.missingMailboxEvidence
+      .map((entry) => entry?.address)
+      .filter(Boolean);
+    const missingRuntimeList = teamDState.missingRuntimeEvidence
+      .map((entry) => entry?.bindingName)
+      .filter(Boolean);
+    const missingPaymentProof = teamDState.missingPaymentProofFields.filter(Boolean);
     remainingActions.push(
-      "Team D must close tranhatam.com external activation evidence (mailbox/alias, runtime bindings, provider_ref, message_id, D1 row, inbox proof) before any READY_FOR_LIVE claim."
+      `Team D must close tranhatam.com external activation evidence before READY_FOR_LIVE (mailbox gaps: ${
+        missingMailboxList.length > 0 ? missingMailboxList.join(", ") : "none"
+      }; runtime gaps: ${
+        missingRuntimeList.length > 0 ? missingRuntimeList.join(", ") : "none"
+      }; payment proof gaps: ${
+        missingPaymentProof.length > 0 ? missingPaymentProof.join(", ") : "none"
+      }).`
     );
   }
 
@@ -904,7 +1030,13 @@ async function main() {
     remainingActions.push("No remaining blocking action detected from current snapshots.");
   }
 
-  const gateState = synchronizedLiveReady
+  const evidenceCloseoutReady = mailLaneStateFromEvidence
+    ? mailLaneStateFromEvidence.wave1CloseoutReady === true
+    : mailLaneState.wave1CloseoutReady === true;
+  const teamDActivationReady = teamDState.activationEvidenceComplete === true;
+  const synchronizedLiveSafe = synchronizedLiveReady && evidenceCloseoutReady && teamDActivationReady;
+
+  const gateState = synchronizedLiveSafe
     ? "READY_FOR_SYNCHRONIZED_LIVE"
     : payProductionGateDone
       ? releaseClaimUnlocked
@@ -967,12 +1099,23 @@ async function main() {
         : null,
       team1FullRerunReviewStatus: team1FullRerunReview?.data?.status ?? null,
       teamEmailSmtp: mailLaneState,
+      gapLabels: {
+        mailLaneWave1Closeout: {
+          classification: mailLaneGapClassification,
+          reason: mailLaneGapReason
+        },
+        teamDReadyForSync: {
+          classification: teamDGapClassification,
+          reason: teamDGapReason
+        }
+      },
       teamChannelReminder: teamChannelReminderState,
       teamDState,
       teamBCdnFlowsState,
       bilingualLiveReady,
       bilingualPendingSurfaces,
       ciosReviewClosureReady: ciosClosureReady,
+      ciosAuthorityDecisionRecorded,
       docsPackIntegrated,
       cdnEvidenceState,
       domainVerdicts: domainVerdictState,
@@ -1066,6 +1209,12 @@ async function main() {
             path: ciosClosure.relativePath
           }
         : null,
+      ciosAuthorityDecision: ciosAuthorityDecision
+        ? {
+            date: ciosAuthorityDecision.date,
+            path: ciosAuthorityDecision.relativePath
+          }
+        : null,
       mailLaneEvidenceStatus: mailLaneEvidenceStatus
         ? {
             date: mailLaneEvidenceStatus.date,
@@ -1157,6 +1306,8 @@ async function main() {
         : "UNKNOWN"
     }`,
     `- Team Email SMTP lane status: \`${mailLaneState.statusLabel}\``,
+    `- Team Email SMTP gap classification: \`${mailLaneGapClassification}\``,
+    `- Team Email SMTP gap reason: ${mailLaneGapReason}`,
     `- Team Email SMTP wave1 closeout ready: ${boolStatus(mailLaneState.wave1CloseoutReady)}`,
     `- Team Email SMTP mailbox/alias truth done: ${boolStatus(mailLaneState.mailboxAliasTruthDone)}`,
     `- Team Email SMTP inbound routing truth done: ${boolStatus(mailLaneState.inboundRoutingTruthDone)}`,
@@ -1169,6 +1320,8 @@ async function main() {
     `- Team channel reminder overall pass: ${boolStatus(teamChannelReminderState.overallPass)}`,
     `- Team D evidence status available: ${boolStatus(teamDState.available)}`,
     `- Team D state: \`${teamDState.status}\``,
+    `- Team D gap classification: \`${teamDGapClassification}\``,
+    `- Team D gap reason: ${teamDGapReason}`,
     `- Team D activation evidence complete: ${boolStatus(teamDState.activationEvidenceComplete)}`,
     `- Team D live claim blocked: ${boolStatus(teamDState.liveClaimBlocked)}`,
     `- Team 2 CDN/Flows evidence status available: ${boolStatus(teamBCdnFlowsState.available)}`,
@@ -1182,6 +1335,7 @@ async function main() {
     `- Universal bilingual live ready: ${boolStatus(bilingualLiveReady)}`,
     `- Universal bilingual pending surfaces: ${bilingualPendingSurfaces.length > 0 ? bilingualPendingSurfaces.join(", ") : "none"}`,
     `- Team 2 CIOS review closure ready: ${boolStatus(ciosClosureReady)}`,
+    `- Team 1 CIOS authority decision recorded: ${boolStatus(ciosAuthorityDecisionRecorded)}`,
     `- Pay docs integration pass: ${docsPackIntegrated === null ? "UNKNOWN" : boolStatus(docsPackIntegrated)}`,
     `- Domain verdict (developer reopen): ${boolStatus(domainVerdictState.developerReopenApproved)}`,
     `- Domain verdict (cdn pending owner evidence): ${boolStatus(domainVerdictState.cdnPendingOwnerEvidence)}`,
