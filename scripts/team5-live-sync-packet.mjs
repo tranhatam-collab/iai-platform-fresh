@@ -107,7 +107,7 @@ async function main() {
 
   const unmetConditions = [];
   if (!packet.gates?.noGoOwnersDone?.pass) {
-    unmetConditions.push("4 owner sign-off NO-GO");
+    unmetConditions.push("owner sign-off NO-GO theo mô hình đang active");
   }
   if (!packet.gates?.payProductionGateDone?.pass) {
     unmetConditions.push("pay production gate PASS");
@@ -132,7 +132,7 @@ async function main() {
     `- Release-claim state: ${packet.releaseClaimState}`,
     "",
     "DONE:",
-    "- Đã chạy flow chuẩn Team 5: `snapshot -> delta -> bundle -> packet`.",
+    "- Đã chạy flow chuẩn Team 3 (Release Sync): `snapshot -> delta -> bundle -> packet`.",
     "- Đã cập nhật KPI bundle và live-sync readiness theo tracker Team 1.",
     "",
     "IN PROGRESS:",
@@ -172,7 +172,7 @@ async function main() {
 
   process.stdout.write(
     [
-      `Đã tạo Team 5 live-sync final packet cho ngày ${date}.`,
+      `Đã tạo Team 3 live-sync final packet cho ngày ${date}.`,
       `Status: ${packet.status}.`,
       `Auth fail rate: ${formatPercent(authPrevious)} -> ${formatPercent(authCurrent)}.`,
       `Route fail rate: ${formatPercent(routePrevious)} -> ${formatPercent(routeCurrent)}.`,

@@ -107,11 +107,11 @@ function validateSchedule(schedule) {
   }
 
   addCheck(
-    "cadence_is_30_minutes",
-    schedule.cadence_minutes === 30,
-    schedule.cadence_minutes === 30
-      ? "Reminder cadence is locked to 30 minutes."
-      : "Reminder cadence must be 30 minutes."
+    "cadence_is_10_minutes",
+    schedule.cadence_minutes === 10,
+    schedule.cadence_minutes === 10
+      ? "Reminder cadence is locked to 10 minutes."
+      : "Reminder cadence must be 10 minutes."
   );
   addCheck(
     "status_active_until_complete",

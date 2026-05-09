@@ -180,7 +180,7 @@ async function main() {
     `# TEAM5_LIVE_SYNC_READINESS_${date}`,
     `- Thời điểm tạo: ${result.generatedAt}`,
     `- Múi giờ: ${timezone}`,
-    `- Ngày checkpoint Team 5: ${date}`,
+    `- Ngày checkpoint Team 3 (Release Sync): ${date}`,
     `- Ngày snapshot Team 1 dùng để đối chiếu: ${result.date}`,
     `- Nguồn control-tower: ${result.source.controlTowerPath}`,
     ...(result.source.teamAdminPath ? [`- Nguồn Team Admin completion: ${result.source.teamAdminPath}`] : []),
@@ -202,7 +202,7 @@ async function main() {
 
   process.stdout.write(
     [
-      `Team 5 live-sync readiness cho ngày ${date}: ${result.status}.`,
+      `Team 3 live-sync readiness cho ngày ${date}: ${result.status}.`,
       `Team 1 snapshot dùng để đối chiếu: ${result.date}.`,
       `Governance READY: ${boolStatus(governanceReady)}.`,
       `NO-GO owner sign-off done: ${boolStatus(noGoOwnersDone)}.`,

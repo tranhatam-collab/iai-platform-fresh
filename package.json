@@ -96,7 +96,7 @@
     "quality:team2:gate": "pnpm quality:team2:static && pnpm quality:team2:semantic && pnpm quality:team2:surface",
     "precommit": "pnpm quality:gate",
     "team:wake:once": "node scripts/team-autowake-15m-loop.mjs --once",
-    "team:wake:loop": "node scripts/team-autowake-15m-loop.mjs --loop --interval-minutes=15",
+    "team:wake:loop": "node scripts/team-autowake-15m-loop.mjs --loop --interval-minutes=10",
     "report:team-autowake": "pnpm team:wake:once"
   },
   "devDependencies": {

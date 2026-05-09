@@ -4,14 +4,14 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.iai.team-autowake-30m</string>
+  <string>com.iai.team-autowake-10m</string>
 
   <key>ProgramArguments</key>
   <array>
     <string>/usr/local/bin/node</string>
     <string>/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh/scripts/team-autowake-15m-loop.mjs</string>
     <string>--once</string>
-    <string>--interval-minutes=30</string>
+    <string>--interval-minutes=10</string>
   </array>
 
   <key>WorkingDirectory</key>
@@ -21,12 +21,12 @@
   <true/>
 
   <key>StartInterval</key>
-  <integer>1800</integer>
+  <integer>600</integer>
 
   <key>StandardOutPath</key>
-  <string>/private/tmp/iai-team-autowake-30m.launchd.out.log</string>
+  <string>/private/tmp/iai-team-autowake-10m.launchd.out.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/private/tmp/iai-team-autowake-30m.launchd.err.log</string>
+  <string>/private/tmp/iai-team-autowake-10m.launchd.err.log</string>
 </dict>
 </plist>

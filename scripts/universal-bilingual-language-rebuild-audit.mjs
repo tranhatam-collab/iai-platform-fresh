@@ -306,8 +306,12 @@ function collectUiSignalStats(renderSource = "") {
   return {
     formKeys: [...renderSource.matchAll(/t\(locale,\s*"form\./g)].length,
     placeholderKeys: [...renderSource.matchAll(/t\(locale,\s*"ph\./g)].length,
-    buttonKeys: [...renderSource.matchAll(/t\(locale,\s*"btn\./g)].length,
-    navKeys: [...renderSource.matchAll(/t\(locale,\s*"nav\./g)].length,
+    buttonKeys:
+      [...renderSource.matchAll(/t\(locale,\s*"btn\./g)].length +
+      [...renderSource.matchAll(/t\(locale,\s*"noos\.btn\./g)].length,
+    navKeys:
+      [...renderSource.matchAll(/t\(locale,\s*"nav\./g)].length +
+      [...renderSource.matchAll(/t\(locale,\s*"noos\.nav\./g)].length,
     footerKeys:
       [...renderSource.matchAll(/t\(locale,\s*"footer\./g)].length +
       [...renderSource.matchAll(/t\(locale,\s*"[^"]*footer[^"]*"/g)].length
