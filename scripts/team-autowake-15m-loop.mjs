@@ -213,7 +213,7 @@ async function runCycle({ requestedDate, intervalMinutes }) {
 }
 
 async function main() {
-  const intervalMinutes = Number.parseInt(parseArg("interval-minutes", "15"), 10);
+  const intervalMinutes = Number.parseInt(parseArg("interval-minutes", "30"), 10);
   const safeInterval = Number.isFinite(intervalMinutes) && intervalMinutes > 0 ? intervalMinutes : 15;
   const requestedDate = parseArg("date", null);
   const loop = hasFlag("--loop") && !hasFlag("--once");

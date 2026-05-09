@@ -1,15 +1,16 @@
 # TEAM_AUTOWAKE_15M_STATUS_2026-05-09
-- Generated at: 2026-05-09T05:05:34.966Z
+- Generated at: 2026-05-09T07:15:46.515Z
 - Timezone: Asia/Ho_Chi_Minh
 - Status: `AUTO_3TEAM_ACTIVE_UNTIL_VERIFIED_COMPLETE`
-- Cadence: every 15 minutes
+- Cadence: every 30 minutes
 - Completion: 60%
 - Stop condition satisfied: FAIL
-- Next wake at: 2026-05-09T05:20:34.966Z
+- Next wake at: 2026-05-09T07:45:46.515Z
 
 ## Blocking Until Complete
 - Team 3 Release Sync: owner sign-off của mô hình 3-team chưa complete
 - Team 3 Release Sync: synchronized live chưa ready
+- T2 Infra & Runtime Evidence: CIOS review closure chưa ready
 
 ## Commands This Cycle
 - PASS `Team reminder schedule/status` — exit=0 — `node scripts/team-channel-reminder-check.mjs --date=2026-05-09 --write`
