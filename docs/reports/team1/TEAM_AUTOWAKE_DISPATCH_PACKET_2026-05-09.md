@@ -1,7 +1,7 @@
 # TEAM_REMINDER_DISPATCH_PACKET_2026-05-09
-- Generated at: 2026-05-09T05:05:29.563Z
+- Generated at: 2026-05-09T11:17:44.945Z
 - Timezone: Asia/Ho_Chi_Minh
-- Cadence: every 15 minutes
+- Cadence: every 10 minutes
 - Active rows: 3
 
 ## Reminder Commands

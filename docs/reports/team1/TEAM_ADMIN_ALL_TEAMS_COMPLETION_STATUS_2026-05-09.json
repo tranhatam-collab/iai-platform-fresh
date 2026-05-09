@@ -1,37 +1,62 @@
 {
-  "generatedAt": "2026-05-09T05:05:34.961Z",
+  "generatedAt": "2026-05-09T11:19:57.614Z",
   "timezone": "Asia/Ho_Chi_Minh",
   "requestedDate": "2026-05-09",
-  "gateState": "READY_FOR_TEAM3_RERUN",
+  "gateState": "READY_FOR_EVIDENCE_CLOSEOUT",
   "completion": {
-    "percent": 60,
-    "remainingPercent": 40,
-    "band": "IN_PROGRESS",
+    "percent": 83,
+    "remainingPercent": 17,
+    "band": "NARROW_REMAINING_SCOPE",
     "model": [
       {
         "key": "governanceReady",
-        "weight": 35,
-        "progress": 1
-      },
-      {
-        "key": "noGoOwnersDone",
-        "weight": 35,
-        "progress": 0
-      },
-      {
-        "key": "payProductionGateSignals",
         "weight": 20,
         "progress": 1
       },
       {
+        "key": "noGoOwnersDone",
+        "weight": 15,
+        "progress": 1
+      },
+      {
+        "key": "payProductionGateSignals",
+        "weight": 15,
+        "progress": 1
+      },
+      {
         "key": "releaseClaimUnlocked",
-        "weight": 5,
+        "weight": 10,
         "progress": 1
       },
       {
         "key": "liveSyncReady",
-        "weight": 5,
+        "weight": 10,
+        "progress": 1
+      },
+      {
+        "key": "mailLaneWave1Closeout",
+        "weight": 10,
         "progress": 0
+      },
+      {
+        "key": "teamBCdnFlowsReadyForSync",
+        "weight": 8,
+        "progress": 1
+      },
+      {
+        "key": "teamDReadyForSync",
+        "weight": 7,
+        "progress": 0
+      },
+      {
+        "key": "bilingualLiveReady",
+        "weight": 3,
+        "progress": 1
+      },
+      {
+        "key": "ciosClosureReady",
+        "weight": 2,
+        "progress": 1
       }
     ]
   },
@@ -42,12 +67,19 @@
   },
   "checks": {
     "governanceReady": true,
-    "noGoOwnersDone": false,
+    "noGoOwnersDone": true,
+    "noGoOwnerSources": {
+      "fromControlTower": false,
+      "fromAbcdPrecheck": true,
+      "fromReducedModel": true
+    },
+    "postGateEvidenceReady": false,
+    "synchronizedLiveReady": false,
     "payProductionGateDone": true,
     "payGateDerivedFromFreshArtifacts": true,
     "controlTowerStaleComparedToPayGate": true,
     "releaseClaimUnlocked": true,
-    "liveSyncReady": false,
+    "liveSyncReady": true,
     "paySignals": {
       "source": "team1-pay-prod-gate-status",
       "passed": 10,
@@ -72,7 +104,7 @@
     },
     "teamChannelReminder": {
       "available": true,
-      "cadenceIs15": true,
+      "cadenceIs10": true,
       "activeRows": 3,
       "overallPass": true,
       "scheduleStatus": "ACTIVE_UNTIL_VERIFIED_COMPLETE"
@@ -172,6 +204,10 @@
       "date": "2026-05-09",
       "path": "docs/reports/team1/TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_STATUS_2026-05-09.json"
     },
+    "team1AbcdNogoPrecheck": {
+      "date": "2026-05-09",
+      "path": "docs/reports/team1/TEAM1_ABCD_NOGO_PRECHECK_2026-05-09.json"
+    },
     "channelReminderSchedule": {
       "date": "2026-05-09",
       "path": "docs/reports/team1/TEAM_CHANNEL_REMINDER_SCHEDULE_2026-05-09.json"
@@ -191,6 +227,10 @@
     "ciosClosure": {
       "date": "2026-05-09",
       "path": "docs/reports/team1/TEAMC_CIOS_REVIEW_CLOSURE_STATUS_2026-05-09.json"
+    },
+    "mailLaneEvidenceStatus": {
+      "date": "2026-05-09",
+      "path": "docs/reports/team1/TEAM_EMAIL_SMTP_WAVE1_EVIDENCE_STATUS_2026-05-09.json"
     },
     "mailLaneStatus": {
       "date": "2026-04-22",
@@ -219,22 +259,21 @@
   },
   "gitScopeStatus": {
     "available": true,
-    "dirtyFiles": 27,
-    "outOfScopeFiles": 12,
+    "dirtyFiles": 29,
+    "outOfScopeFiles": 14,
     "outOfScopeExamples": [
       "apps/noos-web/src/i18n.ts",
       "apps/noos-web/src/render.ts",
       "content/en.json",
       "content/seo-registry.csv",
       "content/vi.json",
+      "ops/launchd/com.iai.team-autowake-15m.plist",
       "scripts/team-autowake-15m-loop.mjs",
-      "scripts/universal-bilingual-language-rebuild-audit.mjs",
-      "tests/integration/noos-commerce-surface.test.mjs"
+      "scripts/team-channel-reminder-check.mjs"
     ],
     "commitScopeLocked": false
   },
   "remainingActions": [
-    "Team 3 must rerun live-sync readiness and final packet immediately.",
     "Team 2 has formally locked CDN/Flows as NOT_PUBLIC_READY; keep both domains out of public-live claims until external owner evidence is supplied.",
     "Team 1 must accept or reject the Team 2 CIOS closure packet; checker is PASS, and Team 2 stays monitor-only until the verdict is recorded.",
     "Team Email SMTP must close 5 evidence clusters before live-close: mailbox/alias truth, inbound routing truth, Gmail proof, Outlook proof, internal inbox proof.",

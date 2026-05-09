@@ -1,5 +1,5 @@
 # TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_STATUS_2026-05-09
-- Generated at: 2026-05-09T03:23:26.982Z
+- Generated at: 2026-05-09T11:17:44.987Z
 - Timezone: Asia/Ho_Chi_Minh
 - Evidence source: `docs/reports/team1/TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_2026-05-09.json`
 - Team 1 verdict source: `docs/reports/team1/TEAM1_DOMAIN_REOPEN_VERDICTS_2026-04-22.md` (2026-04-22)

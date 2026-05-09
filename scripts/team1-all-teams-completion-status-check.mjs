@@ -334,6 +334,36 @@ function extractMailLaneState(mailLaneMarkdown) {
   };
 }
 
+function extractMailLaneStateFromEvidenceStatus(mailLaneEvidenceStatus) {
+  const data = mailLaneEvidenceStatus?.data;
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  const requiredFlags = [
+    "mailboxAliasTruthDone",
+    "inboundRoutingTruthDone",
+    "gmailProofDone",
+    "outlookProofDone",
+    "internalInboxProofDone",
+    "wave1CloseoutReady"
+  ];
+  const hasRequiredFlags = requiredFlags.every((key) => typeof data[key] === "boolean");
+  if (!hasRequiredFlags) {
+    return null;
+  }
+
+  return {
+    statusLabel: String(data.statusLabel ?? data.status ?? "UNKNOWN"),
+    mailboxAliasTruthDone: data.mailboxAliasTruthDone === true,
+    inboundRoutingTruthDone: data.inboundRoutingTruthDone === true,
+    gmailProofDone: data.gmailProofDone === true,
+    outlookProofDone: data.outlookProofDone === true,
+    internalInboxProofDone: data.internalInboxProofDone === true,
+    wave1CloseoutReady: data.wave1CloseoutReady === true
+  };
+}
+
 function extractTeamChannelReminderState(reminderStatusMarkdown, reminderSchedule) {
   const schedule = reminderSchedule?.data;
   const scheduleRows = Array.isArray(schedule?.channel_map) ? schedule.channel_map : [];
@@ -345,16 +375,16 @@ function extractTeamChannelReminderState(reminderStatusMarkdown, reminderSchedul
     reminderStatusMarkdown?.match(/- Active rows:\s*`?(\d+)`?/)?.[1] ?? 0
   );
   const activeRows = activeRowsFromSchedule || activeRowsFromMarkdown;
-  const cadenceIs15 =
-    schedule?.cadence_minutes === 15 ||
-    /- Cadence minutes:\s*`?15`?/i.test(reminderStatusMarkdown ?? "");
+  const cadenceIs10 =
+    schedule?.cadence_minutes === 10 ||
+    /- Cadence minutes:\s*`?10`?/i.test(reminderStatusMarkdown ?? "");
   const overallPass =
     /- Overall:\s*PASS/i.test(reminderStatusMarkdown ?? "") ||
-    (cadenceIs15 && activeRows >= 10);
+    (cadenceIs10 && activeRows >= 3);
 
   return {
     available: Boolean(reminderStatusMarkdown || reminderSchedule),
-    cadenceIs15,
+    cadenceIs10,
     activeRows,
     overallPass,
     scheduleStatus: normalize(schedule?.status) || "UNKNOWN"
@@ -441,11 +471,13 @@ async function main() {
     team5Readiness,
     teamDEvidenceStatus,
     teamBCdnFlowsEvidenceStatus,
+    team1AbcdNogoPrecheck,
     channelReminderSchedule,
     channelReminderStatus,
     docsIntegration,
     languageAudit,
     ciosClosure,
+    mailLaneEvidenceStatus,
     mailLaneStatus,
     reminder,
     domainVerdicts,
@@ -485,6 +517,12 @@ async function main() {
     resolveJsonSnapshot(
       root,
       "docs/reports/team1",
+      "TEAM1_ABCD_NOGO_PRECHECK",
+      requestedDate
+    ),
+    resolveJsonSnapshot(
+      root,
+      "docs/reports/team1",
       "TEAM_CHANNEL_REMINDER_SCHEDULE",
       requestedDate
     ),
@@ -511,6 +549,12 @@ async function main() {
       root,
       "docs/reports/team1",
       "TEAMC_CIOS_REVIEW_CLOSURE_STATUS",
+      requestedDate
+    ),
+    resolveJsonSnapshot(
+      root,
+      "docs/reports/team1",
+      "TEAM_EMAIL_SMTP_WAVE1_EVIDENCE_STATUS",
       requestedDate
     ),
     resolveDatedFile(
@@ -567,7 +611,7 @@ async function main() {
 
   const governanceReady =
     controlTower.data.releaseControlState === "READY" || controlTower.data.controlReady === true;
-  const noGoOwnersDone = controlTower.data.checks?.noGoPacketTracker?.pass === true;
+  const noGoFromControlTower = controlTower.data.checks?.noGoPacketTracker?.pass === true;
   const liveSyncReady = team5Readiness.data.status === "READY_FOR_SYNCHRONIZED_LIVE";
 
   const paySignals = getPaySignalSummary(payGateStatus, team2Probe, team2SharedProbe, controlTower);
@@ -613,7 +657,8 @@ async function main() {
   const bilingualPendingSurfaces = Array.from(
     new Set((languageAudit?.data?.pendingPages ?? []).map((entry) => entry?.appId).filter(Boolean))
   );
-  const mailLaneState = extractMailLaneState(mailLaneStatus?.raw ?? "");
+  const mailLaneStateFromEvidence = extractMailLaneStateFromEvidenceStatus(mailLaneEvidenceStatus);
+  const mailLaneState = mailLaneStateFromEvidence ?? extractMailLaneState(mailLaneStatus?.raw ?? "");
   const teamChannelReminderState = extractTeamChannelReminderState(
     channelReminderStatus?.raw ?? "",
     channelReminderSchedule
@@ -645,13 +690,43 @@ async function main() {
       ? teamBCdnFlowsEvidenceStatus.data.flowsMissingRefs
       : []
   };
+  const teamBCdnFlowsReadyForSync = teamBCdnFlowsState.available
+    ? teamBCdnFlowsState.productionEvidenceResolved
+    : !domainVerdictState.cdnPendingOwnerEvidence && !domainVerdictState.flowsPendingRouteRuntimeProof;
+  const teamDReadyForSync =
+    teamDState.available &&
+    teamDState.activationEvidenceComplete &&
+    teamDState.liveClaimBlocked === false;
+  const postGateEvidenceReady =
+    mailLaneState.wave1CloseoutReady &&
+    teamBCdnFlowsReadyForSync &&
+    teamDReadyForSync &&
+    bilingualLiveReady &&
+    ciosClosureReady;
+  const noGoFromAbcdPrecheck = team1AbcdNogoPrecheck?.data?.overallPass === true;
+  const noGoFromReducedModel =
+    teamBCdnFlowsState.productionEvidenceResolved && ciosClosureReady;
+  const noGoOwnersDone =
+    noGoFromControlTower || noGoFromAbcdPrecheck || noGoFromReducedModel;
+  const synchronizedLiveReady =
+    governanceReady &&
+    noGoOwnersDone &&
+    payProductionGateDone &&
+    releaseClaimUnlocked &&
+    liveSyncReady &&
+    postGateEvidenceReady;
 
   const weightedProgress = [
-    { key: "governanceReady", weight: 35, progress: governanceReady ? 1 : 0 },
-    { key: "noGoOwnersDone", weight: 35, progress: noGoOwnersDone ? 1 : 0 },
-    { key: "payProductionGateSignals", weight: 20, progress: paySignalProgress },
-    { key: "releaseClaimUnlocked", weight: 5, progress: releaseClaimUnlocked ? 1 : 0 },
-    { key: "liveSyncReady", weight: 5, progress: liveSyncReady ? 1 : 0 }
+    { key: "governanceReady", weight: 20, progress: governanceReady ? 1 : 0 },
+    { key: "noGoOwnersDone", weight: 15, progress: noGoOwnersDone ? 1 : 0 },
+    { key: "payProductionGateSignals", weight: 15, progress: paySignalProgress },
+    { key: "releaseClaimUnlocked", weight: 10, progress: releaseClaimUnlocked ? 1 : 0 },
+    { key: "liveSyncReady", weight: 10, progress: liveSyncReady ? 1 : 0 },
+    { key: "mailLaneWave1Closeout", weight: 10, progress: mailLaneState.wave1CloseoutReady ? 1 : 0 },
+    { key: "teamBCdnFlowsReadyForSync", weight: 8, progress: teamBCdnFlowsReadyForSync ? 1 : 0 },
+    { key: "teamDReadyForSync", weight: 7, progress: teamDReadyForSync ? 1 : 0 },
+    { key: "bilingualLiveReady", weight: 3, progress: bilingualLiveReady ? 1 : 0 },
+    { key: "ciosClosureReady", weight: 2, progress: ciosClosureReady ? 1 : 0 }
   ];
 
   const completionPercent = Math.round(
@@ -660,6 +735,18 @@ async function main() {
   const remainingPercent = Math.max(0, 100 - completionPercent);
 
   const remainingActions = [];
+
+  if (!governanceReady) {
+    remainingActions.push(
+      "Team 1 must keep governance packet state in READY and revalidate control tower before synchronized-live claim."
+    );
+  }
+
+  if (!noGoOwnersDone) {
+    remainingActions.push(
+      "Team 1 must close NO-GO owner sign-off and publish an authority decision in this cycle."
+    );
+  }
 
   if (!payProductionGateDone) {
     remainingActions.push(
@@ -786,12 +873,12 @@ async function main() {
 
   if (
     teamChannelReminderState.available &&
-    (!teamChannelReminderState.overallPass ||
-      !teamChannelReminderState.cadenceIs15 ||
+      (!teamChannelReminderState.overallPass ||
+      !teamChannelReminderState.cadenceIs10 ||
       teamChannelReminderState.activeRows < 3)
-  ) {
-    remainingActions.push(
-      "Team 0 ops must keep the 3-team reminder protocol locked at 15-minute cadence for Team 1/2/3 until COMPLETE_VERIFIED."
+    ) {
+      remainingActions.push(
+      "Ops owner must keep the 3-team reminder protocol locked at 10-minute cadence for Team 1/2/3 until COMPLETE_VERIFIED."
     );
   }
 
@@ -817,11 +904,13 @@ async function main() {
     remainingActions.push("No remaining blocking action detected from current snapshots.");
   }
 
-  const gateState = liveSyncReady
+  const gateState = synchronizedLiveReady
     ? "READY_FOR_SYNCHRONIZED_LIVE"
     : payProductionGateDone
       ? releaseClaimUnlocked
-        ? "READY_FOR_TEAM3_RERUN"
+        ? liveSyncReady
+          ? "READY_FOR_EVIDENCE_CLOSEOUT"
+          : "READY_FOR_TEAM3_RERUN"
         : "READY_FOR_TEAM1_LOCK_VERDICT"
       : "BLOCKED_ON_PAY_PRODUCTION_GATE";
 
@@ -848,6 +937,13 @@ async function main() {
     checks: {
       governanceReady,
       noGoOwnersDone,
+      noGoOwnerSources: {
+        fromControlTower: noGoFromControlTower,
+        fromAbcdPrecheck: noGoFromAbcdPrecheck,
+        fromReducedModel: noGoFromReducedModel
+      },
+      postGateEvidenceReady,
+      synchronizedLiveReady,
       payProductionGateDone,
       payGateDerivedFromFreshArtifacts:
         !controlTowerPayGateDone &&
@@ -934,6 +1030,12 @@ async function main() {
             path: teamBCdnFlowsEvidenceStatus.relativePath
           }
         : null,
+      team1AbcdNogoPrecheck: team1AbcdNogoPrecheck
+        ? {
+            date: team1AbcdNogoPrecheck.date,
+            path: team1AbcdNogoPrecheck.relativePath
+          }
+        : null,
       channelReminderSchedule: channelReminderSchedule
         ? {
             date: channelReminderSchedule.date,
@@ -962,6 +1064,12 @@ async function main() {
         ? {
             date: ciosClosure.date,
             path: ciosClosure.relativePath
+          }
+        : null,
+      mailLaneEvidenceStatus: mailLaneEvidenceStatus
+        ? {
+            date: mailLaneEvidenceStatus.date,
+            path: mailLaneEvidenceStatus.relativePath
           }
         : null,
       mailLaneStatus: mailLaneStatus
@@ -1030,6 +1138,9 @@ async function main() {
     "## Gate checks",
     `- Governance ready: ${boolStatus(governanceReady)}`,
     `- NO-GO owners done: ${boolStatus(noGoOwnersDone)}`,
+    `- NO-GO source/control-tower: ${boolStatus(noGoFromControlTower)}`,
+    `- NO-GO source/abcd-precheck: ${boolStatus(noGoFromAbcdPrecheck)}`,
+    `- NO-GO source/reduced-model(Team2+Team3): ${boolStatus(noGoFromReducedModel)}`,
     `- Pay production gate done: ${boolStatus(payProductionGateDone)}`,
     `- Release claim unlocked: ${boolStatus(releaseClaimUnlocked)}`,
     `- Team 3 live-sync ready: ${boolStatus(liveSyncReady)}`,
@@ -1053,7 +1164,7 @@ async function main() {
     `- Team Email SMTP Outlook proof done: ${boolStatus(mailLaneState.outlookProofDone)}`,
     `- Team Email SMTP internal inbox proof done: ${boolStatus(mailLaneState.internalInboxProofDone)}`,
     `- Team channel reminder schedule available: ${boolStatus(teamChannelReminderState.available)}`,
-    `- Team channel reminder cadence is 15 minutes: ${boolStatus(teamChannelReminderState.cadenceIs15)}`,
+    `- Team channel reminder cadence is 10 minutes: ${boolStatus(teamChannelReminderState.cadenceIs10)}`,
     `- Team channel reminder active rows: ${teamChannelReminderState.activeRows}`,
     `- Team channel reminder overall pass: ${boolStatus(teamChannelReminderState.overallPass)}`,
     `- Team D evidence status available: ${boolStatus(teamDState.available)}`,
@@ -1123,6 +1234,11 @@ async function main() {
         ? `${snapshot.sources.teamBCdnFlowsEvidenceStatus.date} / ${snapshot.sources.teamBCdnFlowsEvidenceStatus.path}`
         : "not found"
     }`,
+    `- Team 1 ABCD NO-GO precheck: ${
+      snapshot.sources.team1AbcdNogoPrecheck
+        ? `${snapshot.sources.team1AbcdNogoPrecheck.date} / ${snapshot.sources.team1AbcdNogoPrecheck.path}`
+        : "not found"
+    }`,
     `- Team channel reminder schedule: ${
       snapshot.sources.channelReminderSchedule
         ? `${snapshot.sources.channelReminderSchedule.date} / ${snapshot.sources.channelReminderSchedule.path}`
@@ -1146,6 +1262,11 @@ async function main() {
     `- Team C closure snapshot: ${
       snapshot.sources.ciosClosure
         ? `${snapshot.sources.ciosClosure.date} / ${snapshot.sources.ciosClosure.path}`
+        : "not found"
+    }`,
+    `- Team Email SMTP evidence status: ${
+      snapshot.sources.mailLaneEvidenceStatus
+        ? `${snapshot.sources.mailLaneEvidenceStatus.date} / ${snapshot.sources.mailLaneEvidenceStatus.path}`
         : "not found"
     }`,
     `- Team Email SMTP lane status: ${

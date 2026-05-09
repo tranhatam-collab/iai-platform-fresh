@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 
@@ -56,6 +56,15 @@ function getDateArg() {
   return explicit ? explicit.slice("--date=".length) : todayInTimezone(timezone);
 }
 
+function getModelModeArg() {
+  const explicit = process.argv.find((argument) => argument.startsWith("--model="));
+  if (!explicit) {
+    return "three-team";
+  }
+  const value = explicit.slice("--model=".length).trim().toLowerCase();
+  return value === "legacy-abcd" ? "legacy-abcd" : "three-team";
+}
+
 async function fileExists(filePath) {
   try {
     await access(filePath, constants.F_OK);
@@ -111,19 +120,96 @@ function normalize(value) {
   return String(value ?? "").trim();
 }
 
-async function evaluateTeamBEvidence(root) {
-  const evidencePath = path.join(
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function resolveLatestJsonSnapshot(root, relativeDir, prefix, requestedDate) {
+  const absoluteDir = path.join(root, relativeDir);
+  let entries = [];
+  try {
+    entries = await readdir(absoluteDir);
+  } catch {
+    return null;
+  }
+  const pattern = new RegExp(`^${escapeRegex(prefix)}_(\\d{4}-\\d{2}-\\d{2})\\.json$`);
+  const dates = entries
+    .flatMap((entry) => {
+      const match = pattern.exec(entry);
+      return match ? [match[1]] : [];
+    })
+    .sort((left, right) => right.localeCompare(left));
+  const selectedDate = dates.find((date) => date <= requestedDate) ?? dates[0];
+  if (!selectedDate) {
+    return null;
+  }
+  const absolutePath = path.join(absoluteDir, `${prefix}_${selectedDate}.json`);
+  const source = await readFile(absolutePath, "utf8");
+  return {
+    sourceDate: selectedDate,
+    sourcePath: absolutePath,
+    data: JSON.parse(source)
+  };
+}
+
+async function evaluateTeamBEvidence(root, requestedDate) {
+  const legacyEvidencePath = path.join(
     root,
     "docs/reports/team1/TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_2026-04-23.json"
   );
+  const statusSnapshot = await resolveLatestJsonSnapshot(
+    root,
+    path.join("docs", "reports", "team1"),
+    "TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_STATUS",
+    requestedDate
+  );
 
-  if (!(await fileExists(evidencePath))) {
+  if (statusSnapshot?.data) {
+    const missingCdnRefs = Array.isArray(statusSnapshot.data.cdnMissingRefs)
+      ? statusSnapshot.data.cdnMissingRefs
+      : requiredCdnRefs;
+    const missingFlowsRefs = Array.isArray(statusSnapshot.data.flowsMissingRefs)
+      ? statusSnapshot.data.flowsMissingRefs
+      : requiredFlowsRefs;
+    const productionEvidenceComplete = statusSnapshot.data.productionEvidenceComplete === true;
+    const formalNotPublicReadyAccepted =
+      statusSnapshot.data.formalNotPublicReadyAccepted === true;
+    const productionEvidenceResolved =
+      statusSnapshot.data.productionEvidenceResolved === true ||
+      productionEvidenceComplete ||
+      formalNotPublicReadyAccepted;
+
+    return {
+      present: true,
+      path: path.relative(root, statusSnapshot.sourcePath),
+      sourceDate: statusSnapshot.sourceDate,
+      sourceKind: "TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_STATUS",
+      checks: {
+        cdnRefsComplete: statusSnapshot.data.cdnEvidenceComplete === true,
+        flowsRefsComplete: statusSnapshot.data.flowsEvidenceComplete === true,
+        productionEvidenceComplete,
+        formalNotPublicReadyAccepted,
+        productionEvidenceResolved
+      },
+      missing: {
+        cdn: missingCdnRefs,
+        flows: missingFlowsRefs
+      }
+    };
+  }
+
+  if (!(await fileExists(legacyEvidencePath))) {
     return {
       present: false,
-      path: path.relative(root, evidencePath),
+      path: path.relative(root, legacyEvidencePath),
+      sourceDate: null,
+      sourceKind: "TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE",
       checks: {
         cdnRefsComplete: false,
-        flowsRefsComplete: false
+        flowsRefsComplete: false,
+        productionEvidenceComplete: false,
+        formalNotPublicReadyAccepted: false,
+        productionEvidenceResolved: false
       },
       missing: {
         cdn: requiredCdnRefs,
@@ -132,7 +218,7 @@ async function evaluateTeamBEvidence(root) {
     };
   }
 
-  const evidence = JSON.parse(await readFile(evidencePath, "utf8"));
+  const evidence = JSON.parse(await readFile(legacyEvidencePath, "utf8"));
   const cdn = evidence?.cdn ?? {};
   const flows = evidence?.flows ?? {};
 
@@ -141,10 +227,15 @@ async function evaluateTeamBEvidence(root) {
 
   return {
     present: true,
-    path: path.relative(root, evidencePath),
+    path: path.relative(root, legacyEvidencePath),
+    sourceDate: "2026-04-23",
+    sourceKind: "TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE",
     checks: {
       cdnRefsComplete: missingCdnRefs.length === 0,
-      flowsRefsComplete: missingFlowsRefs.length === 0
+      flowsRefsComplete: missingFlowsRefs.length === 0,
+      productionEvidenceComplete: missingCdnRefs.length === 0 && missingFlowsRefs.length === 0,
+      formalNotPublicReadyAccepted: false,
+      productionEvidenceResolved: missingCdnRefs.length === 0 && missingFlowsRefs.length === 0
     },
     missing: {
       cdn: missingCdnRefs,
@@ -173,6 +264,7 @@ async function evaluateTeamCRuntimeClosure(root, date) {
 
 async function main() {
   const date = getDateArg();
+  const modelMode = getModelModeArg();
   const root = process.cwd();
   const reportDir = path.join(root, "docs", "reports", "team1");
 
@@ -210,20 +302,32 @@ async function main() {
     })
   );
 
-  const teamBEvidence = await evaluateTeamBEvidence(root);
+  const teamBEvidence = await evaluateTeamBEvidence(root, date);
   const teamCRuntime = await evaluateTeamCRuntimeClosure(root, date);
 
-  const overallPass =
+  const legacyAbcdPass =
     packetResults.every((entry) => entry.pass) &&
     teamBEvidence.checks.cdnRefsComplete &&
     teamBEvidence.checks.flowsRefsComplete &&
     teamCRuntime.reviewClosureReady;
 
+  const threeTeamModelPass =
+    teamBEvidence.checks.productionEvidenceResolved === true &&
+    teamCRuntime.reviewClosureReady === true;
+
+  const overallPass = modelMode === "legacy-abcd" ? legacyAbcdPass : threeTeamModelPass;
+
   const snapshot = {
     generatedAt: new Date().toISOString(),
     timezone,
     date,
+    modelMode,
     overallPass,
+    modelEvaluation: {
+      legacyAbcdPass,
+      threeTeamModelPass,
+      using: modelMode
+    },
     packetResults,
     teamBEvidence,
     teamCRuntime
@@ -239,7 +343,10 @@ async function main() {
     `# TEAM1_ABCD_NOGO_PRECHECK_${date}`,
     `- Generated at: ${snapshot.generatedAt}`,
     `- Timezone: ${timezone}`,
+    `- Model mode: ${modelMode}`,
     `- Overall: ${markdownStatus(overallPass)}`,
+    `- Legacy ABCD pass: ${markdownStatus(legacyAbcdPass)}`,
+    `- Active 3-team pass: ${markdownStatus(threeTeamModelPass)}`,
     "",
     "## Packet checks",
     ...packetResults.flatMap((entry) => [
@@ -256,8 +363,13 @@ async function main() {
     "## Team B evidence refs",
     `- source: ${teamBEvidence.path}`,
     `- present: ${markdownStatus(teamBEvidence.present)}`,
+    `- source kind: ${teamBEvidence.sourceKind ?? "unknown"}`,
+    `- source date: ${teamBEvidence.sourceDate ?? "unknown"}`,
     `- cdn refs complete: ${markdownStatus(teamBEvidence.checks.cdnRefsComplete)}`,
     `- flows refs complete: ${markdownStatus(teamBEvidence.checks.flowsRefsComplete)}`,
+    `- production evidence complete: ${markdownStatus(teamBEvidence.checks.productionEvidenceComplete)}`,
+    `- formal NOT_PUBLIC_READY accepted: ${markdownStatus(teamBEvidence.checks.formalNotPublicReadyAccepted)}`,
+    `- production evidence resolved: ${markdownStatus(teamBEvidence.checks.productionEvidenceResolved)}`,
     `- missing cdn refs: ${teamBEvidence.missing.cdn.length > 0 ? teamBEvidence.missing.cdn.join(", ") : "none"}`,
     `- missing flows refs: ${teamBEvidence.missing.flows.length > 0 ? teamBEvidence.missing.flows.join(", ") : "none"}`,
     "",
@@ -267,7 +379,8 @@ async function main() {
     `- reviewClosureReady: ${markdownStatus(teamCRuntime.reviewClosureReady)}`,
     "",
     "## Quick rerun",
-    "- `node scripts/team1-abcd-nogo-precheck.mjs --date=YYYY-MM-DD`",
+    "- `node scripts/team1-abcd-nogo-precheck.mjs --date=YYYY-MM-DD --model=three-team`",
+    "- `node scripts/team1-abcd-nogo-precheck.mjs --date=YYYY-MM-DD --model=legacy-abcd`",
     ""
   ].join("\n");
 

@@ -146,6 +146,12 @@ async function runCycle({ requestedDate, intervalMinutes }) {
     ...args,
     `--timeout-ms=${CIOS_CLOSURE_TIMEOUT_MS}`
   ]));
+  commands.push(
+    runNode("Team 1 NO-GO precheck (3-team model)", "scripts/team1-abcd-nogo-precheck.mjs", [
+      ...args,
+      "--model=three-team"
+    ])
+  );
   commands.push(runNode("Team 3 live-sync readiness", "scripts/team5-live-sync-readiness-check.mjs", args));
   commands.push(runNode("Team 3 live-sync final packet", "scripts/team5-live-sync-packet.mjs", args));
   commands.push(runNode("Team 1 all-teams completion snapshot", "scripts/team1-all-teams-completion-status-check.mjs", args));
@@ -213,8 +219,8 @@ async function runCycle({ requestedDate, intervalMinutes }) {
 }
 
 async function main() {
-  const intervalMinutes = Number.parseInt(parseArg("interval-minutes", "30"), 10);
-  const safeInterval = Number.isFinite(intervalMinutes) && intervalMinutes > 0 ? intervalMinutes : 15;
+  const intervalMinutes = Number.parseInt(parseArg("interval-minutes", "10"), 10);
+  const safeInterval = Number.isFinite(intervalMinutes) && intervalMinutes > 0 ? intervalMinutes : 10;
   const requestedDate = parseArg("date", null);
   const loop = hasFlag("--loop") && !hasFlag("--once");
 

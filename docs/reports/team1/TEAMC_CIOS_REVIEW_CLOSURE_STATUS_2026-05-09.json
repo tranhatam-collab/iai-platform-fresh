@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-09T03:23:55.224Z",
+  "generatedAt": "2026-05-09T11:17:50.052Z",
   "timezone": "Asia/Ho_Chi_Minh",
   "date": "2026-05-09",
   "timeoutMs": 120000,
@@ -62,8 +62,8 @@
       "signal": null,
       "timedOut": false,
       "error": null,
-      "durationMs": 284,
-      "stdout": "✔ cios sibling workspace exposes release-critical route shells (2.559042ms)\n✔ cios sibling workspace exposes runtime contract and rollback proof (8.936792ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 147.545417",
+      "durationMs": 87,
+      "stdout": "✔ cios sibling workspace exposes release-critical route shells (1.750083ms)\n✔ cios sibling workspace exposes runtime contract and rollback proof (2.984541ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 50.949125",
       "stderr": ""
     },
     "upstreamVitest": {
@@ -74,8 +74,8 @@
       "signal": null,
       "timedOut": false,
       "error": null,
-      "durationMs": 27827,
-      "stdout": "RUN  v4.1.1 /Users/tranhatam/Documents/Devnewproject/cios.iai.one\n\nstdout | tests/phase0-constitutional-ui-states.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }\n\n ✓ tests/phase0-constitutional-ui-states.test.ts > phase0 day6 constitutional review + ui state contracts > exposes constitutional reason code + ui state mapping in bootstrap 12ms\n ✓ tests/phase0-constitutional-ui-states.test.ts > phase0 day6 constitutional review + ui state contracts > exposes disable/review reason groups in overview 42ms\nstdout | tests/sprint-v1.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild\n\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > registers and creates auth session, then returns member plans 1054ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > protects secured endpoints without JWT 18ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns crm list/detail and governance snapshots 49ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns auth audit trail for compliance role 10ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > evaluates sensitive action with CEE-lite 69ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > creates and updates flow runs for realtime flow.updated path 41ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns persisted realtime events since event id fallback endpoint 19ms\nstdout | tests/phase1-integration.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }\n\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces auth on realtime replay endpoint 6ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces permission matrix for realtime replay endpoint 3ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > replays only even...",
+      "durationMs": 4944,
+      "stdout": "RUN  v4.1.1 /Users/tranhatam/Documents/Devnewproject/cios.iai.one\n\nstdout | tests/phase1-integration.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: 🛡️ auth for agents: https://vestauth.com\n\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces auth on realtime replay endpoint 2ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces permission matrix for realtime replay endpoint 1ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > replays only events after a given event id 9ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces permission matrix for flow dispatch 1ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > rejects flow callback when signature is missing or invalid 2ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > accepts flow callback with valid signature 2ms\nstdout | tests/phase0-realtime-minimum.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }\n\n ✓ tests/phase0-realtime-minimum.test.ts > phase0 day5 realtime minimum useful layer > keeps realtime recent endpoint protected by auth + permissions 3ms\n ✓ tests/phase0-realtime-minimum.test.ts > phase0 day5 realtime minimum useful layer > exposes recent realtime events for authorized role 2ms\nstdout | tests/sse-reconnect.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }\n\n ✓ tests/sse-reconnect.test.ts > SSE auth and reconnect behavior > enforces auth/permission on realtime stream endpoint 2ms\n ✓ tests/sse-reconnect.test.ts > SSE auth and reconnect behavior > supports reconnect fallback by event id with ordered new events 13ms\nstdout | tests/sprint-v1.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }\n\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > registers and creates auth session, then re...",
       "stderr": ""
     },
     "strictSmoke": {
