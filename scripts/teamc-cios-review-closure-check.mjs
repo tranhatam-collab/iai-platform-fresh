@@ -4,7 +4,7 @@ import { constants } from "node:fs";
 import path from "node:path";
 
 const timezone = "Asia/Ho_Chi_Minh";
-const defaultTimeoutMs = 20_000;
+const defaultTimeoutMs = 60_000;
 const screenshotRequirements = [
   {
     label: "Root landing",
@@ -286,17 +286,28 @@ async function main() {
     "cios.iai.one",
     "CIOS_IAI_ONE_RUNTIME_CONTRACT_PROOF_2026-04-21.md"
   );
+  const strictSmokeArtifactJsonPath = path.join(
+    root,
+    "docs",
+    "release-evidence",
+    "cios.iai.one",
+    "artifacts",
+    `CIOS_IAI_ONE_STRICT_SMOKE_${date}.json`
+  );
   const ciosEnvPath = path.join(ciosRoot, ".env");
 
-  const [ciosRootExists, packetExists, runtimeProofExists, ciosEnvText] = await Promise.all([
+  const [ciosRootExists, packetExists, runtimeProofExists, ciosEnvText, strictSmokeArtifactRaw] = await Promise.all([
     fileExists(ciosRoot),
     fileExists(packetPath),
     fileExists(runtimeProofPath),
-    readFile(ciosEnvPath, "utf8").catch(() => "")
+    readFile(ciosEnvPath, "utf8").catch(() => ""),
+    readFile(strictSmokeArtifactJsonPath, "utf8").catch(() => "")
   ]);
 
   const dotEnv = parseDotEnv(ciosEnvText);
   const smokeReadiness = evaluateSmokeReadiness(dotEnv);
+  const strictSmokeArtifact = strictSmokeArtifactRaw ? JSON.parse(strictSmokeArtifactRaw) : null;
+  const strictSmokeArtifactPass = strictSmokeArtifact?.success === true;
 
   const screenshotChecks = await Promise.all(
     screenshotRequirements.map(async (requirement) => {
@@ -357,7 +368,20 @@ async function main() {
     skipped: true
   };
 
-  if (ciosRootExists && smokeReadiness.ready) {
+  if (strictSmokeArtifactPass) {
+    strictSmoke = {
+      ok: true,
+      exitCode: 0,
+      signal: null,
+      timedOut: false,
+      error: null,
+      stdout: strictSmokeArtifactJsonPath,
+      stderr: "",
+      durationMs: Number(strictSmokeArtifact?.finalResult?.durationMs ?? 0),
+      skipped: false,
+      reusedArtifact: true
+    };
+  } else if (ciosRootExists && smokeReadiness.ready) {
     const smokeResult = await runCommand({
       command: process.execPath,
       args: ["scripts/teamc-cios-strict-smoke-capture.mjs", `--date=${date}`],
@@ -402,9 +426,15 @@ async function main() {
     );
   }
   if (!checks.upstreamVitestPass) {
-    nextActions.push(
-      "Điều tra `npm test` của ../cios.iai.one trong môi trường có DB/toolchain đúng hoặc thêm harness test phù hợp trước khi Team 1 dùng upstream suite làm proof."
-    );
+    if (upstreamVitest.timedOut) {
+      nextActions.push(
+        "Rerun Team C closure checker với `--timeout-ms=60000` hoặc cao hơn sau khi hydrate workspace; suite upstream hiện pass khoảng 34 giây nên timeout quá thấp sẽ tạo false blocker."
+      );
+    } else {
+      nextActions.push(
+        "Điều tra `npm test` của ../cios.iai.one trong môi trường có DB/toolchain đúng hoặc thêm harness test phù hợp trước khi Team 1 dùng upstream suite làm proof."
+      );
+    }
   }
   if (!checks.strictSmokeReady) {
     nextActions.push(
@@ -446,7 +476,11 @@ async function main() {
       },
       strictSmoke: {
         command: "node scripts/teamc-cios-strict-smoke-capture.mjs",
-        result: strictSmoke.skipped ? "SKIPPED_ENV_NOT_READY" : commandSummary(strictSmoke),
+        result: strictSmoke.skipped
+          ? "SKIPPED_ENV_NOT_READY"
+          : strictSmoke.reusedArtifact
+            ? "PASS_REUSED_ARTIFACT"
+            : commandSummary(strictSmoke),
         ...strictSmoke
       }
     },

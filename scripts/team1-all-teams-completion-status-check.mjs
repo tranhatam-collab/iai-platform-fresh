@@ -632,6 +632,10 @@ async function main() {
     overallPass: teamBCdnFlowsEvidenceStatus?.data?.overallPass === true,
     productionEvidenceComplete:
       teamBCdnFlowsEvidenceStatus?.data?.productionEvidenceComplete === true,
+    formalNotPublicReadyAccepted:
+      teamBCdnFlowsEvidenceStatus?.data?.formalNotPublicReadyAccepted === true,
+    productionEvidenceResolved:
+      teamBCdnFlowsEvidenceStatus?.data?.productionEvidenceResolved === true,
     cdnEvidenceComplete: teamBCdnFlowsEvidenceStatus?.data?.cdnEvidenceComplete === true,
     flowsEvidenceComplete: teamBCdnFlowsEvidenceStatus?.data?.flowsEvidenceComplete === true,
     cdnMissingRefs: Array.isArray(teamBCdnFlowsEvidenceStatus?.data?.cdnMissingRefs)
@@ -702,7 +706,7 @@ async function main() {
   }
 
   if (teamBCdnFlowsState.available) {
-    if (!teamBCdnFlowsState.productionEvidenceComplete) {
+    if (!teamBCdnFlowsState.productionEvidenceResolved) {
       remainingActions.push(
         `Team B CDN/Flows must submit domain-specific production evidence (CDN missing: ${
           teamBCdnFlowsState.cdnMissingRefs.length > 0
@@ -713,6 +717,10 @@ async function main() {
             ? teamBCdnFlowsState.flowsMissingRefs.join(", ")
             : "none"
         }).`
+      );
+    } else if (teamBCdnFlowsState.formalNotPublicReadyAccepted) {
+      remainingActions.push(
+        "Team B CDN/Flows has been formally locked as NOT_PUBLIC_READY; keep both domains out of public-live claims until external owner evidence is supplied."
       );
     }
   } else {
@@ -1057,6 +1065,8 @@ async function main() {
     `- Team B CDN evidence complete: ${boolStatus(teamBCdnFlowsState.cdnEvidenceComplete)}`,
     `- Team B Flows evidence complete: ${boolStatus(teamBCdnFlowsState.flowsEvidenceComplete)}`,
     `- Team B CDN/Flows production evidence complete: ${boolStatus(teamBCdnFlowsState.productionEvidenceComplete)}`,
+    `- Team B CDN/Flows formal NOT_PUBLIC_READY accepted: ${boolStatus(teamBCdnFlowsState.formalNotPublicReadyAccepted)}`,
+    `- Team B CDN/Flows production evidence resolved: ${boolStatus(teamBCdnFlowsState.productionEvidenceResolved)}`,
     `- Team B CDN/Flows checker overall pass: ${boolStatus(teamBCdnFlowsState.overallPass)}`,
     `- Universal bilingual live ready: ${boolStatus(bilingualLiveReady)}`,
     `- Universal bilingual pending surfaces: ${bilingualPendingSurfaces.length > 0 ? bilingualPendingSurfaces.join(", ") : "none"}`,

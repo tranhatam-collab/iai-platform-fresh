@@ -1,0 +1,109 @@
+{
+  "generatedAt": "2026-05-09T03:23:55.224Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-05-09",
+  "timeoutMs": 120000,
+  "paths": {
+    "ciosRoot": "../cios.iai.one",
+    "packetPath": "docs/release-evidence/cios.iai.one/CIOS_IAI_ONE_RELEASE_EVIDENCE_PACKET_2026-04-20.md",
+    "runtimeProofPath": "docs/release-evidence/cios.iai.one/CIOS_IAI_ONE_RUNTIME_CONTRACT_PROOF_2026-04-21.md"
+  },
+  "smokeReadiness": {
+    "hasWorkersJwtSecret": false,
+    "hasDirectToken": false,
+    "hasSessionAuth": true,
+    "hasWorkersApiUrl": true,
+    "ready": true,
+    "workersJwtLooksPlaceholder": false,
+    "workersJwtSource": "missing",
+    "directTokenSource": "missing",
+    "sessionAuthSource": "default(demo123456)",
+    "workersApiUrlSource": "default",
+    "workersApiUrl": "https://cios-workers-api.tranhatam66.workers.dev"
+  },
+  "screenshotChecks": [
+    {
+      "label": "Root landing",
+      "route": "https://cios.iai.one/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/root.png",
+      "present": true
+    },
+    {
+      "label": "CIOS hub",
+      "route": "https://cios.iai.one/cios/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/hub.png",
+      "present": true
+    },
+    {
+      "label": "CIOS app",
+      "route": "https://cios.iai.one/cios/app/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/app.png",
+      "present": true
+    },
+    {
+      "label": "CIOS pricing",
+      "route": "https://cios.iai.one/cios/pricing/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/pricing.png",
+      "present": true
+    },
+    {
+      "label": "CIOS demo",
+      "route": "https://cios.iai.one/cios/demo/",
+      "relativePath": "docs/release-evidence/cios.iai.one/artifacts/screenshots/demo.png",
+      "present": true
+    }
+  ],
+  "commands": {
+    "workspaceEvidenceGuard": {
+      "command": "node --test tests/integration/cios-release-evidence.test.mjs",
+      "result": "PASS",
+      "ok": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "error": null,
+      "durationMs": 284,
+      "stdout": "✔ cios sibling workspace exposes release-critical route shells (2.559042ms)\n✔ cios sibling workspace exposes runtime contract and rollback proof (8.936792ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 147.545417",
+      "stderr": ""
+    },
+    "upstreamVitest": {
+      "command": "node node_modules/vitest/vitest.mjs run --reporter=verbose --maxWorkers=1 --configLoader runner",
+      "result": "PASS",
+      "ok": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "error": null,
+      "durationMs": 27827,
+      "stdout": "RUN  v4.1.1 /Users/tranhatam/Documents/Devnewproject/cios.iai.one\n\nstdout | tests/phase0-constitutional-ui-states.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }\n\n ✓ tests/phase0-constitutional-ui-states.test.ts > phase0 day6 constitutional review + ui state contracts > exposes constitutional reason code + ui state mapping in bootstrap 12ms\n ✓ tests/phase0-constitutional-ui-states.test.ts > phase0 day6 constitutional review + ui state contracts > exposes disable/review reason groups in overview 42ms\nstdout | tests/sprint-v1.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild\n\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > registers and creates auth session, then returns member plans 1054ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > protects secured endpoints without JWT 18ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns crm list/detail and governance snapshots 49ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns auth audit trail for compliance role 10ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > evaluates sensitive action with CEE-lite 69ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > creates and updates flow runs for realtime flow.updated path 41ms\n ✓ tests/sprint-v1.test.ts > sprint v1 expansion routes > returns persisted realtime events since event id fallback endpoint 19ms\nstdout | tests/phase1-integration.test.ts\n[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }\n\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces auth on realtime replay endpoint 6ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > enforces permission matrix for realtime replay endpoint 3ms\n ✓ tests/phase1-integration.test.ts > phase1 integration gates > replays only even...",
+      "stderr": ""
+    },
+    "strictSmoke": {
+      "command": "node scripts/teamc-cios-strict-smoke-capture.mjs",
+      "result": "PASS_REUSED_ARTIFACT",
+      "ok": true,
+      "exitCode": 0,
+      "signal": null,
+      "timedOut": false,
+      "error": null,
+      "stdout": "/Users/tranhatam/Documents/Devnewproject/iai-platform-fresh/docs/release-evidence/cios.iai.one/artifacts/CIOS_IAI_ONE_STRICT_SMOKE_2026-05-09.json",
+      "stderr": "",
+      "durationMs": 1438,
+      "skipped": false,
+      "reusedArtifact": true
+    }
+  },
+  "checks": {
+    "ciosWorkspacePresent": true,
+    "packetPresent": true,
+    "runtimeProofPresent": true,
+    "screenshotPackPresent": true,
+    "workspaceEvidenceGuardPass": true,
+    "upstreamVitestPass": true,
+    "strictSmokeReady": true,
+    "strictSmokePass": true
+  },
+  "unmetChecks": [],
+  "reviewClosureReady": true,
+  "nextActions": []
+}

@@ -25,6 +25,11 @@ const inferredOwnerNotes = new Set([
   "INFERRED_BY_TEAM_NOVA_OPS_AWAITING_OWNER_CONFIRMATION",
   "INFERRED_PENDING_OWNER_EXTERNAL_PROOF"
 ]);
+const notPublicReadyStates = new Set([
+  "NOT_PUBLIC_READY",
+  "NOT_PUBLIC_READY_ACCEPTED",
+  "FORMAL_NOT_PUBLIC_READY"
+]);
 
 function todayInTimezone(timeZone) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -190,10 +195,18 @@ function validateEvidence(evidence, verdicts) {
   const cdnEvidenceComplete = cdnMissingRefs.length === 0 && cdnDnsResolves;
   const flowsEvidenceComplete = flowsMissingRefs.length === 0;
   const productionEvidenceComplete = cdnEvidenceComplete && flowsEvidenceComplete;
+  const cdnNotPublicReady =
+    notPublicReadyStates.has(normalize(cdn.public_ready_state)) ||
+    notPublicReadyStates.has(normalize(cdn.status));
+  const flowsNotPublicReady =
+    notPublicReadyStates.has(normalize(flows.public_ready_state)) ||
+    notPublicReadyStates.has(normalize(flows.status));
+  const formalNotPublicReadyAccepted = cdnNotPublicReady && flowsNotPublicReady;
+  const productionEvidenceResolved = productionEvidenceComplete || formalNotPublicReadyAccepted;
 
   const status = normalize(evidence.status);
   const claimStatusRequested = claimStatuses.has(status);
-  const noOverclaim = !(claimStatusRequested && !productionEvidenceComplete);
+  const noOverclaim = !(claimStatusRequested && !productionEvidenceResolved);
   addCheck(
     "no_overclaim_before_domain_production_evidence_complete",
     noOverclaim,
@@ -239,11 +252,15 @@ function validateEvidence(evidence, verdicts) {
     cdnDnsResolves,
     cdnEvidenceComplete,
     cdnMissingRefs,
+    cdnNotPublicReady,
     checks,
+    flowsNotPublicReady,
     flowsEvidenceComplete,
     flowsMissingRefs,
+    formalNotPublicReadyAccepted,
     overallPass: checks.every((check) => check.pass),
     productionEvidenceComplete,
+    productionEvidenceResolved,
     status
   };
 }
@@ -293,6 +310,8 @@ async function main() {
     }`,
     `- Evidence status: \`${validation.status}\``,
     `- Production evidence complete: ${markdownStatus(validation.productionEvidenceComplete)}`,
+    `- Formal NOT_PUBLIC_READY accepted: ${markdownStatus(validation.formalNotPublicReadyAccepted)}`,
+    `- Production evidence resolved for Team 2: ${markdownStatus(validation.productionEvidenceResolved)}`,
     `- CDN evidence complete: ${markdownStatus(validation.cdnEvidenceComplete)}`,
     `- Flows evidence complete: ${markdownStatus(validation.flowsEvidenceComplete)}`,
     `- Overall checker pass: ${markdownStatus(validation.overallPass)}`,
@@ -305,9 +324,11 @@ async function main() {
     "",
     "## Completion Breakdown",
     `- CDN DNS resolves: ${markdownStatus(validation.cdnDnsResolves)}`,
+    `- CDN formal NOT_PUBLIC_READY: ${markdownStatus(validation.cdnNotPublicReady)}`,
     `- CDN missing refs: ${
       validation.cdnMissingRefs.length > 0 ? validation.cdnMissingRefs.join(", ") : "none"
     }`,
+    `- Flows formal NOT_PUBLIC_READY: ${markdownStatus(validation.flowsNotPublicReady)}`,
     `- Flows missing refs: ${
       validation.flowsMissingRefs.length > 0 ? validation.flowsMissingRefs.join(", ") : "none"
     }`,

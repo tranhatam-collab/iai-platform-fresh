@@ -1,0 +1,97 @@
+{
+  "generatedAt": "2026-05-09T03:23:26.982Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-05-09",
+  "evidencePath": "docs/reports/team1/TEAM_B_CDN_FLOWS_PRODUCTION_EVIDENCE_2026-05-09.json",
+  "evidenceDate": "2026-05-09",
+  "verdictSource": {
+    "date": "2026-04-22",
+    "path": "docs/reports/team1/TEAM1_DOMAIN_REOPEN_VERDICTS_2026-04-22.md",
+    "cdnVerdict": "REOPEN_REVIEW_DENIED_PENDING_OWNER_EVIDENCE",
+    "flowsVerdict": "REOPEN_REVIEW_PENDING_ROUTE_RUNTIME_PROOF"
+  },
+  "cdnDnsResolves": false,
+  "cdnEvidenceComplete": false,
+  "cdnMissingRefs": [
+    "deploy_log_ref",
+    "rule_snapshot_ref",
+    "cache_header_proof_ref",
+    "purge_rollback_note_ref",
+    "asset_header_proof_ref"
+  ],
+  "cdnNotPublicReady": true,
+  "checks": [
+    {
+      "name": "evidence_json_object",
+      "pass": true,
+      "details": "Evidence is a JSON object."
+    },
+    {
+      "name": "scope_locked",
+      "pass": true,
+      "details": "Scope must be team-b-cdn-flows."
+    },
+    {
+      "name": "cdn_domain_locked",
+      "pass": true,
+      "details": "CDN evidence must be locked to cdn.iai.one."
+    },
+    {
+      "name": "flows_domain_locked",
+      "pass": true,
+      "details": "Flows evidence must be locked to flows.iai.one."
+    },
+    {
+      "name": "cdn_required_fields_represented",
+      "pass": true,
+      "details": "CDN required evidence fields are represented."
+    },
+    {
+      "name": "flows_required_fields_represented",
+      "pass": true,
+      "details": "Flows required evidence fields are represented."
+    },
+    {
+      "name": "claim_policy_locked",
+      "pass": true,
+      "details": "Claim policy must keep release-ready forbidden until both domains complete."
+    },
+    {
+      "name": "no_overclaim_before_domain_production_evidence_complete",
+      "pass": true,
+      "details": "Evidence does not overclaim release-ready before production evidence closure."
+    },
+    {
+      "name": "cdn_owner_confirmation_note_present",
+      "pass": true,
+      "details": "CDN packet should explicitly carry TEAM_NOVA_OPS inferred-owner note while waiting external owner proof."
+    },
+    {
+      "name": "flows_owner_confirmation_note_present",
+      "pass": true,
+      "details": "Flows packet should explicitly carry TEAM_NOVA_OPS inferred-owner note while waiting external owner proof."
+    },
+    {
+      "name": "team1_cdn_verdict_alignment",
+      "pass": true,
+      "details": "Team 1 CDN verdict should remain pending/denied while CDN evidence incomplete (current: REOPEN_REVIEW_DENIED_PENDING_OWNER_EVIDENCE)."
+    },
+    {
+      "name": "team1_flows_verdict_alignment",
+      "pass": true,
+      "details": "Team 1 Flows verdict should remain pending while Flows evidence incomplete (current: REOPEN_REVIEW_PENDING_ROUTE_RUNTIME_PROOF)."
+    }
+  ],
+  "flowsNotPublicReady": true,
+  "flowsEvidenceComplete": false,
+  "flowsMissingRefs": [
+    "route_map_production_ref",
+    "runtime_production_ref",
+    "screenshot_production_ref"
+  ],
+  "formalNotPublicReadyAccepted": true,
+  "overallPass": true,
+  "productionEvidenceComplete": false,
+  "productionEvidenceResolved": true,
+  "status": "FORMAL_NOT_PUBLIC_READY"
+}

@@ -1,0 +1,1475 @@
+{
+  "generatedAt": "2026-05-09T03:15:31.683Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "dateTag": "2026-05-09",
+  "ciosRoot": "/Users/tranhatam/Documents/Devnewproject/cios.iai.one",
+  "workersApiUrl": "https://cios-workers-api.tranhatam66.workers.dev",
+  "success": true,
+  "attempts": [
+    {
+      "attempt": 1,
+      "success": true,
+      "exitCode": 0,
+      "retryable": false,
+      "durationMs": 1438,
+      "tokenMethod": "auth_session",
+      "error": "",
+      "diagnostics": [
+        "auth session accepted (status=200)"
+      ]
+    }
+  ],
+  "finalResult": {
+    "attempt": 1,
+    "exitCode": 0,
+    "durationMs": 1438,
+    "tokenMethod": "auth_session",
+    "error": "",
+    "diagnostics": [
+      "auth session accepted (status=200)"
+    ]
+  },
+  "strictSmokePayload": {
+    "health": {
+      "ok": true,
+      "data": {
+        "service": "cios-workers-api",
+        "status": "healthy",
+        "contract": "phase2-workers-v1"
+      },
+      "meta": {},
+      "error": null,
+      "trace_id": "b077df61-7c4d-4804-ad13-dc71718c0059"
+    },
+    "ingest": {
+      "ok": true,
+      "data": {
+        "accepted": true,
+        "route": "/v1/events/ingest",
+        "event_id": "4b07f701-d5a0-4c13-947a-c2d54ed1a7cc"
+      },
+      "meta": {
+        "phase": "workers-contract",
+        "status": "d1-persisted"
+      },
+      "error": null,
+      "trace_id": "0ca42118-4522-417a-8d70-b0f662f2837d"
+    },
+    "search": {
+      "ok": true,
+      "data": [
+        {
+          "id": "381fb1c9-5de3-4697-bfe1-ebc369887351",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "6339c7c3-c8fa-44db-bef8-2fb95383c994",
+          "payload": {
+            "payload": {
+              "message": "warmup ingest"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "3d0bf5cb-b3de-46b2-88f8-5fd20a32d5c7",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "d467be6c-c46d-4673-bb2c-db0585d4e76b",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "15bf8f83-671a-4667-9d8b-14bff13ae0d8",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "7cab11ae-4cdd-45d4-a065-3d5ace61fbee",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "318599f8-122b-42cd-9dbb-e1bcfd042635",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "e42f6fc6-9a42-45bb-8379-d220f9fbaa94",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "857ecd50-512d-4b1d-82a3-cae35966b2bd",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "73053a06-6d7f-4920-8f2c-a0c0c02d1bff",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "547fc706-463b-4e7d-b68d-d2ccf9aa58ae",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "e2eee45c-0ec0-4eb1-a447-f08be4ca8ce6",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "b086a10d-2d34-4c65-ba1c-8cc9fb3c39c9",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "d9068aed-87b4-4c9f-85c9-d12fc3989c4a",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "58979d6e-de5c-482d-92b8-aa23b7e9b4e4",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "718301a4-bed1-42d2-b5cf-5acd188a675d",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "2baf6004-f045-4105-85d9-36b4e8b511f3",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "c91b6d2a-d08b-4012-924e-f98f5bfdf694",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "2a38eac9-5aec-4dce-a0ab-cbb7d14ec3d5",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "f64a6961-fe8a-462a-b9ce-9985af24f897",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "9902a56a-86fc-45d0-9dd2-9627c94e961f",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "d3a8ceae-4a9c-4e31-860a-e66c9913abc2",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "bfb4ad9d-086f-4b11-9eb9-7e4a6625c429",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "516ccf46-daab-4af0-a767-79f9892077b4",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "07c6eb0b-28fa-4b00-a270-73ccb89e90d6",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "512d27fa-9f8f-452e-bc80-7e9ba9360e07",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "477e9229-2d1a-4641-80b5-bff5bbe9cf81",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "db386b64-dc98-4017-952d-2a1d3698cf12",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "c36b3994-5c7b-49be-a641-967cab8b3d42",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "368b6141-bb9a-44c1-a49f-a1464cc702ce",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "5d182789-e0fa-4501-a289-3e7c71a092b3",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "d3f26829-3555-4a57-ba91-2f4d95a928af",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "2b35e44a-279d-4d32-bdb2-20f0f73630c5",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "29d9c2d0-6052-45c9-9dda-9ca08aca0c58",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "7bf545ff-f5cc-45d9-90bc-3499db9a5cc2",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "6d12f247-8e3c-4511-9ff7-7e9844703a09",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "fdbd1e42-2045-4d3b-8e07-5676de278210",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "076603d5-3a23-4e79-90d9-1b8e889b882b",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        },
+        {
+          "id": "006d275b-8e5b-482f-addd-d2790c4e734e",
+          "source": "smoke-suite",
+          "event_type": "system.smoke",
+          "occurred_at": "2026-04-03T00:00:00.000Z",
+          "trace_id": "05e0f3f8-ade1-4649-ab1a-6ad16674241e",
+          "payload": {
+            "payload": {
+              "message": "workers smoke warmup"
+            },
+            "entity_refs": [
+              "org_demo"
+            ]
+          }
+        }
+      ],
+      "meta": {
+        "pagination": {
+          "page": 1,
+          "page_size": 20
+        },
+        "filters": {
+          "text": "smoke-suite",
+          "source": null,
+          "eventType": null,
+          "from": null,
+          "to": null
+        },
+        "source": "d1-search"
+      },
+      "error": null,
+      "trace_id": "158d6566-a73d-46cf-bd00-4a646d8fb090"
+    },
+    "dispatch": {
+      "ok": true,
+      "data": {
+        "flow_dispatch_id": "0f4b8d29-560e-4289-8b70-79af8990b4d8",
+        "status": "accepted"
+      },
+      "meta": {
+        "phase": "workers-contract",
+        "status": "d1-persisted"
+      },
+      "error": null,
+      "trace_id": "1b2aeea0-a637-473c-9553-01b154bacd4a"
+    },
+    "callback": {
+      "ok": true,
+      "data": {
+        "callback_processed": true,
+        "flow_run_id": "0f4b8d29-560e-4289-8b70-79af8990b4d8"
+      },
+      "meta": {
+        "phase": "workers-contract",
+        "status": "stubbed"
+      },
+      "error": null,
+      "trace_id": "97d5fb87-65d7-4d26-95b9-b21356b85df5"
+    },
+    "flow_logs": {
+      "ok": true,
+      "data": [
+        {
+          "flow_run_id": "0f4b8d29-560e-4289-8b70-79af8990b4d8",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:15:31.318Z",
+          "trace_id": "1b2aeea0-a637-473c-9553-01b154bacd4a"
+        },
+        {
+          "flow_run_id": "2fb6022d-7d7c-461d-aa11-6253b95fe063",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:15:21.293Z",
+          "trace_id": "a01eda35-ddec-4a90-b7e2-90183bf82b3f"
+        },
+        {
+          "flow_run_id": "73213972-f172-4d97-a229-63ddf7e98464",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:15:17.462Z",
+          "trace_id": "9e32d6c2-81d5-4726-9777-684273bf3242"
+        },
+        {
+          "flow_run_id": "ff2eacd2-6422-4778-a5b9-535d49a85579",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:14:11.346Z",
+          "trace_id": "ebc4f3ee-4478-4ce7-bdbc-fe4191738f86"
+        },
+        {
+          "flow_run_id": "88550407-7c26-4fd6-b1e4-1b8d8a95414a",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:14:01.871Z",
+          "trace_id": "f43cd95f-18ae-42f0-a62e-996fc94ff13a"
+        },
+        {
+          "flow_run_id": "2b11f80b-5330-4b11-81a7-e7ae2471abce",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:12:21.785Z",
+          "trace_id": "e62aa60f-66cc-4e29-bcc8-f3984f2e4cc1"
+        },
+        {
+          "flow_run_id": "4fd8dd75-33c9-4435-bed9-699d3b7061ca",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:08:26.713Z",
+          "trace_id": "240fa49c-5c29-4333-99b9-e9ea002920ed"
+        },
+        {
+          "flow_run_id": "23a18276-32c1-4d04-b534-dbd30797d73e",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:07:20.129Z",
+          "trace_id": "cd50083b-b2cd-409f-9f7a-89db3de79155"
+        },
+        {
+          "flow_run_id": "8ed2631f-9a52-4e21-97cb-6fd9757f5f0e",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:07:12.916Z",
+          "trace_id": "96647f69-8889-4b78-be87-66a1c5f06023"
+        },
+        {
+          "flow_run_id": "c62bcaf7-5e0f-4485-a96e-633be8675389",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:06:15.786Z",
+          "trace_id": "46cbd66d-6c8c-4613-8c2b-a69e80fd9c20"
+        },
+        {
+          "flow_run_id": "3d0a3b2d-6645-4564-a5c0-015e8fa4d21f",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T03:02:40.729Z",
+          "trace_id": "72a560c3-b267-4ec3-adc8-4467d8391cc1"
+        },
+        {
+          "flow_run_id": "ac396773-0684-4f59-942c-e7f9dca9dfbb",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T02:59:57.313Z",
+          "trace_id": "34f8c594-2025-4233-b51f-ca81ae38b8bc"
+        },
+        {
+          "flow_run_id": "d923454e-2752-4508-8ccc-11bbed4c446b",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T02:57:11.774Z",
+          "trace_id": "76d8154e-a4ee-458e-9197-03bcc86dcf4e"
+        },
+        {
+          "flow_run_id": "cca8bf54-991d-468f-86f5-a69a8fa7debe",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T02:42:07.200Z",
+          "trace_id": "2c1b61f7-037c-4f87-a54d-f4e0c2fbacd9"
+        },
+        {
+          "flow_run_id": "6d6c156c-6fad-45fb-a7e9-0f11e4a9680b",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T02:26:34.428Z",
+          "trace_id": "5be43c7b-b110-4cac-8e94-2e59b637c728"
+        },
+        {
+          "flow_run_id": "27c45daf-30e0-4361-8440-2317f843a707",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T02:10:56.479Z",
+          "trace_id": "7e383e34-5978-4e71-8ad8-f1969215ac4f"
+        },
+        {
+          "flow_run_id": "0aca3973-717e-4f3d-ae08-1a13371e9d29",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T01:55:49.128Z",
+          "trace_id": "427e0a95-6ae4-4c30-a096-2d8415fcc47e"
+        },
+        {
+          "flow_run_id": "14b99fa7-cc19-478c-aac8-d1c749e71dd2",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T01:40:42.216Z",
+          "trace_id": "e7dd398e-9210-48ff-b97d-6efceb6a4a06"
+        },
+        {
+          "flow_run_id": "0c964e00-6827-466e-b47c-b6990ecbbb1c",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T01:25:18.982Z",
+          "trace_id": "3998ff13-30ab-47aa-a5dc-59a47a614a32"
+        },
+        {
+          "flow_run_id": "3cf130e2-6507-4410-b4a5-5b4f871de0bd",
+          "trigger_name": "smoke.flow.callback",
+          "status": "accepted",
+          "completed_at": "2026-05-09T01:10:07.308Z",
+          "trace_id": "0abf0595-7bd5-4fc0-b42f-52d691b796ae"
+        }
+      ],
+      "meta": {
+        "pagination": {
+          "page": 1,
+          "page_size": 20
+        },
+        "filters": {
+          "from": null,
+          "to": null
+        }
+      },
+      "error": null,
+      "trace_id": "687403e9-ad0c-4517-812b-984c13f80dff"
+    },
+    "governance_audit": {
+      "ok": true,
+      "data": [
+        {
+          "at": "2026-05-09T03:15:31.533Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "97d5fb87-65d7-4d26-95b9-b21356b85df5"
+        },
+        {
+          "at": "2026-05-09T03:15:31.363Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "1b2aeea0-a637-473c-9553-01b154bacd4a"
+        },
+        {
+          "at": "2026-05-09T03:15:31.050Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "0ca42118-4522-417a-8d70-b0f662f2837d"
+        },
+        {
+          "at": "2026-05-09T03:15:21.551Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "0bdb5f18-1395-4e76-8500-a553bb465d23"
+        },
+        {
+          "at": "2026-05-09T03:15:21.339Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "a01eda35-ddec-4a90-b7e2-90183bf82b3f"
+        },
+        {
+          "at": "2026-05-09T03:15:20.986Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "04a64cb9-1c03-4e62-ae62-429af7a20e53"
+        },
+        {
+          "at": "2026-05-09T03:15:17.684Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "ed9bdf13-b30c-4f38-ba3b-cbb2fe7087eb"
+        },
+        {
+          "at": "2026-05-09T03:15:17.507Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "9e32d6c2-81d5-4726-9777-684273bf3242"
+        },
+        {
+          "at": "2026-05-09T03:15:17.187Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "59ba9eb6-f580-4ad9-9dfb-9acc8e32ca01"
+        },
+        {
+          "at": "2026-05-09T03:14:11.567Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "3ee926fe-7af0-43b2-9941-02019aeb0787"
+        },
+        {
+          "at": "2026-05-09T03:14:11.390Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "ebc4f3ee-4478-4ce7-bdbc-fe4191738f86"
+        },
+        {
+          "at": "2026-05-09T03:14:11.058Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "85b448b7-ca42-40cc-a87f-ad4c79d16b56"
+        },
+        {
+          "at": "2026-05-09T03:14:02.098Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "805084c1-d73f-4b54-a661-cb5013cf8de8"
+        },
+        {
+          "at": "2026-05-09T03:14:01.920Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "f43cd95f-18ae-42f0-a62e-996fc94ff13a"
+        },
+        {
+          "at": "2026-05-09T03:14:01.537Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "03fd80f5-315b-438e-ad11-9db6f961dc39"
+        },
+        {
+          "at": "2026-05-09T03:12:22.027Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "11540c4b-ff8a-4434-97ec-6005181eb23b"
+        },
+        {
+          "at": "2026-05-09T03:12:21.831Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "e62aa60f-66cc-4e29-bcc8-f3984f2e4cc1"
+        },
+        {
+          "at": "2026-05-09T03:12:21.485Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "4382480f-34db-4435-8c45-d8ea9feeb0a3"
+        },
+        {
+          "at": "2026-05-09T03:08:26.943Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "e16208e2-0c54-4d91-a55a-2bd7cfb65201"
+        },
+        {
+          "at": "2026-05-09T03:08:26.758Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "240fa49c-5c29-4333-99b9-e9ea002920ed"
+        },
+        {
+          "at": "2026-05-09T03:08:26.318Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "c2484562-3b63-4482-98d8-0b66c0df7d1f"
+        },
+        {
+          "at": "2026-05-09T03:07:20.349Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "5139d9af-a71d-4a45-8a26-c037330ac574"
+        },
+        {
+          "at": "2026-05-09T03:07:20.175Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "cd50083b-b2cd-409f-9f7a-89db3de79155"
+        },
+        {
+          "at": "2026-05-09T03:07:19.832Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "395b0f39-8b1a-4399-81da-9bf96da63675"
+        },
+        {
+          "at": "2026-05-09T03:07:13.128Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "20d84fcf-3d1f-4765-9168-dac74305f185"
+        },
+        {
+          "at": "2026-05-09T03:07:12.960Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "96647f69-8889-4b78-be87-66a1c5f06023"
+        },
+        {
+          "at": "2026-05-09T03:07:12.523Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "34aecbe1-0ba7-4deb-b9fc-83e8b689d8ff"
+        },
+        {
+          "at": "2026-05-09T03:06:16.007Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "2fc5c586-726f-4774-85d5-ac932c3dac09"
+        },
+        {
+          "at": "2026-05-09T03:06:15.830Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "46cbd66d-6c8c-4613-8c2b-a69e80fd9c20"
+        },
+        {
+          "at": "2026-05-09T03:06:15.183Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "60f02062-34b1-46bb-abd6-5d5eb0c0a344"
+        },
+        {
+          "at": "2026-05-09T03:02:40.951Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "1fc169fd-3b6d-4f2c-9bdb-6c8b4c55bb17"
+        },
+        {
+          "at": "2026-05-09T03:02:40.777Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "72a560c3-b267-4ec3-adc8-4467d8391cc1"
+        },
+        {
+          "at": "2026-05-09T03:02:40.284Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "e6591aea-6f86-4ed2-9201-dd91d8505095"
+        },
+        {
+          "at": "2026-05-09T02:59:57.566Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "c27eb029-359a-4abc-9597-aa2472d1e75e"
+        },
+        {
+          "at": "2026-05-09T02:59:57.355Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "34f8c594-2025-4233-b51f-ca81ae38b8bc"
+        },
+        {
+          "at": "2026-05-09T02:59:56.748Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "b29a157e-42c6-47d3-b56d-e0dcc756c054"
+        },
+        {
+          "at": "2026-05-09T02:57:11.999Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "4b5f26ae-2715-4c3a-b248-9fd0a53c642b"
+        },
+        {
+          "at": "2026-05-09T02:57:11.821Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "76d8154e-a4ee-458e-9197-03bcc86dcf4e"
+        },
+        {
+          "at": "2026-05-09T02:57:11.490Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "57045aa8-865c-40c1-82b5-be95c9d13698"
+        },
+        {
+          "at": "2026-05-09T02:42:07.450Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "809cb5fe-21e9-4a9f-bab6-2e6740ad69ec"
+        },
+        {
+          "at": "2026-05-09T02:42:07.250Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "2c1b61f7-037c-4f87-a54d-f4e0c2fbacd9"
+        },
+        {
+          "at": "2026-05-09T02:42:06.887Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "5c12fe6e-b042-45c9-a81e-2e3296022238"
+        },
+        {
+          "at": "2026-05-09T02:26:35.016Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "278e720b-0f91-4e3d-a1f4-ff4987df4f76"
+        },
+        {
+          "at": "2026-05-09T02:26:34.470Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "5be43c7b-b110-4cac-8e94-2e59b637c728"
+        },
+        {
+          "at": "2026-05-09T02:26:33.849Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "a7df9a93-f137-41b8-8fb8-06f621c72fc6"
+        },
+        {
+          "at": "2026-05-09T02:10:56.710Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "0df24ff4-6c9a-46bd-a086-fdcfacf523f8"
+        },
+        {
+          "at": "2026-05-09T02:10:56.525Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "7e383e34-5978-4e71-8ad8-f1969215ac4f"
+        },
+        {
+          "at": "2026-05-09T02:10:56.119Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "975b455e-713a-461b-9238-a936c4fd4c6f"
+        },
+        {
+          "at": "2026-05-09T01:55:49.341Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "a8291ff3-dba5-457f-8283-bd71c3dd668a"
+        },
+        {
+          "at": "2026-05-09T01:55:49.171Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "427e0a95-6ae4-4c30-a096-2d8415fcc47e"
+        },
+        {
+          "at": "2026-05-09T01:55:48.806Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "5785f279-010e-4b8d-9964-25ec5eb129ff"
+        },
+        {
+          "at": "2026-05-09T01:40:42.439Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "7a4bb4ba-7351-4944-bda6-1ccf7e9a14e6"
+        },
+        {
+          "at": "2026-05-09T01:40:42.260Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "e7dd398e-9210-48ff-b97d-6efceb6a4a06"
+        },
+        {
+          "at": "2026-05-09T01:40:41.806Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "6d258f46-3afa-482f-9730-be1bd8be5874"
+        },
+        {
+          "at": "2026-05-09T01:25:19.213Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "67001d0f-1a7b-4d54-8801-2c3fe957ad64"
+        },
+        {
+          "at": "2026-05-09T01:25:19.027Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "3998ff13-30ab-47aa-a5dc-59a47a614a32"
+        },
+        {
+          "at": "2026-05-09T01:25:18.599Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "e41cf78e-b0ba-43c8-9ae7-a1fc41916b03"
+        },
+        {
+          "at": "2026-05-09T01:10:07.534Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "5fa70268-3d24-48b3-9f1d-dbc25d05fa5e"
+        },
+        {
+          "at": "2026-05-09T01:10:07.352Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "0abf0595-7bd5-4fc0-b42f-52d691b796ae"
+        },
+        {
+          "at": "2026-05-09T01:10:06.953Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "f7f70623-2305-4dd0-bd0e-1a5672d9d150"
+        },
+        {
+          "at": "2026-05-08T23:35:20.523Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "0e124e26-a4c8-41fc-9799-b312dc5616cd"
+        },
+        {
+          "at": "2026-05-08T23:35:20.361Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "45a59090-8ae3-443b-be01-691883ff01f9"
+        },
+        {
+          "at": "2026-05-08T23:35:19.953Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "080fb0b7-d9e0-4666-a4d8-48be4511da42"
+        },
+        {
+          "at": "2026-05-08T23:20:16.705Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "34e1db4c-f875-4319-ad9e-a4dec05bc263"
+        },
+        {
+          "at": "2026-05-08T23:20:16.510Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "d2cb4fcb-2630-4a59-a144-ded940e38ac3"
+        },
+        {
+          "at": "2026-05-08T23:20:16.146Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "e45b3668-8f02-419f-b144-21f3e8277e5e"
+        },
+        {
+          "at": "2026-05-08T23:05:12.626Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "99c62dcb-126d-4931-b106-56c52282d823"
+        },
+        {
+          "at": "2026-05-08T23:05:12.445Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "04df46e6-a24c-4fb4-9cba-019a307619c8"
+        },
+        {
+          "at": "2026-05-08T23:05:12.099Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "ee574bf7-778f-42a7-9bbf-a614f872c6aa"
+        },
+        {
+          "at": "2026-05-08T22:50:06.986Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "96e4833d-bcc3-4fbc-9c29-23139220a6d6"
+        },
+        {
+          "at": "2026-05-08T22:50:06.793Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "3e0ba297-3a84-48c9-a171-f89b28193380"
+        },
+        {
+          "at": "2026-05-08T22:50:06.208Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "5b725d1a-bf73-4b87-acd2-8a78879da3c1"
+        },
+        {
+          "at": "2026-05-08T22:34:55.579Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "067244e6-4152-4c9e-b6c0-a56c850ae6e4"
+        },
+        {
+          "at": "2026-05-08T22:34:55.409Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "f5e3c3a4-a75e-4aed-8892-5e5647e9a3b6"
+        },
+        {
+          "at": "2026-05-08T22:34:54.957Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "5c0652e2-aa96-423e-96e1-27ab8b38f34a"
+        },
+        {
+          "at": "2026-05-08T22:19:39.592Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "02b84ec7-3624-4bac-8d48-a7abdd6cd5bf"
+        },
+        {
+          "at": "2026-05-08T22:19:39.428Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "c39fbc4f-b253-4520-b841-6e74de6d6bee"
+        },
+        {
+          "at": "2026-05-08T22:19:38.819Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "89c5dfb3-3d27-41ab-952f-05a04b8357ca"
+        },
+        {
+          "at": "2026-05-08T22:04:27.709Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "103897fd-5c4b-41bc-a541-6b702ce719a4"
+        },
+        {
+          "at": "2026-05-08T22:04:27.530Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "581ad4a4-da24-4231-a59f-7458a5155895"
+        },
+        {
+          "at": "2026-05-08T22:04:27.223Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "0ebd250a-d881-4f0f-a688-4b7bbc0972ad"
+        },
+        {
+          "at": "2026-05-08T21:49:21.009Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "3403bdf1-5bcc-4480-91db-e5c759b41d16"
+        },
+        {
+          "at": "2026-05-08T21:49:20.831Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "4df33ea3-680c-45aa-a211-9d036735ad7e"
+        },
+        {
+          "at": "2026-05-08T21:49:20.441Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "27e8de7b-1e0b-4e01-97c8-5431121e5605"
+        },
+        {
+          "at": "2026-05-08T21:34:16.017Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "87e6b28e-2f3d-431a-b492-0ef7b3c6cff2"
+        },
+        {
+          "at": "2026-05-08T21:34:15.838Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "ba206a57-b6b6-40f0-b860-c09717ba77cc"
+        },
+        {
+          "at": "2026-05-08T21:34:15.407Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "69d1aeea-6160-4280-86a3-b8c0c52205ff"
+        },
+        {
+          "at": "2026-05-08T21:19:07.583Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "9d389891-acf8-402a-9c31-159f9533a56f"
+        },
+        {
+          "at": "2026-05-08T21:19:07.345Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "b78bf11d-49c5-4240-9539-5cd3a002f3c2"
+        },
+        {
+          "at": "2026-05-08T21:19:06.974Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "020bdc67-36ad-4375-b6bf-160504f0141d"
+        },
+        {
+          "at": "2026-05-08T21:03:44.405Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "cd1cc775-db44-4cc8-b86a-be61b9b6e900"
+        },
+        {
+          "at": "2026-05-08T21:03:44.218Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "79683bc9-4fef-4db8-9099-89af43b31a3e"
+        },
+        {
+          "at": "2026-05-08T21:03:43.634Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "6ce3008f-95e5-4aed-b19b-56370c1024c0"
+        },
+        {
+          "at": "2026-05-08T20:48:27.625Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "46067b3d-84d0-45d0-b042-a7dff3c959c6"
+        },
+        {
+          "at": "2026-05-08T20:48:27.435Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "077e95d6-ee98-4d10-bad3-9a9b427b9100"
+        },
+        {
+          "at": "2026-05-08T20:48:27.084Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "319db64b-7d2f-4eac-9ddd-7c9ae465ab03"
+        },
+        {
+          "at": "2026-05-08T20:33:19.740Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "278531cd-45be-469a-ac2c-4d53b20b5508"
+        },
+        {
+          "at": "2026-05-08T20:33:19.563Z",
+          "route": "/v1/flow/dispatch",
+          "action": "flow_dispatch",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "463281ca-8451-494a-b447-0716ab47a53b"
+        },
+        {
+          "at": "2026-05-08T20:33:19.192Z",
+          "route": "/v1/events/ingest",
+          "action": "event_ingest",
+          "actor": "member:demo:admin@iai.one",
+          "role": "root",
+          "result": "success",
+          "traceId": "6225459f-c2fc-4c01-9011-5d04c58031ce"
+        },
+        {
+          "at": "2026-05-08T20:18:05.633Z",
+          "route": "/v1/flow/callback",
+          "action": "flow_callback",
+          "actor": "flow-system",
+          "role": "operator",
+          "result": "success",
+          "traceId": "2e6c0fb2-b880-4b57-a536-9cefdd8aca3e"
+        }
+      ],
+      "meta": {
+        "phase": "workers-contract",
+        "status": "d1-audit"
+      },
+      "error": null,
+      "trace_id": "2e870020-66db-4a39-965e-2f5a9e492026"
+    },
+    "strict_mode": true
+  }
+}
