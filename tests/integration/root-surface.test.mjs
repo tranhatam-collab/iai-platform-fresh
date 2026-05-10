@@ -15,6 +15,12 @@ test("root health route exposes constitutional shell wiring", async () => {
   assert.equal(payload.ok, true);
   assert.equal(payload.data.service, "iai-root");
   assert.equal(payload.data.portal_url, "https://home.iai.one");
+  assert.equal(payload.data.oauth[0].provider, "google");
+  assert.equal(payload.data.oauth[0].redirectUri, "https://iai.one/auth/google/callback");
+  assert.equal(payload.data.oauth[0].configured, false);
+  assert.equal(payload.data.oauth[1].provider, "apple");
+  assert.equal(payload.data.oauth[1].redirectUri, "https://iai.one/auth/apple/callback");
+  assert.equal(payload.data.oauth[1].configured, false);
   assert.equal(payload.data.web_surface_enabled, false);
   assert.equal(payload.data.web_url, null);
 });
@@ -55,6 +61,90 @@ test("root supports explicit english rendering", async () => {
   assert.match(html, /Constitutional trust layer/);
   assert.match(html, /Each surface performs only its proper role/);
   assert.match(html, /Legal entity: Angel Edu Tam Foundation Inc/);
+});
+
+test("root login page lists Google and Apple redirect URIs", async () => {
+  const response = await dispatchToHandler(
+    createRootRequestHandler({
+      appleClientId: "one.iai.web",
+      googleClientId: "google-client-id.apps.googleusercontent.com"
+    }),
+    {
+      url: "/login"
+    }
+  );
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, /Đăng nhập vào IAI/);
+  assert.match(html, /Continue with Google ID/);
+  assert.match(html, /Continue with Apple ID/);
+  assert.match(html, /https:\/\/iai\.one\/auth\/google\/callback/);
+  assert.match(html, /https:\/\/iai\.one\/auth\/apple\/callback/);
+});
+
+test("root Google OAuth start redirects with state cookie and exact callback", async () => {
+  const response = await dispatchToHandler(
+    createRootRequestHandler({
+      authCookieDomain: null,
+      googleClientId: "google-client-id.apps.googleusercontent.com"
+    }),
+    {
+      url: "/auth/google/start"
+    }
+  );
+  const location = response.headers.get("location");
+  const cookie = response.headers.get("set-cookie");
+
+  assert.equal(response.status, 302);
+  assert.ok(location);
+  assert.ok(cookie);
+  const redirect = new URL(location);
+  assert.equal(redirect.origin + redirect.pathname, "https://accounts.google.com/o/oauth2/v2/auth");
+  assert.equal(redirect.searchParams.get("client_id"), "google-client-id.apps.googleusercontent.com");
+  assert.equal(redirect.searchParams.get("redirect_uri"), "https://iai.one/auth/google/callback");
+  assert.equal(redirect.searchParams.get("response_type"), "code");
+  assert.equal(redirect.searchParams.get("scope"), "openid email profile");
+  assert.match(cookie, /iai_oauth_state_google=/);
+});
+
+test("root Apple OAuth start redirects with state cookie and exact callback", async () => {
+  const response = await dispatchToHandler(
+    createRootRequestHandler({
+      appleClientId: "one.iai.web",
+      authCookieDomain: null
+    }),
+    {
+      url: "/auth/apple/start"
+    }
+  );
+  const location = response.headers.get("location");
+  const cookie = response.headers.get("set-cookie");
+
+  assert.equal(response.status, 302);
+  assert.ok(location);
+  assert.ok(cookie);
+  const redirect = new URL(location);
+  assert.equal(redirect.origin + redirect.pathname, "https://appleid.apple.com/auth/authorize");
+  assert.equal(redirect.searchParams.get("client_id"), "one.iai.web");
+  assert.equal(redirect.searchParams.get("redirect_uri"), "https://iai.one/auth/apple/callback");
+  assert.equal(redirect.searchParams.get("response_mode"), "form_post");
+  assert.equal(redirect.searchParams.get("scope"), "name email");
+  assert.match(cookie, /iai_oauth_state_apple=/);
+});
+
+test("root OAuth callback validates state before accepting code", async () => {
+  const response = await dispatchToHandler(createRootRequestHandler(), {
+    headers: {
+      cookie: "iai_oauth_state_google=state123"
+    },
+    url: "/auth/google/callback?code=code123&state=state123"
+  });
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(html, /Callback đã sẵn sàng/);
+  assert.match(html, /Authorization code accepted/);
 });
 
 test("root can explicitly re-enable the web surface when deploy truth is ready", async () => {

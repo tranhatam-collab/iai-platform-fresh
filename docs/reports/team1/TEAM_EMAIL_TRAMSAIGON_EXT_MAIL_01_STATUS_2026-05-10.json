@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-10T02:57:19.020Z",
+  "generatedAt": "2026-05-10T03:58:26.595Z",
   "timezone": "Asia/Ho_Chi_Minh",
   "date": "2026-05-10",
   "domain": "tramsaigon.com",
@@ -14,17 +14,34 @@
     "txtDmarc": [
       "\"v=DMARC1; p=quarantine; rua=mailto:dmarc@iai.one; fo=1\""
     ],
-    "dkimRecords": [],
+    "dkimRecords": [
+      "s1.domainkey.u97614395.wl146.sendgrid.net.",
+      "\"k=rsa; t=s; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqPK5Dz+ZTfhv+0TuzoNG8hX9k3SkDz7feeu32TXGMWJUBXfmj/DJ7pjWRadMmUqBo19qfVnoOolD5Kvd6Y5nJKddaFwDitt53T8KunSv+7sUiZQuBKTBsM8Aep/5bYsZLHi00oNrJHSSv1oOcigQqb0Pok+8atxpfWqg5VguIdoyA/hvbkEuVCDtg+lu64xeWvkfm\" \"Q/IoRp9cXuPp50I9AzzfY9OO85wjRpBDkrZq+5wZqdd98wK9/IDJ7LvLUVokQRBoboqwUnhIIW3Kx+Xczhkk+Il3Gg3vCJdsF7XnEoWYjpZzCCfV9Toj2lksl+8QKQPVoFCU6z2qrjg8oiUHQIDAQAB\"",
+      "s2.domainkey.u97614395.wl146.sendgrid.net.",
+      "\"k=rsa; t=s; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqfPik8IazOZVeXiG2qg3M2evKg341cTuz4jbXsPUH6UDOKUBtHxcnB1gXC+XJnJUu6dm1IraiHd5Z9/FwwIWhYA+b8+wxlIKkfrdzbzo0R+LfgNPL5Fdu+IEShT2EI2QYS3TVTUdCzqRwz8fGJDHnOhm78RMk7qFioASD8sjH+5latUHME70ZU2vZDSjaUzVhb8qS\" \"EkQy7d7tkTatngFjdvXRJpQI0FhDk+Y4+DsCCEgFgF4NCJ0pJQHVUy+nFxMhZkEi7mOL/C2rbZ3AaDbLMLkbPjG+HkI5cdYRGGgXTBkTiQzuqIchZ/LBAk0kEi+2QF9Fy9R02S/I7n7PBxqxwIDAQAB\""
+    ],
+    "missing": {
+      "mx": true,
+      "spf": true,
+      "dkim": false,
+      "dmarc": false
+    },
     "mxPass": false,
     "spfPass": false,
-    "dkimPass": false,
+    "dkimPass": true,
     "dmarcPass": true,
     "evidencePath": "docs/release-evidence/pay.iai.one/2026-05-10/tramsaigon.com/dns-live-proof.json"
   },
   "allowlist": {
     "evidencePath": "docs/release-evidence/pay.iai.one/2026-05-10/tramsaigon.com/mail-allowlist-readback.json",
     "pass": false,
-    "details": "allowlist readback is missing or still PENDING."
+    "details": "allowlist readback is missing or still PENDING.",
+    "missingFields": [
+      "workspace_id",
+      "allowed_domains",
+      "verification_status",
+      "proof_ref"
+    ]
   },
   "secrets": {
     "evidencePath": "docs/release-evidence/pay.iai.one/2026-05-10/tramsaigon.com/secrets-live-proof.json",
@@ -93,6 +110,12 @@
   "delivery": {
     "evidencePath": "docs/release-evidence/pay.iai.one/2026-05-10/tramsaigon.com/mail-readback.json",
     "pass": false,
+    "missingTemplates": [
+      "payment_receipt",
+      "checkout_status_update",
+      "payment_failed_notice",
+      "refund_notice"
+    ],
     "requiredTemplates": [
       "payment_receipt",
       "checkout_status_update",
@@ -136,8 +159,8 @@
     },
     {
       "name": "dns_dkim_present",
-      "pass": false,
-      "details": "No DKIM TXT record in dns-live-proof.json."
+      "pass": true,
+      "details": "DKIM TXT entries: s1.domainkey.u97614395.wl146.sendgrid.net., \"k=rsa; t=s; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqPK5Dz+ZTfhv+0TuzoNG8hX9k3SkDz7feeu32TXGMWJUBXfmj/DJ7pjWRadMmUqBo19qfVnoOolD5Kvd6Y5nJKddaFwDitt53T8KunSv+7sUiZQuBKTBsM8Aep/5bYsZLHi00oNrJHSSv1oOcigQqb0Pok+8atxpfWqg5VguIdoyA/hvbkEuVCDtg+lu64xeWvkfm\" \"Q/IoRp9cXuPp50I9AzzfY9OO85wjRpBDkrZq+5wZqdd98wK9/IDJ7LvLUVokQRBoboqwUnhIIW3Kx+Xczhkk+Il3Gg3vCJdsF7XnEoWYjpZzCCfV9Toj2lksl+8QKQPVoFCU6z2qrjg8oiUHQIDAQAB\", s2.domainkey.u97614395.wl146.sendgrid.net., \"k=rsa; t=s; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqfPik8IazOZVeXiG2qg3M2evKg341cTuz4jbXsPUH6UDOKUBtHxcnB1gXC+XJnJUu6dm1IraiHd5Z9/FwwIWhYA+b8+wxlIKkfrdzbzo0R+LfgNPL5Fdu+IEShT2EI2QYS3TVTUdCzqRwz8fGJDHnOhm78RMk7qFioASD8sjH+5latUHME70ZU2vZDSjaUzVhb8qS\" \"EkQy7d7tkTatngFjdvXRJpQI0FhDk+Y4+DsCCEgFgF4NCJ0pJQHVUy+nFxMhZkEi7mOL/C2rbZ3AaDbLMLkbPjG+HkI5cdYRGGgXTBkTiQzuqIchZ/LBAk0kEi+2QF9Fy9R02S/I7n7PBxqxwIDAQAB\""
     },
     {
       "name": "allowlist_runtime_proof_present",

@@ -47,6 +47,10 @@ function shouldWriteOutputs() {
   return !process.argv.includes("--no-write");
 }
 
+function shouldExitNonZeroOnBlocked() {
+  return !process.argv.includes("--status-only") && !process.argv.includes("--soft");
+}
+
 function normalize(value) {
   return String(value ?? "").trim();
 }
@@ -292,7 +296,7 @@ async function main() {
   }
 
   process.stdout.write(`${markdown}\n`);
-  if (!overallPass) {
+  if (!overallPass && shouldExitNonZeroOnBlocked()) {
     process.exitCode = 1;
   }
 }

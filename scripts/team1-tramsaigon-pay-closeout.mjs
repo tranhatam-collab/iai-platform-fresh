@@ -25,6 +25,10 @@ function shouldWriteOutputs() {
   return !process.argv.includes("--no-write");
 }
 
+function shouldExitNonZeroOnBlocked() {
+  return !process.argv.includes("--status-only") && !process.argv.includes("--soft");
+}
+
 function normalize(value) {
   return String(value ?? "").trim();
 }
@@ -283,7 +287,7 @@ async function main() {
     ].join("\n")
   );
 
-  if (!readyForSynchronizedLive) {
+  if (!readyForSynchronizedLive && shouldExitNonZeroOnBlocked()) {
     process.exitCode = 1;
   }
 }

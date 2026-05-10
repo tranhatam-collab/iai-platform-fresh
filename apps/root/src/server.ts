@@ -1,10 +1,40 @@
+import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { resolveLocale, t, type Locale } from "./i18n.js";
-import { renderRootHome, renderRootNotFound, type RootRenderConfig } from "./render.js";
+import {
+  renderRootAuthCallback,
+  renderRootHome,
+  renderRootLogin,
+  renderRootNotFound,
+  type RootAuthProviderStatus,
+  type RootRenderConfig
+} from "./render.js";
 
-export interface RootServerOptions extends Partial<RootRenderConfig> {}
+export interface RootServerOptions extends Partial<RootRenderConfig> {
+  appleClientId?: string;
+  authBaseUrl?: string;
+  authCookieDomain?: string;
+  googleClientId?: string;
+}
 
-interface ResolvedRootConfig extends RootRenderConfig {}
+interface ResolvedRootConfig extends RootRenderConfig {
+  authBaseUrl: string;
+  authCookieDomain: string | null;
+  oauth: {
+    apple: OAuthProviderConfig;
+    google: OAuthProviderConfig;
+  };
+}
+
+interface OAuthProviderConfig {
+  authorizationUrl: string;
+  clientId: string | null;
+  cookieName: string;
+  provider: "apple" | "google";
+  redirectPath: string;
+  responseMode: "form_post" | "query";
+  scope: string;
+}
 
 export function createRootServer(options: RootServerOptions = {}): Server {
   return createServer(createRootRequestHandler(options));
@@ -19,14 +49,49 @@ export function createRootRequestHandler(options: RootServerOptions = {}) {
 }
 
 function resolveConfig(options: RootServerOptions): ResolvedRootConfig {
+  const authBaseUrl = normalizeBaseUrl(
+    options.authBaseUrl ?? process.env.ROOT_AUTH_BASE_URL ?? "https://iai.one"
+  );
+  const authCookieDomain = normalizeOptionalString(
+    options.authCookieDomain ?? process.env.ROOT_AUTH_COOKIE_DOMAIN ?? ".iai.one"
+  );
+  const googleClientId = normalizeOptionalString(
+    options.googleClientId ?? process.env.ROOT_GOOGLE_CLIENT_ID
+  );
+  const appleClientId = normalizeOptionalString(
+    options.appleClientId ?? process.env.ROOT_APPLE_CLIENT_ID
+  );
+
   return {
     appUrl: options.appUrl ?? process.env.ROOT_APP_URL ?? "https://app.iai.one",
+    authBaseUrl,
+    authCookieDomain,
     dashUrl: options.dashUrl ?? process.env.ROOT_DASH_URL ?? "https://dash.iai.one",
     developerUrl:
       options.developerUrl ?? process.env.ROOT_DEVELOPER_URL ?? "https://developer.iai.one",
     docsUrl: options.docsUrl ?? process.env.ROOT_DOCS_URL ?? "https://docs.iai.one",
     flowUrl: options.flowUrl ?? process.env.ROOT_FLOW_URL ?? "https://flow.iai.one",
     nftUrl: options.nftUrl ?? process.env.ROOT_NFT_URL ?? "https://nft.iai.one",
+    oauth: {
+      apple: {
+        authorizationUrl: "https://appleid.apple.com/auth/authorize",
+        clientId: appleClientId,
+        cookieName: "iai_oauth_state_apple",
+        provider: "apple",
+        redirectPath: "/auth/apple/callback",
+        responseMode: "form_post",
+        scope: "name email"
+      },
+      google: {
+        authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        clientId: googleClientId,
+        cookieName: "iai_oauth_state_google",
+        provider: "google",
+        redirectPath: "/auth/google/callback",
+        responseMode: "query",
+        scope: "openid email profile"
+      }
+    },
     portalUrl: options.portalUrl ?? process.env.ROOT_PORTAL_URL ?? "https://home.iai.one",
     webSurfaceEnabled: parseBooleanFlag(
       options.webSurfaceEnabled,
@@ -45,8 +110,51 @@ async function handleRequest(
   const method = request.method ?? "GET";
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
+  const authProviderStatuses = getAuthProviderStatuses(config);
 
   try {
+    if (isOAuthStartPath(url.pathname)) {
+      if (method !== "GET") {
+        respondJson(
+          response,
+          405,
+          {
+            ok: false,
+            error: {
+              code: "METHOD_NOT_ALLOWED",
+              message: t(locale, "root.error.method")
+            }
+          },
+          locale
+        );
+        return;
+      }
+
+      beginOAuth(response, config, url.pathname, locale);
+      return;
+    }
+
+    if (isOAuthCallbackPath(url.pathname)) {
+      if (method !== "GET" && method !== "POST") {
+        respondJson(
+          response,
+          405,
+          {
+            ok: false,
+            error: {
+              code: "METHOD_NOT_ALLOWED",
+              message: t(locale, "root.error.method")
+            }
+          },
+          locale
+        );
+        return;
+      }
+
+      await completeOAuthCallback(request, response, config, url, locale);
+      return;
+    }
+
     if (method !== "GET") {
       respondJson(
         response,
@@ -76,6 +184,7 @@ async function handleRequest(
             docs_url: config.docsUrl,
             flow_url: config.flowUrl,
             nft_url: config.nftUrl,
+            oauth: authProviderStatuses,
             portal_url: config.portalUrl,
             service: "iai-root",
             status: "ok",
@@ -85,6 +194,11 @@ async function handleRequest(
         },
         locale
       );
+      return;
+    }
+
+    if (url.pathname === "/login") {
+      respondHtml(response, 200, renderRootLogin(config, locale, authProviderStatuses), locale);
       return;
     }
 
@@ -127,6 +241,120 @@ async function handleRequest(
   }
 }
 
+function beginOAuth(
+  response: ServerResponse,
+  config: ResolvedRootConfig,
+  pathname: string,
+  locale: Locale
+): void {
+  const provider = pathname === "/auth/apple/start" ? config.oauth.apple : config.oauth.google;
+
+  if (!provider.clientId) {
+    respondJson(
+      response,
+      503,
+      {
+        ok: false,
+        error: {
+          code: "OAUTH_PROVIDER_NOT_CONFIGURED",
+          message:
+            provider.provider === "apple"
+              ? "ROOT_APPLE_CLIENT_ID is not configured for iai.one."
+              : "ROOT_GOOGLE_CLIENT_ID is not configured for iai.one."
+        }
+      },
+      locale
+    );
+    return;
+  }
+
+  const state = createStateToken();
+  const redirectUri = new URL(provider.redirectPath, config.authBaseUrl).toString();
+  const authorizationUrl = new URL(provider.authorizationUrl);
+  authorizationUrl.searchParams.set("client_id", provider.clientId);
+  authorizationUrl.searchParams.set("redirect_uri", redirectUri);
+  authorizationUrl.searchParams.set("response_type", "code");
+  authorizationUrl.searchParams.set("scope", provider.scope);
+  authorizationUrl.searchParams.set("state", state);
+
+  if (provider.provider === "google") {
+    authorizationUrl.searchParams.set("access_type", "offline");
+    authorizationUrl.searchParams.set("include_granted_scopes", "true");
+    authorizationUrl.searchParams.set("nonce", createStateToken());
+  } else {
+    authorizationUrl.searchParams.set("response_mode", provider.responseMode);
+  }
+
+  response.statusCode = 302;
+  response.setHeader("cache-control", "no-store");
+  response.setHeader("location", authorizationUrl.toString());
+  response.setHeader("set-cookie", buildStateCookie(provider.cookieName, state, config.authCookieDomain));
+  response.end();
+}
+
+async function completeOAuthCallback(
+  request: IncomingMessage,
+  response: ServerResponse,
+  config: ResolvedRootConfig,
+  url: URL,
+  locale: Locale
+): Promise<void> {
+  const provider = url.pathname === "/auth/apple/callback" ? config.oauth.apple : config.oauth.google;
+  const params =
+    (request.method ?? "GET") === "POST"
+      ? new URLSearchParams(await readRequestBody(request))
+      : url.searchParams;
+  const cookies = parseCookies(normalizeHeaderValue(request.headers.cookie));
+  const expectedState = cookies[provider.cookieName] ?? "";
+  const receivedState = params.get("state") ?? "";
+  const error = params.get("error");
+  const code = params.get("code");
+
+  response.setHeader("set-cookie", expireStateCookie(provider.cookieName, config.authCookieDomain));
+
+  if (error) {
+    respondHtml(
+      response,
+      400,
+      renderRootAuthCallback(locale, provider.provider, "error", `Provider returned: ${error}`),
+      locale
+    );
+    return;
+  }
+
+  if (!expectedState || expectedState !== receivedState) {
+    respondHtml(
+      response,
+      400,
+      renderRootAuthCallback(locale, provider.provider, "error", "OAuth state did not match."),
+      locale
+    );
+    return;
+  }
+
+  if (!code) {
+    respondHtml(
+      response,
+      400,
+      renderRootAuthCallback(locale, provider.provider, "error", "OAuth code was missing."),
+      locale
+    );
+    return;
+  }
+
+  respondHtml(
+    response,
+    200,
+    renderRootAuthCallback(
+      locale,
+      provider.provider,
+      "ready",
+      "Authorization code accepted. Server token exchange can run after the provider secret is installed."
+    ),
+    locale
+  );
+}
+
 function respondHtml(response: ServerResponse, statusCode: number, html: string, locale: Locale): void {
   response.statusCode = statusCode;
   response.setHeader("cache-control", "no-store");
@@ -141,6 +369,109 @@ function respondJson(response: ServerResponse, statusCode: number, payload: unkn
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "application/json; charset=utf-8");
   response.end(JSON.stringify(payload));
+}
+
+function getAuthProviderStatuses(config: ResolvedRootConfig): RootAuthProviderStatus[] {
+  return [
+    {
+      configured: Boolean(config.oauth.google.clientId),
+      label: "Google ID",
+      provider: "google",
+      redirectUri: new URL(config.oauth.google.redirectPath, config.authBaseUrl).toString(),
+      startPath: "/auth/google/start"
+    },
+    {
+      configured: Boolean(config.oauth.apple.clientId),
+      label: "Apple ID",
+      provider: "apple",
+      redirectUri: new URL(config.oauth.apple.redirectPath, config.authBaseUrl).toString(),
+      startPath: "/auth/apple/start"
+    }
+  ];
+}
+
+function isOAuthStartPath(pathname: string): boolean {
+  return pathname === "/auth/google/start" || pathname === "/auth/apple/start";
+}
+
+function isOAuthCallbackPath(pathname: string): boolean {
+  return pathname === "/auth/google/callback" || pathname === "/auth/apple/callback";
+}
+
+function createStateToken(): string {
+  return randomBytes(24).toString("base64url");
+}
+
+function buildStateCookie(name: string, value: string, domain: string | null): string {
+  return [
+    `${name}=${value}`,
+    "Path=/auth",
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax",
+    "Max-Age=600",
+    domain ? `Domain=${domain}` : ""
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+function expireStateCookie(name: string, domain: string | null): string {
+  return [
+    `${name}=`,
+    "Path=/auth",
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax",
+    "Max-Age=0",
+    domain ? `Domain=${domain}` : ""
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+async function readRequestBody(request: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function parseCookies(cookieHeader: string | null): Record<string, string> {
+  const cookies: Record<string, string> = {};
+
+  if (!cookieHeader) {
+    return cookies;
+  }
+
+  for (const part of cookieHeader.split(";")) {
+    const [rawName, ...rawValue] = part.trim().split("=");
+    const name = rawName?.trim();
+
+    if (!name) {
+      continue;
+    }
+
+    cookies[name] = decodeURIComponent(rawValue.join("="));
+  }
+
+  return cookies;
+}
+
+function normalizeBaseUrl(value: string): string {
+  const url = new URL(value);
+  url.pathname = "/";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+function normalizeOptionalString(value: string | null | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
 }
 
 function respondSvg(response: ServerResponse, statusCode: number, svg: string, locale: Locale): void {

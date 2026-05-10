@@ -19,6 +19,14 @@ export interface RootRenderConfig {
   webUrl: string;
 }
 
+export interface RootAuthProviderStatus {
+  configured: boolean;
+  label: string;
+  provider: "apple" | "google";
+  redirectUri: string;
+  startPath: string;
+}
+
 export function renderRootHome(config: RootRenderConfig, locale: Locale): string {
   return page(
     "/",
@@ -37,6 +45,7 @@ export function renderRootHome(config: RootRenderConfig, locale: Locale): string
           <a href="${escapeHtml(localizeExternalUrl(config.portalUrl, locale))}">${escapeHtml(t(locale, "nav.portal"))}</a>
           <a href="${escapeHtml(localizeExternalUrl(config.docsUrl, locale))}">${escapeHtml(t(locale, "nav.docs"))}</a>
           <a href="${escapeHtml(localizeExternalUrl(config.developerUrl, locale))}">${escapeHtml(t(locale, "nav.developer"))}</a>
+          <a href="${escapeHtml(buildLocalizedPath("/login", locale))}">${escapeHtml(t(locale, "nav.login"))}</a>
           <a href="${escapeHtml(localizeExternalUrl(config.dashUrl, locale))}">${escapeHtml(t(locale, "nav.dashboard"))}</a>
           ${renderLocaleSwitch(locale, "/")}
         </nav>
@@ -154,6 +163,115 @@ export function renderRootHome(config: RootRenderConfig, locale: Locale): string
   );
 }
 
+export function renderRootLogin(
+  config: RootRenderConfig,
+  locale: Locale,
+  providers: RootAuthProviderStatus[]
+): string {
+  const isVi = locale === "vi";
+
+  return page(
+    "/login",
+    locale,
+    isVi ? "Đăng nhập" : "Login",
+    `
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">${escapeHtml(t(locale, "surface.root.domain"))}</p>
+          <strong>${escapeHtml(isVi ? "Shared identity" : "Shared identity")}</strong>
+        </div>
+        <nav class="topnav" aria-label="Primary">
+          <a href="${escapeHtml(buildLocalizedPath("/", locale))}">${escapeHtml(t(locale, "nav.portal"))}</a>
+          <a href="${escapeHtml(localizeExternalUrl(config.docsUrl, locale))}">${escapeHtml(t(locale, "nav.docs"))}</a>
+          <a href="${escapeHtml(localizeExternalUrl(config.developerUrl, locale))}">${escapeHtml(t(locale, "nav.developer"))}</a>
+          ${renderLocaleSwitch(locale, "/login")}
+        </nav>
+      </header>
+
+      <main class="page-shell" id="main-content">
+        <section class="hero hero-simple">
+          <div class="hero-copy">
+            <p class="eyebrow">${escapeHtml(t(locale, "surface.root.domain"))}</p>
+            <h1>${escapeHtml(isVi ? "Đăng nhập vào IAI" : "Sign in to IAI")}</h1>
+            <p class="lede">${escapeHtml(
+              isVi
+                ? "Bắt đầu bằng Google ID hoặc Apple ID. Phiên đăng nhập dùng chung sẽ đi tiếp tới các bề mặt IAI sau khi provider key được cài vào môi trường deploy."
+                : "Start with Google ID or Apple ID. The shared session can carry into IAI surfaces after provider keys are installed in the deployment environment."
+            )}</p>
+            <div class="actions auth-actions">
+              ${providers.map((provider) => renderAuthButton(provider)).join("")}
+            </div>
+          </div>
+          <aside class="panel role-panel">
+            <p class="eyebrow">${escapeHtml(isVi ? "Redirect URI cần đăng ký" : "Redirect URIs to register")}</p>
+            <h2>${escapeHtml(isVi ? "Key không nằm trong code" : "Keys stay out of code")}</h2>
+            <ul class="stack-list">
+              ${providers
+                .map(
+                  (provider) =>
+                    `<li><strong>${escapeHtml(provider.label)}</strong>: <code>${escapeHtml(
+                      provider.redirectUri
+                    )}</code></li>`
+                )
+                .join("")}
+            </ul>
+          </aside>
+        </section>
+      </main>
+    `
+  );
+}
+
+export function renderRootAuthCallback(
+  locale: Locale,
+  provider: "apple" | "google",
+  status: "error" | "ready",
+  detail: string
+): string {
+  const isVi = locale === "vi";
+  const providerLabel = provider === "apple" ? "Apple ID" : "Google ID";
+
+  return page(
+    `/auth/${provider}/callback`,
+    locale,
+    isVi ? "Kết quả đăng nhập" : "Login result",
+    `
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">${escapeHtml(t(locale, "surface.root.domain"))}</p>
+          <strong>${escapeHtml(providerLabel)}</strong>
+        </div>
+        <nav class="topnav" aria-label="Primary">
+          <a href="${escapeHtml(buildLocalizedPath("/login", locale))}">${escapeHtml(isVi ? "Đăng nhập" : "Login")}</a>
+          ${renderLocaleSwitch(locale, `/auth/${provider}/callback`)}
+        </nav>
+      </header>
+      <main class="page-shell" id="main-content">
+        <section class="hero hero-simple">
+          <div class="hero-copy">
+            <p class="eyebrow">${escapeHtml(providerLabel)}</p>
+            <h1>${escapeHtml(
+              status === "ready"
+                ? isVi
+                  ? "Callback đã sẵn sàng"
+                  : "Callback is ready"
+                : isVi
+                  ? "Callback cần kiểm tra"
+                  : "Callback needs attention"
+            )}</h1>
+            <p class="lede">${escapeHtml(detail)}</p>
+            <div class="actions">
+              <a class="primary" href="${escapeHtml(buildLocalizedPath("/login", locale))}">${escapeHtml(
+                isVi ? "Quay lại đăng nhập" : "Back to login"
+              )}</a>
+            </div>
+          </div>
+        </section>
+      </main>
+    `
+  );
+}
+
 export function renderRootNotFound(locale: Locale, path: string): string {
   return page(
     path,
@@ -185,6 +303,16 @@ export function renderRootNotFound(locale: Locale, path: string): string {
       </main>
     `
   );
+}
+
+function renderAuthButton(provider: RootAuthProviderStatus): string {
+  const disabled = provider.configured ? "" : " is-disabled";
+  const href = provider.configured ? provider.startPath : "#";
+  const suffix = provider.configured ? "" : " · needs key";
+
+  return `<a class="primary auth-provider${disabled}" href="${escapeHtml(href)}" aria-disabled="${
+    provider.configured ? "false" : "true"
+  }">${escapeHtml(`Continue with ${provider.label}${suffix}`)}</a>`;
 }
 
 const surfaceIcons: Record<string, string> = {

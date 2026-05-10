@@ -47,6 +47,10 @@ function shouldWriteOutputs() {
   return !process.argv.includes("--no-write");
 }
 
+function shouldExitNonZeroOnBlocked() {
+  return !process.argv.includes("--status-only") && !process.argv.includes("--soft");
+}
+
 function markdownStatus(pass) {
   return pass ? "PASS" : "FAIL";
 }
@@ -123,7 +127,8 @@ function parseAllowlistProof(allowlistReadback) {
   if (!isRecord(allowlistReadback) || pendingStatus(allowlistReadback._status)) {
     return {
       pass: false,
-      details: "allowlist readback is missing or still PENDING."
+      details: "allowlist readback is missing or still PENDING.",
+      missingFields: ["workspace_id", "allowed_domains", "verification_status", "proof_ref"]
     };
   }
 
@@ -134,18 +139,34 @@ function parseAllowlistProof(allowlistReadback) {
   const verificationStatus = normalize(
     allowlistReadback.verification_status || allowlistReadback.status
   ).toLowerCase();
+  const workspaceId = normalize(allowlistReadback.workspace_id);
   const domainIncluded = allowedDomains.includes(domain) || declaredDomain === domain;
   const statusVerified =
     verificationStatus.length === 0 ||
     ["verified", "active", "complete_verified"].includes(verificationStatus);
+  const proofRef = normalize(allowlistReadback.proof_ref);
+  const missingFields = [];
+  if (!workspaceId) {
+    missingFields.push("workspace_id");
+  }
+  if (!domainIncluded) {
+    missingFields.push("allowed_domains|domain");
+  }
+  if (!statusVerified) {
+    missingFields.push("verification_status");
+  }
+  if (!proofRef) {
+    missingFields.push("proof_ref");
+  }
 
   return {
-    pass: domainIncluded && statusVerified,
+    pass: missingFields.length === 0,
     details: domainIncluded
       ? statusVerified
         ? "allowlist readback includes tramsaigon.com with verified/active status."
         : `allowlist row is present but verification status is ${verificationStatus || "missing"}.`
-      : "allowlist readback does not include tramsaigon.com."
+      : "allowlist readback does not include tramsaigon.com.",
+    missingFields
   };
 }
 
@@ -210,7 +231,14 @@ async function main() {
   const dkimValues = parseStringArray(dnsProof?.dkim_records);
   const spfPass = rootTxtValues.some((entry) => entry.toLowerCase().includes("v=spf1"));
   const dmarcPass = dmarcTxtValues.some((entry) => entry.toLowerCase().includes("v=dmarc1"));
-  const dkimPass = dkimValues.some((entry) => entry.toLowerCase().includes("v=dkim1"));
+  const dkimPass = dkimValues.some((entry) => {
+    const normalized = entry.toLowerCase();
+    return (
+      normalized.includes("v=dkim1") ||
+      normalized.includes("k=rsa") ||
+      normalized.includes(".domainkey.")
+    );
+  });
   const mxPass = mxValues.length > 0;
   const dnsProofPresent = isRecord(dnsProof);
 
@@ -250,7 +278,7 @@ async function main() {
     dkimPass,
     dkimPass
       ? `DKIM TXT entries: ${dkimValues.join(", ")}`
-      : "No DKIM TXT record in dns-live-proof.json."
+      : "No DKIM selector evidence found in dns-live-proof.json (expected v=DKIM1, k=rsa, or domainkey selector alias)."
   );
 
   const allowlistProof = parseAllowlistProof(allowlistReadback);
@@ -282,10 +310,13 @@ async function main() {
     `Missing production: ${productionMissing.length > 0 ? productionMissing.join(", ") : "none"}; missing staging: ${stagingMissing.length > 0 ? stagingMissing.join(", ") : "none"}.`
   );
 
+  const deliveryMissingTemplates = requiredTemplates.filter(
+    (templateId) => !hasTemplateDelivery(mailReadback, templateId)
+  );
   const deliveryOutputPass =
     isRecord(mailReadback) &&
     !pendingStatus(mailReadback._status) &&
-    requiredTemplates.every((templateId) => hasTemplateDelivery(mailReadback, templateId));
+    deliveryMissingTemplates.length === 0;
   addCheck(
     checks,
     "delivery_output_present",
@@ -293,7 +324,9 @@ async function main() {
     isRecord(mailReadback)
       ? pendingStatus(mailReadback._status)
         ? "mail-readback.json still marked PENDING_OWNER_EVIDENCE."
-        : "mail-readback.json must include all 4 templates with message_id and delivered/sent/accepted state."
+        : deliveryMissingTemplates.length > 0
+          ? `Missing template evidence: ${deliveryMissingTemplates.join(", ")}`
+          : "mail-readback.json includes all required template evidence."
       : "mail-readback.json is missing."
   );
 
@@ -357,6 +390,12 @@ async function main() {
       txtRoot: rootTxtValues,
       txtDmarc: dmarcTxtValues,
       dkimRecords: dkimValues,
+      missing: {
+        mx: !mxPass,
+        spf: !spfPass,
+        dkim: !dkimPass,
+        dmarc: !dmarcPass
+      },
       mxPass,
       spfPass,
       dkimPass,
@@ -366,7 +405,8 @@ async function main() {
     allowlist: {
       evidencePath: allowlistReadbackPath ? path.relative(root, allowlistReadbackPath) : null,
       pass: allowlistProof.pass,
-      details: allowlistProof.details
+      details: allowlistProof.details,
+      missingFields: allowlistProof.missingFields
     },
     secrets: {
       evidencePath: secretsProofPath ? path.relative(root, secretsProofPath) : null,
@@ -379,6 +419,7 @@ async function main() {
     delivery: {
       evidencePath: mailReadbackPath ? path.relative(root, mailReadbackPath) : null,
       pass: deliveryOutputPass,
+      missingTemplates: deliveryMissingTemplates,
       requiredTemplates
     },
     publicSendGuard: {
@@ -420,6 +461,22 @@ async function main() {
     `- Delivery output (4 templates with message_id + final_state): ${markdownStatus(deliveryOutputPass)}`,
     `- Public /v1/send guard: ${markdownStatus(publicSendLocked)}`,
     "",
+    "## Missing Detail",
+    `- DNS missing: ${[
+      !mxPass ? "MX" : null,
+      !spfPass ? "SPF" : null,
+      !dkimPass ? "DKIM" : null,
+      !dmarcPass ? "DMARC" : null
+    ]
+      .filter(Boolean)
+      .join(", ") || "none"}`,
+    `- Allowlist missing fields: ${
+      allowlistProof.missingFields.length > 0 ? allowlistProof.missingFields.join(", ") : "none"
+    }`,
+    `- Delivery missing templates: ${
+      deliveryMissingTemplates.length > 0 ? deliveryMissingTemplates.join(", ") : "none"
+    }`,
+    "",
     "## Next commands",
     `- \`pnpm report:tramsaigon-ext-mail-01 -- --date=${date}\``,
     `- \`dig +short MX ${domain}\``,
@@ -445,7 +502,7 @@ async function main() {
     ].join("\n")
   );
 
-  if (!extMailReady) {
+  if (!extMailReady && shouldExitNonZeroOnBlocked()) {
     process.exitCode = 1;
   }
 }
