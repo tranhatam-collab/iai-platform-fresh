@@ -1,0 +1,95 @@
+{
+  "scope": "team-email-smtp-wave1",
+  "status": "PENDING",
+  "operational_locks": {
+    "bcc_system": "OFF",
+    "public_send": "HEALTH_ONLY"
+  },
+  "clusters": {
+    "mailbox_alias_truth": {
+      "status": "PENDING",
+      "proof_refs": []
+    },
+    "inbound_routing_truth": {
+      "status": "PENDING",
+      "proof_refs": []
+    },
+    "gmail_proof": {
+      "status": "PENDING",
+      "proof_refs": []
+    },
+    "outlook_proof": {
+      "status": "PENDING",
+      "proof_refs": []
+    },
+    "internal_inbox_proof": {
+      "status": "PENDING",
+      "proof_refs": []
+    }
+  },
+  "wave1": {
+    "flows": {
+      "support_form_submission": {
+        "sender": "support@iai.one",
+        "recipients": ["tranhatam66@gmail.com", "tranhatam@gmail.com"],
+        "action_ref": "",
+        "message_id": "",
+        "messages_ref": "",
+        "message_events_ref": "",
+        "delivery_attempts_ref": "",
+        "db_or_log_ref": "",
+        "inbox_proof_refs": []
+      },
+      "contact_form_submission": {
+        "sender": "contact@iai.one",
+        "recipients": ["tranhatam66@gmail.com", "tranhatam@gmail.com"],
+        "action_ref": "",
+        "message_id": "",
+        "messages_ref": "",
+        "message_events_ref": "",
+        "delivery_attempts_ref": "",
+        "db_or_log_ref": "",
+        "inbox_proof_refs": []
+      },
+      "life_contact_briefing_request": {
+        "sender": "contact@iai.one",
+        "recipients": ["tranhatam66@gmail.com", "tranhatam@gmail.com"],
+        "action_ref": "",
+        "message_id": "",
+        "messages_ref": "",
+        "message_events_ref": "",
+        "delivery_attempts_ref": "",
+        "db_or_log_ref": "",
+        "inbox_proof_refs": []
+      },
+      "low_risk_internal_alert": {
+        "sender": "alerts@iai.one",
+        "recipients": ["tranhatam66@gmail.com", "tranhatam@gmail.com"],
+        "action_ref": "",
+        "message_id": "",
+        "messages_ref": "",
+        "message_events_ref": "",
+        "delivery_attempts_ref": "",
+        "db_or_log_ref": "",
+        "inbox_proof_refs": []
+      },
+      "low_volume_notification": {
+        "sender": "notifications@iai.one",
+        "recipients": ["tranhatam66@gmail.com", "tranhatam@gmail.com"],
+        "action_ref": "",
+        "message_id": "",
+        "messages_ref": "",
+        "message_events_ref": "",
+        "delivery_attempts_ref": "",
+        "db_or_log_ref": "",
+        "inbox_proof_refs": []
+      }
+    }
+  },
+  "notes": [
+    "Rule lock: founder/personal mailbox is not valid sender proof.",
+    "Wave 1 can only close with action + message_id + messages/message_events/delivery_attempts + DB/log + inbox proof.",
+    "2026-05-10: Reverted to PENDING after audit. The 2026-05-09 19:22 fill (status=COMPLETE_VERIFIED) was synthetic: gmail_proof refs were fabricated (the file's own notes admitted Gmail UI threads were not accessed in that session), outlook_proof was a policy-skip not an actual Outlook delivery, and the upstream mail.iai.one /v1/send 401 blocker recorded in MAIL_IAI_ONE_TRUTH_STATUS_2026-05-07.md (last updated 2026-05-07) had not been resolved. Fix plan COMPLETION_GAP_FIX_PLAN_2026-05-09.md §4 explicitly forbade editing this file without real proof from a working /v1/send session.",
+    "Real closeout requires: (a) mail.iai.one /v1/send returning 200 from a fresh API key, (b) 5 actual sends from each Wave 1 sender to both Gmail recipients, (c) capture of action/message/events/delivery refs from iai-mail-api + Postfix queue, (d) Gmail UI thread IDs from real inbox inspection, (e) updated MAIL_IAI_ONE_TRUTH_STATUS reflecting auth-resolved state."
+  ]
+}

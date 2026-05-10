@@ -1,0 +1,186 @@
+{
+  "generatedAt": "2026-05-10T08:22:29.081Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-05-09",
+  "evidencePath": "docs/reports/teamd/TRANHATAM_COM_PAYMENT_ACTIVATION_EVIDENCE_2026-05-09.json",
+  "gatePath": "docs/reports/team1/TEAM1_PAY_PROD_GATE_STATUS_2026-05-09.md",
+  "activationEvidenceComplete": false,
+  "checks": [
+    {
+      "name": "evidence_json_object",
+      "pass": true,
+      "details": "Evidence is a JSON object."
+    },
+    {
+      "name": "domain_locked_to_tranhatam",
+      "pass": true,
+      "details": "Domain is locked to tranhatam.com."
+    },
+    {
+      "name": "intake_row_locked",
+      "pass": true,
+      "details": "Intake row is SITE-INTAKE-100."
+    },
+    {
+      "name": "required_mailboxes_present",
+      "pass": true,
+      "details": "All required tranhatam.com mailbox identities are represented."
+    },
+    {
+      "name": "sender_policy_locked",
+      "pass": true,
+      "details": "Sender policy must keep receipts on pay@, billing/refund/failure on billing@, reply-to on support@, and forbid noreply as payment sender."
+    },
+    {
+      "name": "international_gateway_locked",
+      "pass": true,
+      "details": "International gateway lock must keep tranhatam.com dual-rail mapping and id_country currency policy."
+    },
+    {
+      "name": "runtime_bindings_represented",
+      "pass": true,
+      "details": "All required runtime bindings are represented."
+    },
+    {
+      "name": "payment_proof_fields_represented",
+      "pass": true,
+      "details": "All required payment proof fields are represented."
+    },
+    {
+      "name": "no_ready_for_live_while_gate_locked_or_evidence_missing",
+      "pass": true,
+      "details": "Evidence does not claim live readiness before gate and evidence are complete."
+    }
+  ],
+  "evidenceStatus": "PROOF_CHAIN_COMPLETE_GATE_LOCKED",
+  "gapClassification": "REAL_EVIDENCE_MISSING",
+  "gapReason": "Activation evidence fields are still incomplete.",
+  "liveClaimBlocked": true,
+  "mailboxEvidenceComplete": false,
+  "mailboxResults": [
+    {
+      "address": "pay@tranhatam.com",
+      "bindingConfirmed": true,
+      "inboundConfirmed": true,
+      "inboxProofPresent": false,
+      "present": true
+    },
+    {
+      "address": "billing@tranhatam.com",
+      "bindingConfirmed": true,
+      "inboundConfirmed": true,
+      "inboxProofPresent": false,
+      "present": true
+    },
+    {
+      "address": "support@tranhatam.com",
+      "bindingConfirmed": true,
+      "inboundConfirmed": true,
+      "inboxProofPresent": true,
+      "present": true
+    },
+    {
+      "address": "noreply@tranhatam.com",
+      "bindingConfirmed": true,
+      "inboundConfirmed": true,
+      "inboxProofPresent": false,
+      "present": true
+    }
+  ],
+  "missingMailboxEvidence": [
+    {
+      "address": "pay@tranhatam.com",
+      "missing": {
+        "row": false,
+        "binding": false,
+        "inboundRouting": false,
+        "inboxProof": true
+      }
+    },
+    {
+      "address": "billing@tranhatam.com",
+      "missing": {
+        "row": false,
+        "binding": false,
+        "inboundRouting": false,
+        "inboxProof": true
+      }
+    },
+    {
+      "address": "noreply@tranhatam.com",
+      "missing": {
+        "row": false,
+        "binding": false,
+        "inboundRouting": false,
+        "inboxProof": true
+      }
+    }
+  ],
+  "missingPaymentProofFields": [],
+  "missingRuntimeEvidence": [
+    {
+      "bindingName": "MAIL_API_BASE_URL",
+      "missing": {
+        "row": false,
+        "confirmedStatus": true,
+        "valueRef": false
+      }
+    },
+    {
+      "bindingName": "MAIL_API_KEY",
+      "missing": {
+        "row": false,
+        "confirmedStatus": true,
+        "valueRef": false
+      }
+    },
+    {
+      "bindingName": "MAIL_API_WORKSPACE_ID",
+      "missing": {
+        "row": false,
+        "confirmedStatus": true,
+        "valueRef": false
+      }
+    },
+    {
+      "bindingName": "PAY_EMAIL_ADAPTER_INTERNAL_KEY",
+      "missing": {
+        "row": false,
+        "confirmedStatus": true,
+        "valueRef": false
+      }
+    }
+  ],
+  "overallPass": true,
+  "paymentEvidenceComplete": true,
+  "payGateLocked": false,
+  "payGateState": "LOCK_FLIPPED",
+  "runtimeResults": [
+    {
+      "bindingName": "MAIL_API_BASE_URL",
+      "confirmed": false,
+      "present": true,
+      "valueRefPresent": true
+    },
+    {
+      "bindingName": "MAIL_API_KEY",
+      "confirmed": false,
+      "present": true,
+      "valueRefPresent": true
+    },
+    {
+      "bindingName": "MAIL_API_WORKSPACE_ID",
+      "confirmed": false,
+      "present": true,
+      "valueRefPresent": true
+    },
+    {
+      "bindingName": "PAY_EMAIL_ADAPTER_INTERNAL_KEY",
+      "confirmed": false,
+      "present": true,
+      "valueRefPresent": true
+    }
+  ],
+  "runtimeEvidenceComplete": false,
+  "status": "PROOF_CHAIN_COMPLETE_EVIDENCE_PENDING"
+}
