@@ -1,0 +1,81 @@
+{
+  "generatedAt": "2026-05-10T02:56:35.659Z",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "date": "2026-05-10",
+  "status": "BLOCKED_REAL_EVIDENCE_MISSING",
+  "readyForSynchronizedLive": false,
+  "sources": {
+    "teamD": "docs/reports/teamd/TRAMSAIGON_COM_PAYMENT_ACTIVATION_EVIDENCE_STATUS_2026-05-10.json",
+    "extPay": "docs/reports/team1/EXT_PAY_04_TRAMSAIGON_STATUS_2026-05-10.json",
+    "extMail": "docs/reports/team1/TEAM_EMAIL_TRAMSAIGON_EXT_MAIL_01_STATUS_2026-05-10.json"
+  },
+  "checkerRuns": [
+    {
+      "checker": "scripts/pay-team-d-tramsaigon-evidence-check.mjs",
+      "ok": true,
+      "code": 0
+    },
+    {
+      "checker": "scripts/ext-pay-04-tramsaigon-status-check.mjs",
+      "ok": false,
+      "code": 1
+    },
+    {
+      "checker": "scripts/team-email-tramsaigon-ext-mail-01-check.mjs",
+      "ok": false,
+      "code": 1
+    }
+  ],
+  "summary": {
+    "teamDActivationEvidenceComplete": false,
+    "teamDLiveClaimBlocked": true,
+    "extPay04Ready": false,
+    "extMail01Ready": false
+  },
+  "blockers": [
+    {
+      "key": "TEAMD_ACTIVATION_EVIDENCE_INCOMPLETE",
+      "details": "activationEvidenceComplete=false"
+    },
+    {
+      "key": "TEAMD_LIVE_CLAIM_BLOCKED",
+      "details": "liveClaimBlocked=true"
+    },
+    {
+      "key": "EXT_PAY_04_SECRETS_BOUND_MISSING",
+      "details": "secretsBoundConfirmed=false"
+    },
+    {
+      "key": "EXT_PAY_04_SIGNATURE_VERIFICATION_MISSING",
+      "details": "signatureVerifiedConfirmed=false"
+    },
+    {
+      "key": "EXT_PAY_04_MERCHANT_CHANNEL_MISSING",
+      "details": "merchantLiveConfirmed=false"
+    },
+    {
+      "key": "EXT_PAY_04_PROVIDER_E2E_MISSING",
+      "details": "providerE2EComplete=false"
+    },
+    {
+      "key": "EXT_PAY_04_D1_READBACK_MISSING",
+      "details": "d1ReadbackComplete=false"
+    },
+    {
+      "key": "EXT_PAY_04_MAIL_READBACK_MISSING",
+      "details": "mailReadbackComplete=false"
+    },
+    {
+      "key": "EXT_MAIL_01_EVIDENCE_INCOMPLETE",
+      "details": "REAL_EVIDENCE_MISSING: Missing clusters: dns_auth, allowlist, delivery_output."
+    },
+    {
+      "key": "CHECKER_FAILED",
+      "details": "scripts/ext-pay-04-tramsaigon-status-check.mjs exited 1"
+    },
+    {
+      "key": "CHECKER_FAILED",
+      "details": "scripts/team-email-tramsaigon-ext-mail-01-check.mjs exited 1"
+    }
+  ]
+}
