@@ -1,6 +1,8 @@
 node_modules
 dist
 coverage
+# pnpm workspace: npm lockfiles from standalone sub-dirs conflict with pnpm-lock.yaml
+package-lock.json
 .DS_Store
 .env
 .env.local
