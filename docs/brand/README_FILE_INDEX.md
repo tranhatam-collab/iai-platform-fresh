@@ -13,6 +13,8 @@ This folder contains the control packet for the Brand v2 rollout review. It is i
 | `IAI_ONE_ECOSYSTEM_BRAND_ROLLOUT_APPROVAL_REPORT_2026-05-09.md` | Full ecosystem assessment, domain mapping, rollout waves, hard stops. | Ready for team review. |
 | `IAI_ONE_BRAND_ROLLOUT_TEAM_SIGNOFF_TEMPLATE_2026-05-09.md` | Team 1 / Team 2 / Team 3 / Founder signoff template. | Ready for use. |
 | `IAI_ONE_BRAND_WAVE1_IMPLEMENTATION_BRIEF_2026-05-09.md` | Wave 1 implementation brief for `iai.one/root` and `flow.iai.one`. | Ready for review. |
+| `IAI_ONE_BRANDPRO_V1_SIGNOFF_PACK_2026-05-12.md` | Team 1 gate verdict for Brandpro v1.0, PR state, commit hashes, and next unlock actions. | Ready for Team 1 / Founder review. |
+| `IAI_ONE_BRAND_LIVE_VERIFICATION_REPORT_5_SURFACES_2026-05-12.md` | Live verification report for `home`, `flow`, `nft`, `cios`, and `iaifoundation`. | Current live result is FAIL. |
 | `README_FILE_INDEX.md` | This index. | Ready. |
 
 ## Team Routing
