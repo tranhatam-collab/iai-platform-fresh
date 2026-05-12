@@ -23,7 +23,12 @@ function hasFlag(flag) {
   return process.argv.includes(flag);
 }
 
-const CIOS_CLOSURE_TIMEOUT_MS = 120000;
+// CIOS vitest suite takes ~150s on cold start, ~34s on warm. 120000ms (2 min)
+// is below cold-start time and causes a false-fail every loop iteration,
+// regressing the all-teams completion gate from 83% to 66% repeatedly.
+// 300000ms (5 min) gives 2× headroom over cold-start and matches the
+// defaultTimeoutMs inside teamc-cios-review-closure-check.mjs.
+const CIOS_CLOSURE_TIMEOUT_MS = 300000;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
