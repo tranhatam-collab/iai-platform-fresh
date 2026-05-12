@@ -4,7 +4,7 @@ import { constants } from "node:fs";
 import path from "node:path";
 
 const timezone = "Asia/Ho_Chi_Minh";
-const defaultTimeoutMs = 60_000;
+const defaultTimeoutMs = 300_000; // suite takes ~150s on cold start; 300s gives 2× headroom
 const screenshotRequirements = [
   {
     label: "Root landing",
