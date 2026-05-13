@@ -4,8 +4,10 @@ import { resolveLocale, t, type Locale } from "./i18n.js";
 import {
   renderRootAuthCallback,
   renderRootHome,
+  renderRootInfoPage,
   renderRootLogin,
   renderRootNotFound,
+  type RootInfoPageSlug,
   type RootAuthProviderStatus,
   type RootRenderConfig
 } from "./render.js";
@@ -199,6 +201,12 @@ async function handleRequest(
 
     if (url.pathname === "/login") {
       respondHtml(response, 200, renderRootLogin(config, locale, authProviderStatuses), locale);
+      return;
+    }
+
+    const infoPageSlug = getRootInfoPageSlug(url.pathname);
+    if (infoPageSlug) {
+      respondHtml(response, 200, renderRootInfoPage(config, locale, infoPageSlug), locale);
       return;
     }
 
@@ -396,6 +404,21 @@ function isOAuthStartPath(pathname: string): boolean {
 
 function isOAuthCallbackPath(pathname: string): boolean {
   return pathname === "/auth/google/callback" || pathname === "/auth/apple/callback";
+}
+
+function getRootInfoPageSlug(pathname: string): RootInfoPageSlug | null {
+  switch (pathname) {
+    case "/contact":
+      return "contact";
+    case "/privacy":
+      return "privacy";
+    case "/support":
+      return "support";
+    case "/terms":
+      return "terms";
+    default:
+      return null;
+  }
 }
 
 function createStateToken(): string {

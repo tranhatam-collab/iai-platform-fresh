@@ -63,6 +63,40 @@ test("root supports explicit english rendering", async () => {
   assert.match(html, /Legal entity: Angel Edu Tam Foundation Inc/);
 });
 
+test("root exposes public legal and support pages for auth provider review", async () => {
+  const routes = [
+    ["/privacy", /Quyền riêng tư IAI/, /Google ID, Apple ID và magic link/],
+    ["/terms", /Điều khoản IAI/, /Hành vi bị cấm/],
+    ["/support", /Hỗ trợ IAI/, /support@iai\.one/],
+    ["/contact", /Liên hệ IAI/, /contact@iai\.one/]
+  ];
+
+  for (const [url, titlePattern, bodyPattern] of routes) {
+    const response = await dispatchToHandler(createRootRequestHandler(), { url });
+    const html = await response.text();
+
+    assert.equal(response.status, 200, url);
+    assert.equal(response.headers.get("content-language"), "vi", url);
+    assert.match(html, titlePattern, url);
+    assert.match(html, bodyPattern, url);
+    assert.match(html, /https:\/\/docs\.iai\.one\/legal\/iai-flow\//, url);
+    assert.match(html, new RegExp(`<link rel="canonical" href="https://iai\\.one${url}`), url);
+  }
+});
+
+test("root legal and support pages support english locale", async () => {
+  const response = await dispatchToHandler(createRootRequestHandler(), {
+    url: "/privacy?lang=en"
+  });
+  const html = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-language"), "en");
+  assert.match(html, /IAI Privacy/);
+  assert.match(html, /Google ID, Apple ID, and magic links/);
+  assert.match(html, /https:\/\/iai\.one\/privacy\?lang=en/);
+});
+
 test("root login page lists Google and Apple redirect URIs", async () => {
   const response = await dispatchToHandler(
     createRootRequestHandler({

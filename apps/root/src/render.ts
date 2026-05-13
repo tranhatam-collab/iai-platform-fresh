@@ -27,6 +27,18 @@ export interface RootAuthProviderStatus {
   startPath: string;
 }
 
+export type RootInfoPageSlug = "contact" | "privacy" | "support" | "terms";
+
+interface RootInfoPageCopy {
+  docsLabel: string;
+  eyebrow: string;
+  lede: string;
+  primaryHref: string;
+  primaryLabel: string;
+  sections: Array<{ body: string; title: string }>;
+  title: string;
+}
+
 export function renderRootHome(config: RootRenderConfig, locale: Locale): string {
   return page(
     "/",
@@ -155,6 +167,92 @@ export function renderRootHome(config: RootRenderConfig, locale: Locale): string
           <div class="footer-col">
             <p class="footer-heading">${escapeHtml(t(locale, "footer.nav.legal"))}</p>
             <a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a>
+            <p>${escapeHtml(t(locale, "footer.entity"))}</p>
+          </div>
+        </div>
+      </footer>
+    `
+  );
+}
+
+export function renderRootInfoPage(
+  config: RootRenderConfig,
+  locale: Locale,
+  slug: RootInfoPageSlug
+): string {
+  const copy = getInfoPageCopy(locale, slug);
+
+  return page(
+    `/${slug}`,
+    locale,
+    copy.title,
+    `
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">${escapeHtml(t(locale, "surface.root.domain"))}</p>
+          <strong>${escapeHtml(t(locale, "surface.root.title"))}</strong>
+        </div>
+        <nav class="topnav" aria-label="Primary">
+          <a href="${escapeHtml(buildLocalizedPath("/", locale))}">${escapeHtml(t(locale, "nav.portal"))}</a>
+          <a href="${escapeHtml(buildLocalizedPath("/login", locale))}">${escapeHtml(t(locale, "nav.login"))}</a>
+          <a href="${escapeHtml(localizeExternalUrl(config.docsUrl, locale))}">${escapeHtml(t(locale, "nav.docs"))}</a>
+          ${renderLocaleSwitch(locale, `/${slug}`)}
+        </nav>
+      </header>
+
+      <main class="page-shell" id="main-content">
+        <section class="hero hero-simple">
+          <div class="hero-copy">
+            <p class="eyebrow">${escapeHtml(copy.eyebrow)}</p>
+            <h1>${escapeHtml(copy.title)}</h1>
+            <p class="lede">${escapeHtml(copy.lede)}</p>
+            <div class="actions">
+              <a class="primary" href="${escapeHtml(copy.primaryHref)}">${escapeHtml(copy.primaryLabel)}</a>
+              <a class="secondary" href="${escapeHtml(localizeExternalUrl(config.docsUrl, locale))}">${escapeHtml(
+                copy.docsLabel
+              )}</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="surface-grid info-grid">
+          ${copy.sections
+            .map(
+              (section) => `
+                <article class="surface-card reveal">
+                  <h3>${escapeHtml(section.title)}</h3>
+                  <p>${escapeHtml(section.body)}</p>
+                </article>
+              `
+            )
+            .join("")}
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <strong>${escapeHtml(t(locale, "footer.copyright"))}</strong>
+            <p>${escapeHtml(t(locale, "footer.statement"))}</p>
+          </div>
+          <div class="footer-col">
+            <p class="footer-heading">${escapeHtml(t(locale, "footer.nav.legal"))}</p>
+            <a href="${escapeHtml(buildLocalizedPath("/privacy", locale))}">${escapeHtml(
+              locale === "vi" ? "Quyền riêng tư" : "Privacy"
+            )}</a>
+            <a href="${escapeHtml(buildLocalizedPath("/terms", locale))}">${escapeHtml(
+              locale === "vi" ? "Điều khoản" : "Terms"
+            )}</a>
+            <a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a>
+          </div>
+          <div class="footer-col">
+            <p class="footer-heading">${escapeHtml(locale === "vi" ? "Liên hệ" : "Contact")}</p>
+            <a href="${escapeHtml(buildLocalizedPath("/support", locale))}">${escapeHtml(
+              locale === "vi" ? "Hỗ trợ" : "Support"
+            )}</a>
+            <a href="${escapeHtml(buildLocalizedPath("/contact", locale))}">${escapeHtml(
+              locale === "vi" ? "Liên hệ" : "Contact"
+            )}</a>
             <p>${escapeHtml(t(locale, "footer.entity"))}</p>
           </div>
         </div>
@@ -678,6 +776,10 @@ function page(path: string, locale: Locale, pageTitle: string | undefined, body:
         color: var(--ink);
       }
 
+      .info-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
       @media (max-width: 1080px) {
         .surface-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -838,6 +940,174 @@ function renderLocaleSwitch(locale: Locale, currentPath: string): string {
         .join("")}
     </div>
   `;
+}
+
+function getInfoPageCopy(locale: Locale, slug: RootInfoPageSlug): RootInfoPageCopy {
+  const isVi = locale === "vi";
+  const legalUrl = "https://docs.iai.one/legal/iai-flow/";
+  const supportEmail = "support@iai.one";
+  const contactEmail = "contact@iai.one";
+
+  const pages: Record<RootInfoPageSlug, RootInfoPageCopy> = {
+    contact: {
+      docsLabel: isVi ? "Mở tài liệu" : "Open docs",
+      eyebrow: isVi ? "Liên hệ chính thức" : "Official contact",
+      lede: isVi
+        ? "Dùng kênh liên hệ này cho yêu cầu hợp tác, vận hành, pháp lý hoặc phản hồi về bề mặt IAI."
+        : "Use this contact channel for partnership, operations, legal, or public-surface feedback for IAI.",
+      primaryHref: `mailto:${contactEmail}`,
+      primaryLabel: contactEmail,
+      sections: isVi
+        ? [
+            {
+              title: "Yêu cầu chung",
+              body: `Gửi email đến ${contactEmail} với tên miền, nội dung cần xử lý và bằng chứng liên quan.`
+            },
+            {
+              title: "Vấn đề tài khoản",
+              body: `Nếu liên quan đăng nhập hoặc quyền truy cập, dùng ${supportEmail} để được điều phối đúng luồng.`
+            },
+            {
+              title: "Pháp lý",
+              body: `Các thông tin pháp lý công khai được đặt tại ${legalUrl}.`
+            }
+          ]
+        : [
+            {
+              title: "General requests",
+              body: `Email ${contactEmail} with the domain, requested action, and supporting evidence.`
+            },
+            {
+              title: "Account issues",
+              body: `For sign-in or access issues, use ${supportEmail} so the request enters the correct support flow.`
+            },
+            {
+              title: "Legal",
+              body: `Public legal information is maintained at ${legalUrl}.`
+            }
+          ],
+      title: isVi ? "Liên hệ IAI" : "Contact IAI"
+    },
+    privacy: {
+      docsLabel: isVi ? "Mở legal docs" : "Open legal docs",
+      eyebrow: isVi ? "Quyền riêng tư" : "Privacy",
+      lede: isVi
+        ? "IAI chỉ yêu cầu dữ liệu cần thiết cho đăng nhập, vận hành tài khoản, bảo mật và hỗ trợ."
+        : "IAI requests only the data needed for sign-in, account operations, security, and support.",
+      primaryHref: legalUrl,
+      primaryLabel: isVi ? "Chính sách đầy đủ" : "Full policy",
+      sections: isVi
+        ? [
+            {
+              title: "Dữ liệu đăng nhập",
+              body: "Google ID, Apple ID và magic link chỉ được dùng để xác thực danh tính và duy trì phiên đăng nhập."
+            },
+            {
+              title: "Bảo mật",
+              body: "Token, secret provider và session secret phải nằm trong môi trường deploy, không nằm trong code hoặc tài liệu công khai."
+            },
+            {
+              title: "Hỗ trợ",
+              body: `Người dùng có thể yêu cầu hỗ trợ qua ${supportEmail}.`
+            }
+          ]
+        : [
+            {
+              title: "Sign-in data",
+              body: "Google ID, Apple ID, and magic links are used only to authenticate identity and maintain sessions."
+            },
+            {
+              title: "Security",
+              body: "Provider tokens, provider secrets, and session secrets must stay in deployment environments, not code or public docs."
+            },
+            {
+              title: "Support",
+              body: `Users can request support through ${supportEmail}.`
+            }
+          ],
+      title: isVi ? "Quyền riêng tư IAI" : "IAI Privacy"
+    },
+    support: {
+      docsLabel: isVi ? "Mở tài liệu" : "Open docs",
+      eyebrow: isVi ? "Hỗ trợ tài khoản" : "Account support",
+      lede: isVi
+        ? "Kênh hỗ trợ này dành cho đăng nhập, magic link, quyền truy cập, thanh toán và các bề mặt thành viên."
+        : "This support channel covers sign-in, magic links, access, payments, and member surfaces.",
+      primaryHref: `mailto:${supportEmail}`,
+      primaryLabel: supportEmail,
+      sections: isVi
+        ? [
+            {
+              title: "Đăng nhập",
+              body: "Gửi tên miền, email tài khoản và ảnh lỗi nếu Google ID hoặc magic link không hoạt động."
+            },
+            {
+              title: "Bảo mật",
+              body: "Không gửi mật khẩu, private key, token, mã OTP hoặc secret qua ticket hỗ trợ."
+            },
+            {
+              title: "Theo dõi",
+              body: "Mỗi yêu cầu cần có một mã tham chiếu hoặc thời điểm xảy ra lỗi để đối chiếu log."
+            }
+          ]
+        : [
+            {
+              title: "Sign-in",
+              body: "Send the domain, account email, and error screenshot if Google ID or magic link is not working."
+            },
+            {
+              title: "Security",
+              body: "Do not send passwords, private keys, tokens, OTP codes, or secrets in support tickets."
+            },
+            {
+              title: "Trace",
+              body: "Each request needs a reference id or incident time so operations can match logs."
+            }
+          ],
+      title: isVi ? "Hỗ trợ IAI" : "IAI Support"
+    },
+    terms: {
+      docsLabel: isVi ? "Mở legal docs" : "Open legal docs",
+      eyebrow: isVi ? "Điều khoản sử dụng" : "Terms of use",
+      lede: isVi
+        ? "Các bề mặt IAI phải được dùng đúng vai trò: tài khoản, dashboard, tài liệu, thanh toán, hoặc hỗ trợ."
+        : "IAI surfaces must be used for their proper role: account, dashboard, docs, payment, or support.",
+      primaryHref: legalUrl,
+      primaryLabel: isVi ? "Điều khoản đầy đủ" : "Full terms",
+      sections: isVi
+        ? [
+            {
+              title: "Tài khoản",
+              body: "Người dùng chịu trách nhiệm bảo vệ email, thiết bị đăng nhập và phiên truy cập của mình."
+            },
+            {
+              title: "Hành vi bị cấm",
+              body: "Không tấn công, khai thác, giả mạo danh tính, spam form hoặc dùng hệ thống để gây hại cho người khác."
+            },
+            {
+              title: "Ranh giới dịch vụ",
+              body: `Thông tin pháp lý và ranh giới vận hành đầy đủ được duy trì tại ${legalUrl}.`
+            }
+          ]
+        : [
+            {
+              title: "Accounts",
+              body: "Users are responsible for protecting their email, sign-in devices, and active sessions."
+            },
+            {
+              title: "Prohibited conduct",
+              body: "Do not attack, exploit, impersonate, spam forms, or use the system to harm others."
+            },
+            {
+              title: "Service boundaries",
+              body: `Full legal and operating boundaries are maintained at ${legalUrl}.`
+            }
+          ],
+      title: isVi ? "Điều khoản IAI" : "IAI Terms"
+    }
+  };
+
+  return pages[slug];
 }
 
 function escapeHtml(value: string): string {
