@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>IAI Developer — API và tích hợp</title>
     <meta name="description" content="Bề mặt dành cho developer với API, SDK, auth và tích hợp." />
+    <meta property="og:site_name" content="IAI" />
+    <meta property="og:title" content="IAI Developer — API và tích hợp" />
+    <meta property="og:description" content="Bề mặt dành cho developer với API, SDK, auth và tích hợp." />
+    <meta property="og:url" content="https://developer.iai.one/" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="vi" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="IAI Developer — API và tích hợp" />
+    <meta name="twitter:description" content="Bề mặt dành cho developer với API, SDK, auth và tích hợp." />
+    <meta property="og:image" content="https://iai.one/og.svg?surface=developer.iai.one&amp;lang=vi&amp;title=IAI+Developer+%E2%80%94+API+v%C3%A0+t%C3%ADch+h%E1%BB%A3p&amp;description=B%E1%BB%81+m%E1%BA%B7t+d%C3%A0nh+cho+developer+v%E1%BB%9Bi+API%2C+SDK%2C+auth+v%C3%A0+t%C3%ADch+h%E1%BB%A3p." />
+    <meta name="twitter:image" content="https://iai.one/og.svg?surface=developer.iai.one&amp;lang=vi&amp;title=IAI+Developer+%E2%80%94+API+v%C3%A0+t%C3%ADch+h%E1%BB%A3p&amp;description=B%E1%BB%81+m%E1%BA%B7t+d%C3%A0nh+cho+developer+v%E1%BB%9Bi+API%2C+SDK%2C+auth+v%C3%A0+t%C3%ADch+h%E1%BB%A3p." />
     <link rel="canonical" href="https://developer.iai.one/" />
     <link rel="alternate" hreflang="vi" href="https://developer.iai.one/" />
     <link rel="alternate" hreflang="en" href="https://developer.iai.one/?lang=en" />
@@ -259,8 +270,8 @@
           <p class="eyebrow">developer.iai.one</p>
           <strong>Lớp xây dựng</strong>
         </div>
-        <nav class="topnav" aria-label="Điều hướng chính">
-          <a href="https://iai.one/">Root</a>
+        <nav class="topnav" aria-label="Điều hướng developer">
+          <a href="https://iai.one/">Gốc</a>
           <a href="https://home.iai.one/">Trang chủ</a>
           <a href="https://docs.iai.one/">Tài liệu</a>
           <a href="https://app.iai.one/">Ứng dụng</a>
@@ -277,103 +288,103 @@
       <main class="page-shell">
         <section class="hero">
           <div class="hero-copy">
-            <p class="eyebrow">Lớp xây dựng</p>
+            <p class="eyebrow">Developer surface</p>
             <h1>Lớp xây dựng</h1>
             <p class="lede">developer.iai.one là lớp xây dựng cho API, auth, webhook và thực thi tích hợp.</p>
-            <p class="note">Mọi khẳng định trên bề mặt này phải truy vết được về tài liệu, bằng chứng runtime và các contract chính sách.</p>
+            <p class="note">Bắt đầu từ bằng chứng, không từ giả định.</p>
             <div class="actions">
-              <a class="primary" href="/quickstart">Mở Quickstart</a>
-              <a class="secondary" href="https://docs.iai.one/">Mở tài liệu kiến trúc</a>
+              <a class="primary" href="/quickstart">Mở quickstart</a>
+              <a class="secondary" href="https://docs.iai.one/">Đọc docs</a>
             </div>
           </div>
           <aside class="panel lane-panel">
             <p class="eyebrow">Quickstart</p>
-            <h2>Bắt đầu từ bằng chứng, không từ giả định.</h2>
+            <h2>Xây từ các route đã xác thực.</h2>
             <ul class="stack-list">
               <li>
-                <strong>Auth và session</strong>
-                <p>Quy tắc tích hợp identity và session phải bám đúng nguồn auth dùng chung.</p>
+                <strong>Auth</strong>
+                <p>Route auth xác định tích hợp identity theo shared truth và giữ access đúng surface.</p>
               </li>
               <li>
-                <strong>API contracts</strong>
-                <p>Contract endpoint API, cấu trúc request/response và kỳ vọng xử lý lỗi.</p>
+                <strong>API</strong>
+                <p>Route tham chiếu API khóa endpoint shape, auth boundary và runtime ownership.</p>
               </li>
               <li>
-                <strong>Webhook execution</strong>
-                <p>Ma trận sự kiện webhook, hành vi retry và đường tích hợp an toàn với replay.</p>
+                <strong>Webhook</strong>
+                <p>Route webhook khóa event truth, signature handling và replay expectation.</p>
               </li>
             </ul>
           </aside>
         </section>
 
         <section class="section-head">
-          <p class="eyebrow">Route bắt buộc</p>
-          <h2>Bảy route bắt buộc cho builder này đã được làm rõ.</h2>
-          <p>Dùng các route này để giữ quickstart, auth, API, webhook, SDK, nodes và changelog ở trạng thái có thể kiểm chứng.</p>
+          <p class="eyebrow">Required routes</p>
+          <h2>Mỗi developer route có owner và proof boundary.</h2>
+          <p>Các route này là documentation shell cho tới khi live runtime proof cho phép claim mạnh hơn.</p>
         </section>
 
         <section class="required-grid">
           
     <article class="surface-card">
       <h3>Quickstart</h3>
-      <p>Điểm vào implementation-first cho builder.</p>
+      <p>Walkthrough build setup theo evidence-first.</p>
       <div class="card-footer">
         <code>/quickstart</code>
-        <a href="/quickstart" >Mở route</a>
+        <a href="/quickstart" >Mở</a>
       </div>
     </article>
   
     <article class="surface-card">
       <h3>Auth</h3>
-      <p>Quy tắc tích hợp identity và session theo shared truth.</p>
+      <p>Ranh giới tích hợp identity dùng chung.</p>
       <div class="card-footer">
         <code>/auth</code>
-        <a href="/auth" >Mở route</a>
+        <a href="/auth" >Mở</a>
       </div>
     </article>
   
     <article class="surface-card">
-      <h3>API Reference</h3>
-      <p>Endpoint contracts, payload shape và hành vi status.</p>
+      <h3>API reference</h3>
+      <p>Endpoint shape và runtime ownership.</p>
       <div class="card-footer">
         <code>/api/reference</code>
-        <a href="/api/reference" >Mở route</a>
+        <a href="/api/reference" >Mở</a>
       </div>
     </article>
   
     <article class="surface-card">
       <h3>Webhooks</h3>
-      <p>Event matrix, retry và hành vi an toàn với replay.</p>
+      <p>Event truth, signature và replay expectation.</p>
       <div class="card-footer">
         <code>/webhooks</code>
-        <a href="/webhooks" >Mở route</a>
+        <a href="/webhooks" >Mở</a>
       </div>
     </article>
   
     <article class="surface-card">
       <h3>SDK</h3>
-      <p>Ví dụ SDK và hướng dẫn compatibility.</p>
+      <p>Ví dụ và hướng dẫn implementation.</p>
       <div class="card-footer">
         <code>/sdk</code>
-        <a href="/sdk" >Mở route</a>
+        <a href="/sdk" >Mở</a>
       </div>
     </article>
   
     <article class="surface-card">
       <h3>Nodes</h3>
-      <p>Contract cho executable integration nodes.</p>
+      <p>Các khối tích hợp có thể thực thi.</p>
       <div class="card-footer">
         <code>/nodes</code>
-        <a href="/nodes" >Mở route</a>
+        <a href="/nodes" >Mở</a>
       </div>
     </article>
   
     <article class="surface-card">
       <h3>Changelog</h3>
-      <p>Contract deltas và migration notes.</p>
+      <p>Contract delta và release note.</p>
       <div class="card-footer">
         <code>/changelog</code>
-        <a href="/changelog" >Mở route</a>
+        <a href="/changelog" >Mở</a>
       </div>
     </article>
   
@@ -381,69 +392,69 @@
 
         <section class="section-head">
           <p class="eyebrow">Quickstart</p>
-          <h2>Bắt đầu từ bằng chứng, không từ giả định.</h2>
-          <p>Quickstart là lộ trình ngắn theo hướng implementation-first: chốt boundary, nối auth, gọi API và xác thực webhook.</p>
+          <h2>Xây từ các route đã xác thực.</h2>
+          <p>Dùng các bước này để nối API, auth, webhooks, SDK, nodes và changelog truth mà không vượt rào evidence.</p>
         </section>
 
         <section class="quickstart-grid">
           
     <article class="step-card">
-      <h3>1. Chốt vai trò</h3>
-      <p>Đọc boundary và vai trò contract trước khi viết mã.</p>
+      <h3>1. Đọc ranh giới</h3>
+      <p>Xác nhận surface nào sở hữu hành động trước khi viết code.</p>
     </article>
   
           
     <article class="step-card">
-      <h3>2. Nối auth</h3>
-      <p>Dùng shared auth/session truth và không fork auth cục bộ.</p>
+      <h3>2. Kiểm contract shape</h3>
+      <p>Dùng đúng request, response và auth contract đã được ghi nhận.</p>
     </article>
   
           
     <article class="step-card">
-      <h3>3. Chạy kiểm tra API</h3>
-      <p>Xác thực endpoint shape với API và flow API contracts.</p>
+      <h3>3. Implement tối thiểu</h3>
+      <p>Sửa nhỏ nhất an toàn và giữ proof đi kèm.</p>
     </article>
   
           
     <article class="step-card">
-      <h3>4. Xác thực webhook</h3>
-      <p>Xác thực webhook payload, idempotency và replay policy.</p>
+      <h3>4. Ghi evidence</h3>
+      <p>Đính smoke result, route proof và owner note trước release.</p>
     </article>
   
         </section>
 
         <section class="contracts-grid">
           <article class="contract-card">
-            <p class="eyebrow">Auth và session</p>
+            <p class="eyebrow">Auth</p>
             <code>app.iai.one</code>
-            <p>Quy tắc tích hợp identity và session phải bám đúng nguồn auth dùng chung.</p>
+            <p>Route auth xác định tích hợp identity theo shared truth và giữ access đúng surface.</p>
             <a href="https://app.iai.one/">Mở</a>
           </article>
           <article class="contract-card">
-            <p class="eyebrow">API contracts</p>
+            <p class="eyebrow">API</p>
             <code>api.iai.one</code>
-            <p>Contract endpoint API, cấu trúc request/response và kỳ vọng xử lý lỗi.</p>
+            <p>Route tham chiếu API khóa endpoint shape, auth boundary và runtime ownership.</p>
             <a href="https://api.iai.one/">Mở runtime</a>
           </article>
           <article class="contract-card">
-            <p class="eyebrow">Webhook execution</p>
+            <p class="eyebrow">Webhook</p>
             <code>api.flow.iai.one</code>
-            <p>Ma trận sự kiện webhook, hành vi retry và đường tích hợp an toàn với replay.</p>
+            <p>Route webhook khóa event truth, signature handling và replay expectation.</p>
             <a href="https://api.flow.iai.one/">Mở runtime</a>
           </article>
         </section>
 
         <section class="section-head">
-          <p class="eyebrow">Bề mặt liên quan</p>
-          <h2>Đi đúng lớp thực thi cho từng tác vụ.</h2>
-          <p>Khi phạm vi công việc vượt quá một tài liệu đơn lẻ, hãy chuyển sang đúng bề mặt liên quan thay vì dồn tất cả vào lớp này.</p>
+          <p class="eyebrow">Surface liên kết</p>
+          <h2>Developer xây bên cạnh hệ, không đứng trên hệ.</h2>
+          <p>Dùng các surface liên kết cho product access, runtime, docs và control truth.</p>
         </section>
 
         <section class="surface-grid">
           
     <article class="surface-card">
-      <h3>Root</h3>
-      <p>Mở root cho role map hiến pháp và trust boundaries toàn hệ.</p>
+      <h3>Gốc</h3>
+      <p>Root định nghĩa ranh giới hiến pháp và vocabulary.</p>
       <div class="card-footer">
         <code>iai.one</code>
         <a href="https://iai.one/">Mở</a>
@@ -453,7 +464,7 @@
           
     <article class="surface-card">
       <h3>Trang chủ</h3>
-      <p>Mở home cho điều hướng người dùng và các điểm vào public.</p>
+      <p>Home định tuyến người dùng vào đúng surface.</p>
       <div class="card-footer">
         <code>home.iai.one</code>
         <a href="https://home.iai.one/">Mở</a>
@@ -463,7 +474,7 @@
           
     <article class="surface-card">
       <h3>Tài liệu</h3>
-      <p>Mở docs cho kiến trúc, tiêu chuẩn và ngôn ngữ ranh giới đã khóa.</p>
+      <p>Docs giữ kiến trúc, chuẩn và release evidence.</p>
       <div class="card-footer">
         <code>docs.iai.one</code>
         <a href="https://docs.iai.one/">Xem tài liệu</a>
@@ -473,17 +484,17 @@
           
     <article class="surface-card">
       <h3>Flow</h3>
-      <p>Mở flow cho điều phối workflow và runtime theo hướng execution-first.</p>
+      <p>Flow sở hữu workflow và runtime execution.</p>
       <div class="card-footer">
         <code>flow.iai.one</code>
-        <a href="https://flow.iai.one/">Mở flow</a>
+        <a href="https://flow.iai.one/">btn.open_flow</a>
       </div>
     </article>
   
           
     <article class="surface-card">
       <h3>Điều hành</h3>
-      <p>Mở dash cho phê duyệt, thao tác vận hành và governance runtime.</p>
+      <p>Dash sở hữu control và monitoring của operator.</p>
       <div class="card-footer">
         <code>dash.iai.one</code>
         <a href="https://dash.iai.one/">Mở điều hành</a>
@@ -493,7 +504,7 @@
           
     <article class="surface-card">
       <h3>Ứng dụng</h3>
-      <p>Mở app khi công việc trở thành hành trình người dùng thực.</p>
+      <p>App sở hữu hành trình sản phẩm hướng người dùng.</p>
       <div class="card-footer">
         <code>app.iai.one</code>
         <a href="https://app.iai.one/">Mở</a>
@@ -503,15 +514,17 @@
         </section>
 
         <section class="boundary-grid">
-          <article class="boundary-card"><p>Developer không phải nơi sao chép tài liệu. Chuẩn và kiến trúc nằm ở docs.</p></article>
-          <article class="boundary-card"><p>Developer không phải control plane runtime. Hành động runtime nằm ở flow và dash.</p></article>
-          <article class="boundary-card"><p>Developer không phải bề mặt người dùng. Hành trình người dùng nằm ở app và home.</p></article>
+          <article class="boundary-card"><p>Developer không thay docs làm source of truth.</p></article>
+          <article class="boundary-card"><p>Developer không thực thi runtime nếu không có ownership từ Flow hoặc API.</p></article>
+          <article class="boundary-card"><p>Developer không publicize surface chưa release.</p></article>
         </section>
       </main>
 
       <footer class="footer">
         <p>IAI.ONE định nghĩa cấu trúc. Các bề mặt triển khai bên trong cấu trúc đó.</p>
         <p>Không đầu cơ. Chỉ bằng chứng.</p>
+        <p>Pháp nhân: Angel Edu Tam Foundation Inc</p>
+        <p><a href="https://docs.iai.one/legal/iai-flow/">Ranh giới pháp lý IAI Flow</a></p>
       </footer>
     
   </body>

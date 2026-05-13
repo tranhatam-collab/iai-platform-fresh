@@ -3,7 +3,9 @@ import { resolveLocale, t, type Locale } from "./i18n.js";
 import {
   renderDeveloperHome,
   renderDeveloperRequiredRoute,
+  renderDeveloperPolicyRoute,
   renderDeveloperNotFound,
+  type DeveloperPolicyRoutePath,
   type DeveloperRequiredRoutePath,
   type DeveloperRenderConfig
 } from "./render.js";
@@ -20,6 +22,13 @@ const requiredDeveloperRoutes = new Set<DeveloperRequiredRoutePath>([
   "/sdk",
   "/nodes",
   "/changelog"
+]);
+
+const policyDeveloperRoutes = new Set<DeveloperPolicyRoutePath>([
+  "/privacy",
+  "/terms",
+  "/support",
+  "/contact"
 ]);
 
 export function createDeveloperServer(options: DeveloperServerOptions = {}): Server {
@@ -113,6 +122,11 @@ async function handleRequest(
       return;
     }
 
+    if (isDeveloperPolicyRoute(url.pathname)) {
+      respondHtml(response, 200, renderDeveloperPolicyRoute(config, locale, url.pathname), locale);
+      return;
+    }
+
     respondHtml(response, 404, renderDeveloperNotFound(locale, url.pathname), locale);
   } catch (error) {
     respondJson(
@@ -155,7 +169,7 @@ function respondXml(response: ServerResponse, statusCode: number, xml: string, l
 }
 
 function renderDeveloperSitemap(): string {
-  const routes = ["/", ...requiredDeveloperRoutes];
+  const routes = ["/", ...requiredDeveloperRoutes, ...policyDeveloperRoutes];
   const urls = routes
     .map((route) => {
       const loc = `https://developer.iai.one${route}`;
@@ -187,4 +201,8 @@ function normalizeHeaderValue(value: string | string[] | undefined): string | nu
 
 function isDeveloperRequiredRoute(path: string): path is DeveloperRequiredRoutePath {
   return requiredDeveloperRoutes.has(path as DeveloperRequiredRoutePath);
+}
+
+function isDeveloperPolicyRoute(path: string): path is DeveloperPolicyRoutePath {
+  return policyDeveloperRoutes.has(path as DeveloperPolicyRoutePath);
 }

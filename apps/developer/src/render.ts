@@ -27,6 +27,8 @@ export type DeveloperRequiredRoutePath =
   | "/nodes"
   | "/changelog";
 
+export type DeveloperPolicyRoutePath = "/privacy" | "/terms" | "/support" | "/contact";
+
 const requiredRoutePaths: DeveloperRequiredRoutePath[] = [
   "/quickstart",
   "/auth",
@@ -37,6 +39,8 @@ const requiredRoutePaths: DeveloperRequiredRoutePath[] = [
   "/changelog"
 ];
 
+const policyRoutePaths: DeveloperPolicyRoutePath[] = ["/privacy", "/terms", "/support", "/contact"];
+
 interface RequiredRouteCopy {
   description: string;
   detail1: string;
@@ -45,6 +49,19 @@ interface RequiredRouteCopy {
   eyebrow: string;
   primaryHref: string;
   primaryLabel: string;
+  secondaryHref: string;
+  secondaryLabel: string;
+  title: string;
+}
+
+interface PolicyRouteCopy {
+  ctaHref: string;
+  ctaLabel: string;
+  detail1: string;
+  detail2: string;
+  detail3: string;
+  eyebrow: string;
+  intro: string;
   secondaryHref: string;
   secondaryLabel: string;
   title: string;
@@ -285,6 +302,70 @@ export function renderDeveloperRequiredRoute(
   );
 }
 
+export function renderDeveloperPolicyRoute(
+  _config: DeveloperRenderConfig,
+  locale: Locale,
+  routePath: DeveloperPolicyRoutePath
+): string {
+  const copy = resolvePolicyRouteCopy(routePath, locale);
+  return page(
+    routePath,
+    locale,
+    copy.title,
+    `
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">${escapeHtml(t(locale, "surface.developer.domain"))}</p>
+          <strong>${escapeHtml(copy.title)}</strong>
+        </div>
+        <nav class="topnav" aria-label="${escapeHtml(t(locale, "developer.nav.primary"))}">
+          <a href="${escapeHtml(buildLocalizedPath("/", locale))}">${escapeHtml(t(locale, "surface.developer.title"))}</a>
+          <a href="${escapeHtml(buildLocalizedPath("/auth", locale))}">${escapeHtml(resolveRequiredRouteLabel("/auth", locale))}</a>
+          <a href="${escapeHtml(buildLocalizedPath("/privacy", locale))}">${escapeHtml(resolvePolicyRouteLabel("/privacy", locale))}</a>
+          <a href="${escapeHtml(buildLocalizedPath("/terms", locale))}">${escapeHtml(resolvePolicyRouteLabel("/terms", locale))}</a>
+          <a href="${escapeHtml(buildLocalizedPath("/support", locale))}">${escapeHtml(resolvePolicyRouteLabel("/support", locale))}</a>
+          <a href="${escapeHtml(buildLocalizedPath("/contact", locale))}">${escapeHtml(resolvePolicyRouteLabel("/contact", locale))}</a>
+          ${renderLocaleSwitch(locale, routePath)}
+        </nav>
+      </header>
+
+      <main class="page-shell">
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">${escapeHtml(copy.eyebrow)}</p>
+            <h1>${escapeHtml(copy.title)}</h1>
+            <p class="lede">${escapeHtml(copy.intro)}</p>
+            <div class="actions">
+              <a class="primary" href="${escapeHtml(copy.ctaHref)}">${escapeHtml(copy.ctaLabel)}</a>
+              <a class="secondary" href="${escapeHtml(copy.secondaryHref)}">${escapeHtml(copy.secondaryLabel)}</a>
+            </div>
+          </div>
+          <aside class="panel lane-panel">
+            <p class="eyebrow">${escapeHtml(locale === "vi" ? "Provider review" : "Provider review")}</p>
+            <h2>${escapeHtml(locale === "vi" ? "Ranh giới vận hành" : "Operating boundaries")}</h2>
+            <ul class="stack-list">
+              <li>${escapeHtml(copy.detail1)}</li>
+              <li>${escapeHtml(copy.detail2)}</li>
+              <li>${escapeHtml(copy.detail3)}</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="required-grid">
+          ${policyRoutePaths.map((path) => renderPolicyRouteCard(locale, path, routePath)).join("")}
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>${escapeHtml(t(locale, "footer.statement"))}</p>
+        <p>${escapeHtml(t(locale, "footer.trust"))}</p>
+        <p>${escapeHtml(t(locale, "footer.entity"))}</p>
+        <p><a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a></p>
+      </footer>
+    `
+  );
+}
+
 export function renderDeveloperNotFound(locale: Locale, path: string): string {
   return page(
     path,
@@ -316,6 +397,147 @@ export function renderDeveloperNotFound(locale: Locale, path: string): string {
       </main>
     `
   );
+}
+
+function resolvePolicyRouteCopy(routePath: DeveloperPolicyRoutePath, locale: Locale): PolicyRouteCopy {
+  const isVi = locale === "vi";
+
+  switch (routePath) {
+    case "/privacy":
+      return {
+        ctaHref: "/support",
+        ctaLabel: isVi ? "Nhận hỗ trợ" : "Get support",
+        detail1: isVi
+          ? "developer.iai.one không lưu OAuth secret, magic-link signing key, session cookie hoặc private key trong mã public."
+          : "developer.iai.one does not store OAuth secrets, magic-link signing keys, session cookies, or private keys in public code.",
+        detail2: isVi
+          ? "Dữ liệu đăng nhập được xử lý bởi shared auth/session truth của hệ IAI, không fork riêng trên developer portal."
+          : "Sign-in data is handled by the shared IAI auth/session truth and is not forked locally on the developer portal.",
+        detail3: isVi
+          ? "Form hoặc yêu cầu hỗ trợ chỉ nên gửi domain, endpoint, lỗi nhìn thấy và email liên hệ; không gửi raw secret."
+          : "Support requests should include the domain, endpoint, visible error, and contact email only; do not send raw secrets.",
+        eyebrow: "Privacy",
+        intro: isVi
+          ? "Trang này mô tả ranh giới quyền riêng tư cho tài liệu developer, auth integration, SDK, webhook và route hỗ trợ."
+          : "This page describes privacy boundaries for developer docs, auth integration, SDKs, webhooks, and support routes.",
+        secondaryHref: "/terms",
+        secondaryLabel: isVi ? "Điều khoản" : "Terms",
+        title: isVi ? "Quyền riêng tư IAI Developer" : "IAI Developer Privacy"
+      };
+    case "/terms":
+      return {
+        ctaHref: "/privacy",
+        ctaLabel: isVi ? "Quyền riêng tư" : "Privacy",
+        detail1: isVi
+          ? "Developer portal dùng để đọc API, SDK, auth contract, webhook và changelog; không thay thế app hoặc dashboard vận hành."
+          : "The developer portal is for API, SDK, auth contract, webhook, and changelog documentation; it does not replace the app or dashboard.",
+        detail2: isVi
+          ? "Không dùng portal để spam form, khai thác endpoint, giả mạo identity hoặc thử secret trên bề mặt public."
+          : "Do not use the portal to spam forms, exploit endpoints, impersonate identity, or test secrets on public surfaces.",
+        detail3: isVi
+          ? "Mọi tích hợp production phải dùng redirect URI, scope, mail provider và secret đã được cấu hình ngoài mã nguồn."
+          : "Production integrations must use redirect URIs, scopes, mail providers, and secrets configured outside source code.",
+        eyebrow: "Terms",
+        intro: isVi
+          ? "Điều khoản này đặt ranh giới sử dụng cho developer.iai.one và các tài liệu tích hợp liên quan."
+          : "These terms set usage boundaries for developer.iai.one and its integration documentation.",
+        secondaryHref: "/support",
+        secondaryLabel: isVi ? "Hỗ trợ" : "Support",
+        title: isVi ? "Điều khoản IAI Developer" : "IAI Developer Terms"
+      };
+    case "/support":
+      return {
+        ctaHref: "mailto:support@iai.one",
+        ctaLabel: "support@iai.one",
+        detail1: isVi
+          ? "Gửi domain, route, thời điểm lỗi, status code và ảnh chụp màn hình nếu Google OAuth hoặc magic link không hoạt động."
+          : "Send the domain, route, time, status code, and screenshot if Google OAuth or magic link is not working.",
+        detail2: isVi
+          ? "Không gửi OAuth client secret, magic-link key, token, cookie, private key hoặc dữ liệu định danh nhạy cảm."
+          : "Do not send OAuth client secrets, magic-link keys, tokens, cookies, private keys, or sensitive identity data.",
+        detail3: isVi
+          ? "Nếu vấn đề thuộc app login thật, chuyển sang app.iai.one hoặc API owner thay vì sửa riêng developer portal."
+          : "If the issue belongs to the real app login, route it to app.iai.one or the API owner instead of forking the developer portal.",
+        eyebrow: "Support",
+        intro: isVi
+          ? "Kênh hỗ trợ cho tài liệu API, auth contract, SDK, webhook, route public và bằng chứng tích hợp."
+          : "Support channel for API docs, auth contracts, SDKs, webhooks, public routes, and integration evidence.",
+        secondaryHref: "/contact",
+        secondaryLabel: isVi ? "Liên hệ" : "Contact",
+        title: isVi ? "Hỗ trợ IAI Developer" : "IAI Developer Support"
+      };
+    case "/contact":
+      return {
+        ctaHref: "mailto:contact@iai.one",
+        ctaLabel: "contact@iai.one",
+        detail1: isVi
+          ? "Dùng contact@iai.one cho yêu cầu partnership, API access, SDK, webhook, legal hoặc public-surface feedback."
+          : "Use contact@iai.one for partnership, API access, SDK, webhook, legal, or public-surface feedback.",
+        detail2: isVi
+          ? "Dùng support@iai.one cho lỗi đăng nhập, magic link, callback, route hoặc bằng chứng smoke test."
+          : "Use support@iai.one for sign-in, magic-link, callback, route, or smoke-test evidence issues.",
+        detail3: isVi
+          ? "Mọi thông tin cần đủ để xử lý nhưng không chứa raw secret hoặc dữ liệu định danh nhạy cảm."
+          : "Provide enough information to route the issue without including raw secrets or sensitive identity data.",
+        eyebrow: "Contact",
+        intro: isVi
+          ? "Liên hệ chính thức cho yêu cầu developer, tích hợp, API, SDK và legal liên quan developer.iai.one."
+          : "Official contact route for developer, integration, API, SDK, and legal requests related to developer.iai.one.",
+        secondaryHref: "/support",
+        secondaryLabel: isVi ? "Hỗ trợ" : "Support",
+        title: isVi ? "Liên hệ IAI Developer" : "IAI Developer Contact"
+      };
+  }
+}
+
+function renderPolicyRouteCard(
+  locale: Locale,
+  routePath: DeveloperPolicyRoutePath,
+  currentPath: DeveloperPolicyRoutePath
+): string {
+  const label = resolvePolicyRouteLabel(routePath, locale);
+  const href = buildLocalizedPath(routePath, locale);
+  const isCurrent = routePath === currentPath;
+  return `
+    <article class="surface-card">
+      <h3>${escapeHtml(label)}</h3>
+      <p>${escapeHtml(resolvePolicyRouteSummary(routePath, locale))}</p>
+      <div class="card-footer">
+        <code>${escapeHtml(routePath)}</code>
+        <a href="${escapeHtml(href)}" ${isCurrent ? 'aria-current="true"' : ""}>${escapeHtml(
+          isCurrent ? t(locale, "developer.route.current") : t(locale, "developer.route.open")
+        )}</a>
+      </div>
+    </article>
+  `;
+}
+
+function resolvePolicyRouteLabel(routePath: DeveloperPolicyRoutePath, locale: Locale): string {
+  const isVi = locale === "vi";
+  switch (routePath) {
+    case "/privacy":
+      return isVi ? "Quyền riêng tư" : "Privacy";
+    case "/terms":
+      return isVi ? "Điều khoản" : "Terms";
+    case "/support":
+      return isVi ? "Hỗ trợ" : "Support";
+    case "/contact":
+      return isVi ? "Liên hệ" : "Contact";
+  }
+}
+
+function resolvePolicyRouteSummary(routePath: DeveloperPolicyRoutePath, locale: Locale): string {
+  const isVi = locale === "vi";
+  switch (routePath) {
+    case "/privacy":
+      return isVi ? "Dữ liệu, auth và secret boundary." : "Data, auth, and secret boundaries.";
+    case "/terms":
+      return isVi ? "Ranh giới sử dụng developer portal." : "Developer portal usage boundaries.";
+    case "/support":
+      return isVi ? "Hỗ trợ route, OAuth, magic link và SDK." : "Route, OAuth, magic-link, and SDK support.";
+    case "/contact":
+      return isVi ? "Kênh liên hệ tích hợp và legal." : "Integration and legal contact route.";
+  }
 }
 
 function resolveRequiredRouteCopy(

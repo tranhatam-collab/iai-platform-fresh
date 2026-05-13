@@ -2,7 +2,12 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { renderDeveloperHome, renderDeveloperNotFound, renderDeveloperRequiredRoute } from "../dist/render.js";
+import {
+  renderDeveloperHome,
+  renderDeveloperNotFound,
+  renderDeveloperPolicyRoute,
+  renderDeveloperRequiredRoute
+} from "../dist/render.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const appDir = resolve(__dirname, "..");
@@ -29,12 +34,17 @@ const requiredRoutes = [
   "/changelog"
 ];
 
+const policyRoutes = ["/privacy", "/terms", "/support", "/contact"];
+
 rmSync(outputDir, { force: true, recursive: true });
 mkdirSync(outputDir, { recursive: true });
 
 writeRouteHtml("/", renderDeveloperHome(config, "vi"));
 for (const route of requiredRoutes) {
   writeRouteHtml(route, renderDeveloperRequiredRoute(config, "vi", route));
+}
+for (const route of policyRoutes) {
+  writeRouteHtml(route, renderDeveloperPolicyRoute(config, "vi", route));
 }
 writeFileSync(resolve(outputDir, "404.html"), renderDeveloperNotFound("vi", "/404"), "utf8");
 
@@ -54,6 +64,10 @@ writeFileSync(
     "/sdk /sdk/ 301",
     "/nodes /nodes/ 301",
     "/changelog /changelog/ 301",
+    "/privacy /privacy/ 301",
+    "/terms /terms/ 301",
+    "/support /support/ 301",
+    "/contact /contact/ 301",
     ""
   ].join("\n"),
   "utf8"
