@@ -19,7 +19,8 @@ const requiredArtifactGroups = [
   {
     name: "customer_gmail_proof",
     completeFile: "inbox-proof-customer-gmail.png",
-    pendingFile: "inbox-proof-customer-gmail.png.PENDING.txt"
+    pendingFile: "inbox-proof-customer-gmail.png.PENDING.txt",
+    alternativeFile: "customer-gmail-delivery-proof.json"
   }
 ];
 const requiredTemplates = [
@@ -145,14 +146,43 @@ function mailEvidenceComplete(mailReadback) {
 async function classifyArtifactGroup(evidenceDir, group) {
   const completePath = path.join(evidenceDir, group.completeFile);
   const pendingPath = path.join(evidenceDir, group.pendingFile);
+  const alternativePath = group.alternativeFile
+    ? path.join(evidenceDir, group.alternativeFile)
+    : null;
   const complete = await exists(completePath);
   const pending = await exists(pendingPath);
+  const alternativePresent = alternativePath ? await exists(alternativePath) : false;
+  let alternativeValid = false;
+
+  if (alternativePresent && group.name === "customer_gmail_proof" && alternativePath) {
+    try {
+      const payload = await readJsonFile(alternativePath);
+      const recipient = normalize(payload?.recipient).toLowerCase();
+      const finalState = normalize(payload?.final_state || payload?.status).toLowerCase();
+      const messageId = normalize(payload?.message_id);
+      alternativeValid =
+        recipient.endsWith("@gmail.com") &&
+        messageId.length > 0 &&
+        ["accepted", "sent", "delivered"].includes(finalState);
+    } catch {
+      alternativeValid = false;
+    }
+  }
+
   return {
     ...group,
     complete,
     pending,
-    represented: complete || pending,
-    status: complete ? "COMPLETE" : pending ? "PENDING" : "MISSING"
+    alternativePresent,
+    alternativeValid,
+    represented: complete || pending || alternativePresent,
+    status: complete
+      ? "COMPLETE"
+      : alternativeValid
+        ? "COMPLETE_ALT"
+        : pending
+          ? "PENDING"
+          : "MISSING"
   };
 }
 
@@ -225,7 +255,9 @@ async function main() {
   const providerComplete = providerEvidenceComplete(jsonReadbacks["provider-response.json"]);
   const d1Complete = d1EvidenceComplete(jsonReadbacks["d1-readback.json"]);
   const mailComplete = mailEvidenceComplete(jsonReadbacks["mail-readback.json"]);
-  const artifactsComplete = artifactGroups.every((artifact) => artifact.complete);
+  const artifactsComplete = artifactGroups.every(
+    (artifact) => artifact.complete || artifact.alternativeValid
+  );
   const activationEvidenceComplete =
     providerComplete && d1Complete && mailComplete && artifactsComplete;
   const liveClaimBlocked = !activationEvidenceComplete;

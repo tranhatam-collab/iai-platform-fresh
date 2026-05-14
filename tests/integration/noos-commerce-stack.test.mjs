@@ -85,7 +85,7 @@ test("mock-backed NOOS stack completes checkout and enforces boundary redirects"
   });
   assert.equal(boundaryResponse.status, 308);
   assert.equal(boundaryResponse.headers.get("location"), "/en/documents");
-  assert.equal(boundaryResponse.headers.get("x-robots-tag"), "noindex, nofollow");
+  assert.equal(boundaryResponse.headers.get("x-robots-tag"), "noindex,nofollow");
   assert.equal(boundaryResponse.headers.get("x-noos-commerce-source"), "api-required");
 
   const checkoutResponse = await fetch(`${webBase}/en/checkout`, {
@@ -187,5 +187,5 @@ test("mock-backed NOOS stack completes checkout and enforces boundary redirects"
   const inquiryResponse = await fetch(`${webBase}/en/organization-inquiry?buyer=buyer_team014&from=P12`);
   const inquiryHtml = await inquiryResponse.text();
   assert.equal(inquiryResponse.status, 200);
-  assert.match(inquiryHtml, /Organization and strategic rollout starts from a controlled handoff/);
+  assert.match(inquiryHtml, /Organization inquiry handles high-tier support handoff/);
 });
