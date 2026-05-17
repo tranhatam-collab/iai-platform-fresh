@@ -2,11 +2,13 @@ name = "trust-iai-one"
 main = "src/index.js"
 compatibility_date = "2026-04-26"
 account_id = "62d57eaa548617aeecac766e5a1cb98e"
+workers_dev = true
 assets = { directory = "./public", binding = "ASSETS" }
 
-routes = [
-  { pattern = "trust.iai.one", custom_domain = true }
-]
+# routes = [{ pattern = "trust.iai.one", custom_domain = true }]
+# NOTE: custom_domain requires zone in same account. Zone iai.one = f3f9e76.
+# To bind trust.iai.one: either (A) move Worker to f3f9e76 or (B) use CF route in f3f9e76 proxying to this Worker.
+# Phase 2B decision required — deploying to workers.dev for now.
 
 [vars]
 APP_NAME = "trust.iai.one"
