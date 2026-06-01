@@ -10,9 +10,11 @@ import {
 function makeEvent(overrides: Partial<UsageEvent> = {}): UsageEvent {
   return {
     event_id: "evt_001",
+    tenant: "iai",
     workspace_id: "ws_001",
     subject_id: "user_001",
     domain_surface: "flow.iai.one",
+    event_type: "chat_run",
     usage_unit: "run_count",
     usage_amount: 1,
     source_object_id: "flow_001",

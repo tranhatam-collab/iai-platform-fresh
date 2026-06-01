@@ -15,10 +15,14 @@ export type Environment = "development" | "staging" | "production" | "sandbox";
 
 export interface UsageEvent {
   event_id: string;
+  /** Tenant that owns this event */
+  tenant: string;
   workspace_id: string;
   /** subject_id hoặc "system" nếu là system actor */
   subject_id: string | "system";
   domain_surface: string;
+  /** Event type e.g. "chat_run", "api_call", "agent_run" */
+  event_type: string;
   usage_unit: string;
   usage_amount: number;
   source_object_id: string;
@@ -45,8 +49,10 @@ export function validateUsageEvent(event: unknown): asserts event is UsageEvent 
 
   const requiredStringFields: (keyof UsageEvent)[] = [
     "event_id",
+    "tenant",
     "workspace_id",
     "domain_surface",
+    "event_type",
     "usage_unit",
     "source_object_id",
     "occurred_at",
@@ -107,11 +113,11 @@ export async function emitUsageEventToD1(
     )
     .bind(
       event.event_id,
-      event.workspace_id, // tenant derived from workspace in caller
+      event.tenant,
       event.workspace_id,
       event.subject_id,
       event.domain_surface,
-      event.usage_unit,
+      event.event_type,
       event.usage_amount,
       event.usage_unit,
       event.source_object_id,
