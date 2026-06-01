@@ -87,8 +87,18 @@ test("submitting feedback with an invalid email returns a validation error", asy
   assert.match(html, /does not look valid/);
 });
 
-test("POST /v1/site/generate returns 202 with site_id and preview_url", async () => {
-  const handler = createWebRequestHandler();
+test("POST /v1/site/generate returns 200 with site_id and sections when AI succeeds", async () => {
+  const mockClient = {
+    async generateSite() {
+      return {
+        ok: true,
+        siteId: "site_ai_001",
+        sections: [{ heading: "Hero", body: "Welcome" }],
+        previewHtml: "<div>preview</div>"
+      };
+    }
+  };
+  const handler = createWebRequestHandler({ aiAgentClient: mockClient });
 
   const response = await dispatchToHandler(handler, {
     body: JSON.stringify({
@@ -101,18 +111,19 @@ test("POST /v1/site/generate returns 202 with site_id and preview_url", async ()
     method: "POST",
     url: "/v1/site/generate"
   });
-  assert.equal(response.status, 202);
+  assert.equal(response.status, 200);
   const payload = await response.json();
   assert.equal(payload.ok, true);
-  assert.ok(payload.data.site_id.startsWith("site_"));
-  assert.equal(payload.data.status, "generating");
-  assert.ok(payload.data.preview_url.startsWith("/v1/site/"));
+  assert.equal(payload.data.site_id, "site_ai_001");
+  assert.equal(payload.data.status, "completed");
+  assert.equal(payload.data.preview_url, "/v1/site/site_ai_001/preview");
   assert.equal(payload.data.business_name, "Tranhatam Coffee");
   assert.equal(payload.data.goal, "Sell coffee online");
   assert.equal(payload.data.intent, "commerce");
   assert.equal(payload.data.role, "starter");
-  assert.ok(Array.isArray(payload.data.sections));
-  assert.ok(payload.data.created_at);
+  assert.equal(payload.data.sections.length, 1);
+  assert.equal(payload.data.sections[0].heading, "Hero");
+  assert.equal(payload.data.preview_html, "<div>preview</div>");
 });
 
 test("POST /v1/site/generate rejects missing businessName", async () => {
@@ -128,6 +139,29 @@ test("POST /v1/site/generate rejects missing businessName", async () => {
   const payload = await response.json();
   assert.equal(payload.ok, false);
   assert.equal(payload.error.code, "INVALID_REQUEST");
+});
+
+test("POST /v1/site/generate maps AI errors to correct HTTP status", async () => {
+  const mockClient = {
+    async generateSite() {
+      return { ok: false, error: "AI_QUOTA_EXCEEDED" };
+    }
+  };
+  const handler = createWebRequestHandler({ aiAgentClient: mockClient });
+
+  const response = await dispatchToHandler(handler, {
+    body: JSON.stringify({
+      businessName: "Tranhatam Coffee",
+      goal: "Sell coffee online"
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+    url: "/v1/site/generate"
+  });
+  assert.equal(response.status, 429);
+  const payload = await response.json();
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "AI_QUOTA_EXCEEDED");
 });
 
 test("GET /v1/site/:id/preview returns draft placeholder", async () => {

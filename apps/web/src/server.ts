@@ -467,8 +467,38 @@ async function handleRequest(
         return;
       }
 
-      const siteId = `site_${randomUUID().replace(/-/g, "")}`;
-      const now = new Date().toISOString();
+      const result = await aiAgentClient.generateSite({
+        businessName,
+        goal,
+        intent,
+        role,
+        locale: "en"
+      });
+
+      if (!result.ok) {
+        const statusMap: Record<string, number> = {
+          AI_QUOTA_EXCEEDED: 429,
+          AI_UNAUTHORIZED: 401,
+          AI_BAD_RESPONSE: 502,
+          AI_UNAVAILABLE: 503
+        };
+        eventRecorder.record({
+          eventName: "web_api_site_generate",
+          intent,
+          role,
+          route: url.pathname,
+          sourceCampaign: "direct",
+          variantId: "control",
+          buildOutcome: result.error ?? "AI_UNAVAILABLE"
+        });
+        respondJson(response, statusMap[result.error ?? "AI_UNAVAILABLE"] ?? 503, {
+          ok: false,
+          error: { code: result.error ?? "AI_UNAVAILABLE", message: "Site generation failed." }
+        });
+        return;
+      }
+
+      const siteId = result.siteId ?? `site_${randomUUID().replace(/-/g, "")}`;
 
       eventRecorder.record({
         eventName: "web_api_site_generate",
@@ -480,18 +510,18 @@ async function handleRequest(
         buildOutcome: siteId
       });
 
-      respondJson(response, 202, {
+      respondJson(response, 200, {
         ok: true,
         data: {
           site_id: siteId,
-          status: "generating",
+          status: "completed",
           preview_url: `/v1/site/${siteId}/preview`,
           business_name: businessName,
           goal,
           intent,
           role,
-          sections: [],
-          created_at: now
+          sections: result.sections ?? [],
+          preview_html: result.previewHtml ?? ""
         }
       });
       return;
