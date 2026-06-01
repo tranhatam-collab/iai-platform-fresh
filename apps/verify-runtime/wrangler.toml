@@ -1,0 +1,36 @@
+name = "verify-runtime"
+main = "src/index.ts"
+compatibility_date = "2026-04-14"
+workers_dev = true
+
+# ---------------------------------------------------------------
+# REQUIRED CLOUDFLARE BINDINGS (documented; not all activated)
+# ---------------------------------------------------------------
+
+# Durable Object for per-workspace atomic quota counter/state.
+# TODO: DO class must be registered in account before deploy.
+[[durable_objects.bindings]]
+name = "QUOTA_DO"
+class_name = "QuotaDO"
+
+# Migration entry required for Durable Object class activation.
+[[migrations]]
+tag = "v1"
+new_classes = ["QuotaDO"]
+
+# D1 database for usage ledger events ( Phase 2 ).
+# TODO: create database and update database_id before deploy.
+# [[d1_databases]]
+# binding = "USAGE_LEDGER_DB"
+# database_name = "verify_usage_ledger"
+# database_id = "REPLACE_ME"
+
+# Queue for async usage emission ( Phase 2 ).
+# TODO: create queue and uncomment before deploy.
+# [[queues.producers]]
+# binding = "USAGE_EVENTS_QUEUE"
+# queue = "verify-usage-events"
+
+[vars]
+APP_NAME = "verify-runtime"
+ENVIRONMENT = "development"
