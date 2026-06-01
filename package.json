@@ -106,7 +106,9 @@
     "precommit": "pnpm quality:gate",
     "team:wake:once": "node scripts/team-autowake-15m-loop.mjs --once",
     "team:wake:loop": "node scripts/team-autowake-15m-loop.mjs --loop --interval-minutes=10",
-    "report:team-autowake": "pnpm team:wake:once"
+    "report:team-autowake": "pnpm team:wake:once",
+    "continuous:dev": "node scripts/continuous-build-dev-audit.mjs",
+    "continuous:dev:once": "node scripts/continuous-build-dev-audit.mjs --once"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
