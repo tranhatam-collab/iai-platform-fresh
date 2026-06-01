@@ -30,6 +30,11 @@ database_id = "REPLACE_AFTER_CREATE"
 binding = "USAGE_EVENTS_QUEUE"
 queue = "verify-usage-events"
 
+[[queues.consumers]]
+queue = "verify-usage-events"
+max_batch_size = 10
+max_batch_timeout = 5
+
 [vars]
 APP_NAME = "verify-runtime"
 ENVIRONMENT = "development"

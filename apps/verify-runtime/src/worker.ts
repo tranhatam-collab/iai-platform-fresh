@@ -124,6 +124,21 @@ export const worker = {
       return Response.json({ error: "Internal error" }, { status: 500 });
     }
   },
+
+  async queue(batch: MessageBatch, env: Env, ctx: ExecutionContext): Promise<void> {
+    for (const message of batch.messages) {
+      const event = message.body as UsageEvent;
+      validateUsageEvent(event);
+
+      if (env.USAGE_LEDGER_DB) {
+        await emitUsageEventToD1(event, env.USAGE_LEDGER_DB);
+      } else {
+        // D1 not bound — drop silently during pre-staging phase
+        // eslint-disable-next-line no-console
+        console.warn(`[verify-runtime] Dropped usage event ${event.event_id}: D1 not bound`);
+      }
+    }
+  },
 };
 
 export default worker;
