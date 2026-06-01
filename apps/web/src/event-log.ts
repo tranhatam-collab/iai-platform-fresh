@@ -3,7 +3,11 @@ export type WebEventName =
   | "web_onboarding_started"
   | "web_role_selected"
   | "web_auth_handoff_started"
-  | "web_paid_intent_started";
+  | "web_paid_intent_started"
+  | "web_feedback_submitted"
+  | "web_ai_build_started"
+  | "web_ai_build_completed"
+  | "web_ai_build_failed";
 
 export interface WebEventRecord {
   eventName: WebEventName;
@@ -14,6 +18,10 @@ export interface WebEventRecord {
   route: string;
   sourceCampaign: string;
   variantId: string;
+  feedbackCategory?: string;
+  feedbackRating?: number;
+  messageLength?: number;
+  buildOutcome?: string;
 }
 
 export interface WebEventRecorder {

@@ -1,12 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { createAiAgentClient, type AiAgentClient, type AiAgentMode } from "./aiagent-client.js";
 import { createWebEventRecorder, type WebEventRecorder } from "./event-log.js";
 import { buildFlowContractUrl } from "./flow-contract.js";
+import { resolveLocale } from "./i18n.js";
 import {
+  renderBuilderForm,
+  renderBuilderResult,
+  renderFeedbackForm,
+  renderFeedbackSubmitted,
   renderLanding,
   renderOnboardingForm,
   renderOnboardingSummary,
   type ContractStatus,
+  type FeedbackCategory,
   type OnboardingIntent,
   type OnboardingRole,
   type RoutePlan,
@@ -16,6 +23,17 @@ import {
 export interface WebServerOptions extends Partial<SharedContractConfig> {
   contractWorkspaceId?: string;
   fetchImpl?: typeof globalThis.fetch;
+  aiBuilderEnabled?: boolean;
+  aiAgentApiBase?: string;
+  aiAgentMode?: AiAgentMode;
+  aiAgentClient?: AiAgentClient;
+}
+
+interface WebRuntimeConfig extends SharedContractConfig {
+  contractWorkspaceId: string;
+  aiBuilderEnabled: boolean;
+  aiAgentApiBase: string;
+  aiAgentMode: AiAgentMode;
 }
 
 interface SharedRouteTarget {
@@ -49,13 +67,21 @@ export function createWebRequestHandler(options: WebServerOptions = {}) {
   const config = resolveConfig(options);
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   const eventRecorder = createWebEventRecorder();
+  const aiAgentClient =
+    options.aiAgentClient ??
+    createAiAgentClient({
+      apiBase: config.aiAgentApiBase,
+      mode: config.aiAgentMode,
+      apiKey: process.env.WEB_AIAGENT_API_KEY,
+      fetchImpl
+    });
 
   return (request: IncomingMessage, response: ServerResponse) => {
-    void handleRequest(request, response, config, fetchImpl, eventRecorder);
+    void handleRequest(request, response, config, fetchImpl, eventRecorder, aiAgentClient);
   };
 }
 
-function resolveConfig(options: WebServerOptions): SharedContractConfig & { contractWorkspaceId: string } {
+function resolveConfig(options: WebServerOptions): WebRuntimeConfig {
   return {
     contractWorkspaceId:
       options.contractWorkspaceId ?? process.env.WEB_CONTRACT_WORKSPACE_ID ?? "ws_flow_main",
@@ -66,16 +92,26 @@ function resolveConfig(options: WebServerOptions): SharedContractConfig & { cont
       options.sharedBillingUrl ?? process.env.WEB_SHARED_BILLING_URL ?? "https://dash.iai.one/billing",
     sharedAppUrl: options.sharedAppUrl ?? process.env.WEB_SHARED_APP_URL ?? "https://app.iai.one",
     sharedFlowUrl: options.sharedFlowUrl ?? process.env.WEB_SHARED_FLOW_URL ?? "https://flow.iai.one",
-    sharedDashUrl: options.sharedDashUrl ?? process.env.WEB_SHARED_DASH_URL ?? "https://dash.iai.one"
+    sharedDashUrl: options.sharedDashUrl ?? process.env.WEB_SHARED_DASH_URL ?? "https://dash.iai.one",
+    aiBuilderEnabled:
+      options.aiBuilderEnabled ?? process.env.WEB_AI_BUILDER_ENABLED === "true",
+    aiAgentApiBase:
+      options.aiAgentApiBase ?? process.env.WEB_AIAGENT_API_BASE ?? "https://api.aiagent.iai.one",
+    aiAgentMode: options.aiAgentMode ?? parseAiAgentMode(process.env.WEB_AIAGENT_MODE)
   };
+}
+
+function parseAiAgentMode(value: string | undefined): AiAgentMode {
+  return value === "byok" ? "byok" : "free-demo";
 }
 
 async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
-  config: SharedContractConfig & { contractWorkspaceId: string },
+  config: WebRuntimeConfig,
   fetchImpl: typeof globalThis.fetch,
-  eventRecorder: WebEventRecorder
+  eventRecorder: WebEventRecorder,
+  aiAgentClient: AiAgentClient
 ) {
   const requestId = `req_${randomUUID()}`;
 
@@ -255,6 +291,158 @@ async function handleRequest(
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/feedback") {
+      const locale = resolveLocale(url, request.headers["accept-language"]);
+      const category = parseFeedbackCategory(url.searchParams.get("category")) ?? "idea";
+      respondHtml(response, 200, renderFeedbackForm(toSharedConfig(config), { category }, locale));
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/feedback") {
+      const locale = resolveLocale(url, request.headers["accept-language"]);
+      const form = await readFormBody(request);
+      const category = parseFeedbackCategory(form.get("category")) ?? "idea";
+      const message = normalizeString(form.get("message"));
+      const email = normalizeString(form.get("email"));
+      const rating = parseRating(form.get("rating"));
+
+      if (!message) {
+        respondHtml(
+          response,
+          400,
+          renderFeedbackForm(toSharedConfig(config), { category }, locale, "web.feedback.error.message_required")
+        );
+        return;
+      }
+
+      if (email && !isValidEmail(email)) {
+        respondHtml(
+          response,
+          400,
+          renderFeedbackForm(toSharedConfig(config), { category }, locale, "web.feedback.error.email_invalid")
+        );
+        return;
+      }
+
+      const record = eventRecorder.record({
+        eventName: "web_feedback_submitted",
+        route: url.pathname,
+        sourceCampaign: "direct",
+        variantId: "control",
+        feedbackCategory: category,
+        feedbackRating: rating ?? undefined,
+        messageLength: message.length
+      });
+      respondHtml(
+        response,
+        200,
+        renderFeedbackSubmitted({ category, ackId: record.eventId }, locale)
+      );
+      return;
+    }
+
+    if (url.pathname === "/build") {
+      if (!config.aiBuilderEnabled) {
+        respondJson(response, 404, {
+          ok: false,
+          error: { code: "NOT_FOUND", message: "Route not found." }
+        });
+        return;
+      }
+
+      const locale = resolveLocale(url, request.headers["accept-language"]);
+
+      if (request.method === "GET") {
+        respondHtml(response, 200, renderBuilderForm(toSharedConfig(config), undefined, locale));
+        return;
+      }
+
+      if (request.method === "POST") {
+        const form = await readFormBody(request);
+        const businessName = normalizeString(form.get("businessName"));
+        const goal = normalizeString(form.get("goal"));
+        const intent = parseIntent(form.get("intent")) ?? "information";
+        const role = parseRole(form.get("role")) ?? "starter";
+
+        if (!businessName || !goal) {
+          respondHtml(
+            response,
+            400,
+            renderBuilderForm(toSharedConfig(config), { intent, role }, locale, "web.build.error.required")
+          );
+          return;
+        }
+
+        eventRecorder.record({
+          eventName: "web_ai_build_started",
+          intent,
+          role,
+          route: url.pathname,
+          sourceCampaign: "direct",
+          variantId: "control"
+        });
+
+        const result = await aiAgentClient.generateSite({
+          businessName,
+          goal,
+          intent,
+          role,
+          locale: "en"
+        });
+
+        if (!result.ok || !result.sections) {
+          eventRecorder.record({
+            eventName: "web_ai_build_failed",
+            intent,
+            role,
+            route: url.pathname,
+            sourceCampaign: "direct",
+            variantId: "control",
+            buildOutcome: result.error ?? "AI_UNAVAILABLE"
+          });
+          respondHtml(
+            response,
+            502,
+            renderBuilderForm(
+              toSharedConfig(config),
+              { intent, role },
+              locale,
+              builderErrorKey(result.error)
+            )
+          );
+          return;
+        }
+
+        eventRecorder.record({
+          eventName: "web_ai_build_completed",
+          intent,
+          role,
+          route: url.pathname,
+          sourceCampaign: "direct",
+          variantId: "control",
+          buildOutcome: result.siteId ?? "ok"
+        });
+
+        const sharedAuthHref = buildSharedAuthHref(
+          config.sharedAuthUrl,
+          role,
+          intent,
+          resolveRoutePlan(role, intent, defaultRouteTargets(config))
+        );
+        respondHtml(
+          response,
+          200,
+          renderBuilderResult({
+            businessName,
+            sections: result.sections,
+            previewHtml: result.previewHtml,
+            sharedAuthHref
+          }, locale)
+        );
+        return;
+      }
+    }
+
     respondJson(response, 404, {
       ok: false,
       error: { code: "NOT_FOUND", message: "Route not found." }
@@ -274,6 +462,7 @@ async function handleRequest(
 function respondHtml(response: ServerResponse, statusCode: number, body: string) {
   response.statusCode = statusCode;
   response.setHeader("content-type", "text/html; charset=utf-8");
+  response.setHeader("X-Robots-Tag", "noindex, nofollow");
   response.end(body);
 }
 
@@ -308,6 +497,64 @@ function normalizeString(value: string | null): string | undefined {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+const validFeedbackCategories: FeedbackCategory[] = ["bug", "idea", "praise", "question"];
+
+function parseFeedbackCategory(value: string | null): FeedbackCategory | null {
+  return value && validFeedbackCategories.includes(value as FeedbackCategory)
+    ? (value as FeedbackCategory)
+    : null;
+}
+
+function parseRating(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : null;
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function toSharedConfig(config: WebRuntimeConfig): SharedContractConfig {
+  return {
+    flowApiBase: config.flowApiBase,
+    sharedAppUrl: config.sharedAppUrl,
+    sharedAuthUrl: config.sharedAuthUrl,
+    sharedBillingUrl: config.sharedBillingUrl,
+    sharedDashUrl: config.sharedDashUrl,
+    sharedFlowUrl: config.sharedFlowUrl
+  };
+}
+
+function builderErrorKey(error: string | undefined): string {
+  switch (error) {
+    case "AI_QUOTA_EXCEEDED":
+      return "web.build.error.quota";
+    case "AI_UNAUTHORIZED":
+      return "web.build.error.unauthorized";
+    case "AI_BAD_RESPONSE":
+      return "web.build.error.bad_response";
+    default:
+      return "web.build.error.unavailable";
+  }
+}
+
+function defaultRouteTargets(
+  config: WebRuntimeConfig
+): SharedOnboardingContractPayload["routeTargets"] {
+  return {
+    commerce: { nextUrl: `${config.sharedDashUrl}/billing`, productSurface: "dash" },
+    information: { nextUrl: config.sharedAppUrl, productSurface: "app" },
+    leads: {
+      nextUrl: `${config.sharedFlowUrl}/templates/lead-intake?surface=web`,
+      productSurface: "flow"
+    }
+  };
 }
 
 function resolveRoutePlan(

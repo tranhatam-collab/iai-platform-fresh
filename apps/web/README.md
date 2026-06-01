@@ -23,6 +23,8 @@ It must not:
 
 - `/` -> landing and Team 5 boundary framing
 - `/onboarding` -> newcomer route selection
+- `/feedback` -> bilingual feedback form; `POST` records `web_feedback_submitted` and shows the "Feedback submitted" confirmation
+- `/build` -> AI website builder (flag-gated by `WEB_AI_BUILDER_ENABLED`); `POST` calls `aiagent.iai.one` to draft a site
 - `/contract-status` -> shared Team 2 contract health snapshot
 - `/events` -> in-memory onboarding event probe for local smoke/testing
 - `/shared-auth` -> 303 redirect into shared auth
@@ -39,6 +41,10 @@ It must not:
 - `WEB_SHARED_FLOW_URL`
 - `WEB_SHARED_DASH_URL`
 - `WEB_CONTRACT_WORKSPACE_ID`
+- `WEB_AI_BUILDER_ENABLED` (default `false`; gate for `/build`)
+- `WEB_AIAGENT_API_BASE` (default `https://api.aiagent.iai.one`)
+- `WEB_AIAGENT_MODE` (`free-demo` | `byok`; default `free-demo`)
+- `WEB_AIAGENT_API_KEY` (only used when `WEB_AIAGENT_MODE=byok`; never commit a real key)
 
 ## Verification
 

@@ -116,13 +116,14 @@ function page(path: string, locale: Locale, body: string): string {
 </html>`;
 }
 
-function header(locale: Locale, active: "home" | "onboarding"): string {
+function header(locale: Locale, active: "home" | "onboarding" | "feedback" | "build"): string {
   return `
     <header class="site-header">
       <a class="brand" href="${escapeHtml(buildLocalizedPath("/", locale))}">${escapeHtml(t(locale, "nav.web"))}</a>
       <nav aria-label="${escapeHtml(t(locale, "footer.nav.surfaces"))}">
         <a href="${escapeHtml(buildLocalizedPath("/", locale))}"${active === "home" ? ' aria-current="page"' : ""}>${escapeHtml(t(locale, "web.title"))}</a>
         <a href="${escapeHtml(buildLocalizedPath("/onboarding", locale))}"${active === "onboarding" ? ' aria-current="page"' : ""}>${escapeHtml(t(locale, "web.template"))}</a>
+        <a href="${escapeHtml(buildLocalizedPath("/feedback", locale))}"${active === "feedback" ? ' aria-current="page"' : ""}>${escapeHtml(t(locale, "web.feedback.nav"))}</a>
       </nav>
     </header>
   `;
@@ -260,6 +261,162 @@ export function renderOnboardingSummary({
         <div class="step"><h3>${escapeHtml(t(locale, "web.summary.next3.title"))}</h3><p>${escapeHtml(t(locale, "web.summary.next3.body", { surface: plan.productSurface, nextUrl: plan.nextUrl }))}</p></div>
       </div><div class="cta-row"><a class="primary-cta" href="${escapeHtml(sharedAuthHref)}">${escapeHtml(t(locale, "web.action.continue_auth"))}</a><a class="secondary-cta" href="${escapeHtml(config.sharedBillingUrl)}">${escapeHtml(t(locale, "web.action.open_shared_billing"))}</a></div></div></section>
       <footer><div class="footer-inner"><p>${escapeHtml(t(locale, "web.summary.footer"))}</p><p>${escapeHtml(t(locale, "footer.trust"))}</p></div></footer>
+    `
+  );
+}
+
+export type FeedbackCategory = "bug" | "idea" | "praise" | "question";
+
+const feedbackCategories: FeedbackCategory[] = ["bug", "idea", "praise", "question"];
+
+export function renderFeedbackForm(
+  config: SharedContractConfig,
+  defaults: { category: FeedbackCategory } = { category: "idea" },
+  locale: Locale = defaultLocale,
+  errorKey?: string
+): string {
+  void config;
+  const categoryChoices = feedbackCategories
+    .map(
+      (value) => `
+              <label class="choice"><input type="radio" name="category" value="${value}"${checked(value, defaults.category)} /><span class="choice-title">${escapeHtml(t(locale, `web.feedback.category.${value}`))}</span></label>`
+    )
+    .join("");
+
+  return page(
+    "/feedback",
+    locale,
+    `
+      ${header(locale, "feedback")}
+      ${hero(locale, "web.feedback.eyebrow", t(locale, "web.feedback.title"), t(locale, "web.feedback.body"), "#form", buildLocalizedPath("/", locale))}
+      <section class="content-band" id="form"><div>
+        <div class="eyebrow">${escapeHtml(t(locale, "web.feedback.form_eyebrow"))}</div>
+        ${errorKey ? `<p class="note" role="alert">${escapeHtml(t(locale, errorKey))}</p>` : ""}
+        <form method="post" action="${escapeHtml(buildLocalizedPath("/feedback", locale))}" class="field-group">
+          <div class="field-group"><h3>${escapeHtml(t(locale, "web.feedback.category.label"))}</h3><div class="choice-grid">${categoryChoices}
+          </div></div>
+          <div class="field-group"><h3>${escapeHtml(t(locale, "web.feedback.rating.label"))}</h3>
+            <label class="note">${escapeHtml(t(locale, "web.feedback.rating.hint"))}
+              <select name="rating">
+                <option value="">${escapeHtml(t(locale, "web.feedback.rating.none"))}</option>
+                <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
+              </select>
+            </label>
+          </div>
+          <div class="field-group"><h3>${escapeHtml(t(locale, "web.feedback.message.label"))}</h3>
+            <textarea name="message" rows="5" maxlength="2000" required placeholder="${escapeHtml(t(locale, "web.feedback.message.placeholder"))}"></textarea>
+          </div>
+          <div class="field-group"><h3>${escapeHtml(t(locale, "web.feedback.email.label"))}</h3>
+            <input type="email" name="email" placeholder="${escapeHtml(t(locale, "web.feedback.email.placeholder"))}" />
+          </div>
+          <button type="submit">${escapeHtml(t(locale, "web.feedback.submit"))}</button>
+        </form>
+      </div></section>
+      <footer><div class="footer-inner"><p>${escapeHtml(t(locale, "web.feedback.footer"))}</p><p>${escapeHtml(t(locale, "footer.trust"))}</p></div></footer>
+    `
+  );
+}
+
+export function renderFeedbackSubmitted(
+  { category, ackId }: { category: FeedbackCategory; ackId: string },
+  locale: Locale = defaultLocale
+): string {
+  return page(
+    "/feedback",
+    locale,
+    `
+      ${header(locale, "feedback")}
+      ${hero(locale, "web.feedback.eyebrow", t(locale, "web.feedback.submitted.title"), t(locale, "web.feedback.submitted.body"), buildLocalizedPath("/", locale), buildLocalizedPath("/feedback", locale))}
+      <section class="content-band"><div>
+        <div class="eyebrow">${escapeHtml(t(locale, "web.feedback.submitted.eyebrow"))}</div>
+        <div class="plain-list">
+          <div><div class="status-strong">${escapeHtml(t(locale, "web.feedback.submitted.ref"))}</div><p class="route-strong">${escapeHtml(ackId)}</p></div>
+          <div><div class="status-strong">${escapeHtml(t(locale, "web.feedback.category.label"))}</div><p>${escapeHtml(t(locale, `web.feedback.category.${category}`))}</p></div>
+        </div>
+        <div class="cta-row"><a class="primary-cta" href="${escapeHtml(buildLocalizedPath("/", locale))}">${escapeHtml(t(locale, "btn.continue"))}</a><a class="secondary-cta" href="${escapeHtml(buildLocalizedPath("/feedback", locale))}">${escapeHtml(t(locale, "web.feedback.submitted.again"))}</a></div>
+      </div></section>
+      <footer><div class="footer-inner"><p>${escapeHtml(t(locale, "web.feedback.footer"))}</p><p>${escapeHtml(t(locale, "footer.trust"))}</p></div></footer>
+    `
+  );
+}
+
+export interface BuilderSection {
+  heading: string;
+  body: string;
+}
+
+export function renderBuilderForm(
+  config: SharedContractConfig,
+  defaults: { intent: OnboardingIntent; role: OnboardingRole } = { intent: "information", role: "starter" },
+  locale: Locale = defaultLocale,
+  errorKey?: string
+): string {
+  void config;
+  return page(
+    "/build",
+    locale,
+    `
+      ${header(locale, "build")}
+      ${hero(locale, "web.build.eyebrow", t(locale, "web.build.title"), t(locale, "web.build.body"), "#form", buildLocalizedPath("/", locale))}
+      <section class="content-band" id="form"><div>
+        <div class="eyebrow">${escapeHtml(t(locale, "web.build.form_eyebrow"))}</div>
+        ${errorKey ? `<p class="note" role="alert">${escapeHtml(t(locale, errorKey))}</p>` : ""}
+        <form method="post" action="${escapeHtml(buildLocalizedPath("/build", locale))}" class="field-group">
+          <div class="field-group"><h3>${escapeHtml(t(locale, "web.build.business.label"))}</h3>
+            <input type="text" name="businessName" maxlength="120" required placeholder="${escapeHtml(t(locale, "web.build.business.placeholder"))}" />
+          </div>
+          <div class="field-group"><h3>${escapeHtml(t(locale, "web.build.goal.label"))}</h3>
+            <textarea name="goal" rows="4" maxlength="1000" required placeholder="${escapeHtml(t(locale, "web.build.goal.placeholder"))}"></textarea>
+          </div>
+          <div class="field-group"><h3>${escapeHtml(t(locale, "web.intent.label"))}</h3><div class="choice-grid">
+            <label class="choice"><input type="radio" name="intent" value="information"${checked("information", defaults.intent)} /><span class="choice-title">${escapeHtml(t(locale, "web.intent.information"))}</span></label>
+            <label class="choice"><input type="radio" name="intent" value="leads"${checked("leads", defaults.intent)} /><span class="choice-title">${escapeHtml(t(locale, "web.intent.leads"))}</span></label>
+            <label class="choice"><input type="radio" name="intent" value="commerce"${checked("commerce", defaults.intent)} /><span class="choice-title">${escapeHtml(t(locale, "web.intent.commerce"))}</span></label>
+          </div></div>
+          <button type="submit">${escapeHtml(t(locale, "web.build.submit"))}</button>
+        </form>
+        <p class="note">${escapeHtml(t(locale, "web.build.powered_by"))}</p>
+      </div></section>
+      <footer><div class="footer-inner"><p>${escapeHtml(t(locale, "web.build.footer"))}</p><p>${escapeHtml(t(locale, "footer.trust"))}</p></div></footer>
+    `
+  );
+}
+
+export function renderBuilderResult(
+  {
+    businessName,
+    sections,
+    previewHtml,
+    sharedAuthHref
+  }: {
+    businessName: string;
+    sections: BuilderSection[];
+    previewHtml?: string;
+    sharedAuthHref: string;
+  },
+  locale: Locale = defaultLocale
+): string {
+  const sectionBlocks = sections
+    .map(
+      (section) => `
+        <div class="step"><h3>${escapeHtml(section.heading)}</h3><p>${escapeHtml(section.body)}</p></div>`
+    )
+    .join("");
+
+  return page(
+    "/build",
+    locale,
+    `
+      ${header(locale, "build")}
+      ${hero(locale, "web.build.result_eyebrow", t(locale, "web.build.result_title", { businessName }), t(locale, "web.build.result_body"), sharedAuthHref, buildLocalizedPath("/build", locale))}
+      <section class="content-band"><div>
+        <div class="eyebrow">${escapeHtml(t(locale, "web.build.sections_eyebrow"))}</div>
+        <div class="triple">${sectionBlocks}
+        </div>
+      </div></section>
+      ${previewHtml ? `<section class="content-band"><div><div class="eyebrow">${escapeHtml(t(locale, "web.build.preview_eyebrow"))}</div><pre class="note" style="white-space:pre-wrap;overflow:auto">${escapeHtml(previewHtml)}</pre></div></section>` : ""}
+      <section class="content-band"><div class="cta-row"><a class="primary-cta" href="${escapeHtml(sharedAuthHref)}">${escapeHtml(t(locale, "web.build.save_cta"))}</a><a class="secondary-cta" href="${escapeHtml(buildLocalizedPath("/build", locale))}">${escapeHtml(t(locale, "web.build.regenerate"))}</a></div></section>
+      <footer><div class="footer-inner"><p>${escapeHtml(t(locale, "web.build.footer"))}</p><p>${escapeHtml(t(locale, "footer.trust"))}</p></div></footer>
     `
   );
 }
