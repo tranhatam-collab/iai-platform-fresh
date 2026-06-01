@@ -27,6 +27,7 @@ export interface WebServerOptions extends Partial<SharedContractConfig> {
   aiAgentApiBase?: string;
   aiAgentMode?: AiAgentMode;
   aiAgentClient?: AiAgentClient;
+  publicationHold?: boolean;
 }
 
 interface WebRuntimeConfig extends SharedContractConfig {
@@ -34,6 +35,7 @@ interface WebRuntimeConfig extends SharedContractConfig {
   aiBuilderEnabled: boolean;
   aiAgentApiBase: string;
   aiAgentMode: AiAgentMode;
+  publicationHold: boolean;
 }
 
 interface SharedRouteTarget {
@@ -97,7 +99,8 @@ function resolveConfig(options: WebServerOptions): WebRuntimeConfig {
       options.aiBuilderEnabled ?? process.env.WEB_AI_BUILDER_ENABLED === "true",
     aiAgentApiBase:
       options.aiAgentApiBase ?? process.env.WEB_AIAGENT_API_BASE ?? "https://api.aiagent.iai.one",
-    aiAgentMode: options.aiAgentMode ?? parseAiAgentMode(process.env.WEB_AIAGENT_MODE)
+    aiAgentMode: options.aiAgentMode ?? parseAiAgentMode(process.env.WEB_AIAGENT_MODE),
+    publicationHold: options.publicationHold ?? process.env.WEB_PUBLICATION_HOLD !== "false"
   };
 }
 
@@ -114,6 +117,10 @@ async function handleRequest(
   aiAgentClient: AiAgentClient
 ) {
   const requestId = `req_${randomUUID()}`;
+
+  if (config.publicationHold) {
+    response.setHeader("X-Robots-Tag", "noindex, nofollow");
+  }
 
   try {
     if (!request.url || !request.method) {
@@ -462,7 +469,6 @@ async function handleRequest(
 function respondHtml(response: ServerResponse, statusCode: number, body: string) {
   response.statusCode = statusCode;
   response.setHeader("content-type", "text/html; charset=utf-8");
-  response.setHeader("X-Robots-Tag", "noindex, nofollow");
   response.end(body);
 }
 

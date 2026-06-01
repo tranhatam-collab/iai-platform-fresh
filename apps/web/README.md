@@ -45,6 +45,7 @@ It must not:
 - `WEB_AIAGENT_API_BASE` (default `https://api.aiagent.iai.one`)
 - `WEB_AIAGENT_MODE` (`free-demo` | `byok`; default `free-demo`)
 - `WEB_AIAGENT_API_KEY` (only used when `WEB_AIAGENT_MODE=byok`; never commit a real key)
+- `WEB_PUBLICATION_HOLD` (default `true`; while held, every response sends `X-Robots-Tag: noindex, nofollow`. Set to `false` only at Wave 5 go-live to allow indexing — canonical/hreflang are already emitted.)
 
 ## Verification
 

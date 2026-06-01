@@ -21,6 +21,14 @@ test("web feedback form renders in English and Vietnamese", async () => {
   assert.match(viHtml, /Loại phản hồi/);
 });
 
+test("disabling the publication hold removes the noindex header (Wave 5 go-live)", async () => {
+  const handler = createWebRequestHandler({ publicationHold: false });
+
+  const response = await dispatchToHandler(handler, { url: "/feedback" });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("x-robots-tag"), null);
+});
+
 test("submitting valid feedback records an event and shows the submitted confirmation", async () => {
   const handler = createWebRequestHandler();
 
