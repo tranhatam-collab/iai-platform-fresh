@@ -4,32 +4,31 @@ compatibility_date = "2026-04-14"
 workers_dev = true
 
 # ---------------------------------------------------------------
-# REQUIRED CLOUDFLARE BINDINGS (documented; not all activated)
+# CLOUDFLARE BINDINGS
 # ---------------------------------------------------------------
 
 # Durable Object for per-workspace atomic quota counter/state.
-# TODO: DO class must be registered in account before deploy.
 [[durable_objects.bindings]]
 name = "QUOTA_DO"
-class_name = "QuotaDO"
+class_name = "QuotaDurableObject"
 
 # Migration entry required for Durable Object class activation.
 [[migrations]]
 tag = "v1"
-new_classes = ["QuotaDO"]
+new_classes = ["QuotaDurableObject"]
 
-# D1 database for usage ledger events ( Phase 2 ).
-# TODO: create database and update database_id before deploy.
-# [[d1_databases]]
-# binding = "USAGE_LEDGER_DB"
-# database_name = "verify_usage_ledger"
-# database_id = "REPLACE_ME"
+# D1 database for usage ledger events.
+# NOTE: database_id must be replaced after `wrangler d1 create`.
+[[d1_databases]]
+binding = "USAGE_LEDGER_DB"
+database_name = "verify_usage_ledger"
+database_id = "REPLACE_AFTER_CREATE"
 
-# Queue for async usage emission ( Phase 2 ).
-# TODO: create queue and uncomment before deploy.
-# [[queues.producers]]
-# binding = "USAGE_EVENTS_QUEUE"
-# queue = "verify-usage-events"
+# Queue for async usage emission.
+# NOTE: queue must be created with `wrangler queues create`.
+[[queues.producers]]
+binding = "USAGE_EVENTS_QUEUE"
+queue = "verify-usage-events"
 
 [vars]
 APP_NAME = "verify-runtime"

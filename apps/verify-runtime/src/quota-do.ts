@@ -75,42 +75,4 @@ export class QuotaDO {
   }
 }
 
-/**
- * Minimal local stub for Cloudflare DurableObjectState.
- * Replace with @cloudflare/workers-types once the package is installed
- * and the DO is ready for real binding.
- */
-interface DurableObjectStorageStub {
-  get<T>(key: string): Promise<T | undefined>;
-  put(key: string, value: unknown): Promise<void>;
-}
-interface DurableObjectStateStub {
-  storage: DurableObjectStorageStub;
-}
-
-/**
- * Cloudflare Durable Object wrapper stub.
- * TODO: replace stub with real DO class extending DurableObject
- * once @cloudflare/workers-types binding is configured.
- */
-export class DurableObjectQuota {
-  private quota: QuotaDO;
-
-  constructor(state: DurableObjectStateStub, env: unknown) {
-    const stored = state.storage.get<QuotaState>("quota_state");
-    // Initial placeholder until storage is wired
-    this.quota = new QuotaDO({
-      tenant: "unknown",
-      workspaceId: "unknown",
-      unit: "run_count",
-      used: 0,
-      limit: 0,
-      windowStart: Date.now(),
-    });
-  }
-
-  async fetch(request: Request): Promise<Response> {
-    // TODO: wire RPC methods: check, increment, getState
-    return new Response("QuotaDO stub", { status: 501 });
-  }
-}
+// Real DO wrapper: see durable-object.ts → QuotaDurableObject

@@ -85,6 +85,52 @@ export function validateUsageEvent(event: unknown): asserts event is UsageEvent 
  */
 export function emitUsageEvent(event: UsageEvent): UsageEvent {
   validateUsageEvent(event);
-  // TODO Phase 2: enqueue to USAGE_EVENTS_QUEUE or write to USAGE_LEDGER_DB
   return event;
+}
+
+/**
+ * Insert a validated usage event directly into D1.
+ * Used when USAGE_LEDGER_DB binding is available.
+ */
+export async function emitUsageEventToD1(
+  event: UsageEvent,
+  db: D1Database
+): Promise<void> {
+  validateUsageEvent(event);
+  await db
+    .prepare(
+      `INSERT INTO usage_events
+       (id, tenant, workspace_id, actor_id, domain_surface, event_type,
+        usage_amount, usage_unit, source_object_id, metadata, environment,
+        occurred_at, received_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .bind(
+      event.event_id,
+      event.workspace_id, // tenant derived from workspace in caller
+      event.workspace_id,
+      event.subject_id,
+      event.domain_surface,
+      event.usage_unit,
+      event.usage_amount,
+      event.usage_unit,
+      event.source_object_id,
+      "{}", // metadata JSON
+      event.environment,
+      event.occurred_at,
+      Date.now()
+    )
+    .run();
+}
+
+/**
+ * Send a validated usage event to a Queue for async processing.
+ * Used when USAGE_EVENTS_QUEUE binding is available.
+ */
+export async function emitUsageEventToQueue(
+  event: UsageEvent,
+  queue: Queue
+): Promise<void> {
+  validateUsageEvent(event);
+  await queue.send(event);
 }

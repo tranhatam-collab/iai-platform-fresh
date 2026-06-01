@@ -65,6 +65,12 @@ importers:
 
   apps/root: {}
 
+  apps/verify-runtime:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260308.0
+        version: 4.20260601.1
+
   apps/web: {}
 
   packages/config: {}
@@ -72,6 +78,9 @@ importers:
   packages/mail-core: {}
 
 packages:
+
+  '@cloudflare/workers-types@4.20260601.1':
+    resolution: {integrity: sha512-pYORr1EKlDu55HCHhln8XSXoOSvKAkrTkovJL66bX8xw6DAT2fhs39B6FLjCJD+x++hjBEE2bmKB1TcFKS+0Dw==}
 
   '@esbuild/aix-ppc64@0.27.7':
     resolution: {integrity: sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg==}
@@ -277,6 +286,8 @@ packages:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
 snapshots:
+
+  '@cloudflare/workers-types@4.20260601.1': {}
 
   '@esbuild/aix-ppc64@0.27.7':
     optional: true
