@@ -86,3 +86,58 @@ test("submitting feedback with an invalid email returns a validation error", asy
   assert.equal(response.status, 400);
   assert.match(html, /does not look valid/);
 });
+
+test("POST /v1/site/generate returns 202 with site_id and preview_url", async () => {
+  const handler = createWebRequestHandler();
+
+  const response = await dispatchToHandler(handler, {
+    body: JSON.stringify({
+      businessName: "Tranhatam Coffee",
+      goal: "Sell coffee online",
+      intent: "commerce",
+      role: "starter"
+    }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+    url: "/v1/site/generate"
+  });
+  assert.equal(response.status, 202);
+  const payload = await response.json();
+  assert.equal(payload.ok, true);
+  assert.ok(payload.data.site_id.startsWith("site_"));
+  assert.equal(payload.data.status, "generating");
+  assert.ok(payload.data.preview_url.startsWith("/v1/site/"));
+  assert.equal(payload.data.business_name, "Tranhatam Coffee");
+  assert.equal(payload.data.goal, "Sell coffee online");
+  assert.equal(payload.data.intent, "commerce");
+  assert.equal(payload.data.role, "starter");
+  assert.ok(Array.isArray(payload.data.sections));
+  assert.ok(payload.data.created_at);
+});
+
+test("POST /v1/site/generate rejects missing businessName", async () => {
+  const handler = createWebRequestHandler();
+
+  const response = await dispatchToHandler(handler, {
+    body: JSON.stringify({ goal: "Sell coffee online" }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+    url: "/v1/site/generate"
+  });
+  assert.equal(response.status, 400);
+  const payload = await response.json();
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error.code, "INVALID_REQUEST");
+});
+
+test("GET /v1/site/:id/preview returns draft placeholder", async () => {
+  const handler = createWebRequestHandler();
+
+  const response = await dispatchToHandler(handler, { url: "/v1/site/site_abc123/preview" });
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.ok, true);
+  assert.equal(payload.data.site_id, "site_abc123");
+  assert.equal(payload.data.status, "draft");
+  assert.ok(payload.data.html.includes("Placeholder"));
+});

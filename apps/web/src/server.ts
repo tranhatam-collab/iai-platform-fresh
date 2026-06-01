@@ -450,6 +450,66 @@ async function handleRequest(
       }
     }
 
+    // ─── AI Site Generation API (v1 contract) ───
+    if (request.method === "POST" && url.pathname === "/v1/site/generate") {
+      const body = await readJsonBody(request);
+
+      const businessName = normalizeString(String(body.businessName ?? ""));
+      const goal = normalizeString(String(body.goal ?? ""));
+      const intent = parseIntent(String(body.intent ?? "")) ?? "information";
+      const role = parseRole(String(body.role ?? "")) ?? "starter";
+
+      if (!businessName || !goal) {
+        respondJson(response, 400, {
+          ok: false,
+          error: { code: "INVALID_REQUEST", message: "businessName and goal are required." }
+        });
+        return;
+      }
+
+      const siteId = `site_${randomUUID().replace(/-/g, "")}`;
+      const now = new Date().toISOString();
+
+      eventRecorder.record({
+        eventName: "web_api_site_generate",
+        intent,
+        role,
+        route: url.pathname,
+        sourceCampaign: "direct",
+        variantId: "control",
+        buildOutcome: siteId
+      });
+
+      respondJson(response, 202, {
+        ok: true,
+        data: {
+          site_id: siteId,
+          status: "generating",
+          preview_url: `/v1/site/${siteId}/preview`,
+          business_name: businessName,
+          goal,
+          intent,
+          role,
+          sections: [],
+          created_at: now
+        }
+      });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname.startsWith("/v1/site/") && url.pathname.endsWith("/preview")) {
+      const siteId = url.pathname.slice("/v1/site/".length, -"/preview".length);
+      respondJson(response, 200, {
+        ok: true,
+        data: {
+          site_id: siteId,
+          status: "draft",
+          html: "<!-- Placeholder: AI-generated preview will be injected here -->"
+        }
+      });
+      return;
+    }
+
     respondJson(response, 404, {
       ok: false,
       error: { code: "NOT_FOUND", message: "Route not found." }
@@ -484,6 +544,18 @@ async function readFormBody(request: AsyncIterable<Buffer | string>): Promise<UR
     body += chunk.toString();
   }
   return new URLSearchParams(body);
+}
+
+async function readJsonBody(request: AsyncIterable<Buffer | string>): Promise<Record<string, unknown>> {
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk.toString();
+  }
+  try {
+    return JSON.parse(body) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
 }
 
 function parseRole(value: string | null): OnboardingRole | null {

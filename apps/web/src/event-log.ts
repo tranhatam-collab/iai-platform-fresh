@@ -7,7 +7,8 @@ export type WebEventName =
   | "web_feedback_submitted"
   | "web_ai_build_started"
   | "web_ai_build_completed"
-  | "web_ai_build_failed";
+  | "web_ai_build_failed"
+  | "web_api_site_generate";
 
 export interface WebEventRecord {
   eventName: WebEventName;
