@@ -830,6 +830,10 @@ export function getCommerceSourceMode(): CommerceSourceMode {
   return requireCommerceApi() ? "api-required" : "api-optional";
 }
 
+export function isSellingEnabled(): boolean {
+  return process.env.SELLING_ENABLED === "true";
+}
+
 function buildEmptyLibrary(buyerId: string): LibraryView {
   return {
     buyerId,
@@ -1009,6 +1013,9 @@ export async function executeCheckoutFlowAsync(input: {
   buyerEmail?: string;
   sourceSurface?: "product-detail" | "catalog" | "upsell-card" | "library";
 }): Promise<CheckoutFlowResult> {
+  if (!isSellingEnabled()) {
+    throw new Error("SELLING_BLOCKED: Checkout is disabled. This site is in waitlist mode.");
+  }
   const product = await loadProductByCodeAsync(input.productCode);
   if (!product) {
     throw new Error(`Unknown product ${input.productCode}`);

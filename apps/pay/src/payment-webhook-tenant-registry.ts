@@ -68,3 +68,16 @@ export function getPaymentWebhookTenantConfig(
   }
   return BUILTIN_BY_CODE.get(normalized);
 }
+
+// TODO BLOCKED: Tenant webhook expansion
+// VERIFY_IAI_ONE_TENANT_AND_FLOW_MATRIX_2026 defines 5 tenants:
+//   iai, dsts, nhachung, muonnoi, aal
+// Only "tranhatam" has a live PaymentWebhookTenantConfig above.
+// The remaining 4 tenants MUST NOT be added until each has:
+//   - destination_url
+//   - tenant_id (pay platform UUID)
+//   - signature_scheme + version lock
+//   - timestamp_header + signature_header names
+//   - runtime secret (stored in env, not in this file)
+// Until then, any pay webhook route for those tenants returns 404.
+// Owner: Team 2 / Pay runtime. Gate: Founder approval per tenant.

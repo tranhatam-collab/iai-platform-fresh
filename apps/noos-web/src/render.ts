@@ -2529,22 +2529,59 @@ export async function renderCheckoutFromForm(body: URLSearchParams, locale: Loca
   const productCode = (body.get("product") as ProductCode | null) ?? "P11";
   const buyerEmail = body.get("email") ?? undefined;
   const licenseType = body.get("license") ?? undefined;
-  const checkout = await executeCheckoutFlowAsync({
-    buyerId,
-    productCode,
-    buyerEmail,
-    licenseType,
-    sourceSurface: "product-detail"
-  });
+  try {
+    const checkout = await executeCheckoutFlowAsync({
+      buyerId,
+      productCode,
+      buyerEmail,
+      licenseType,
+      sourceSurface: "product-detail"
+    });
 
-  return {
-    status: 303,
-    contentType: "text/plain; charset=utf-8",
-    headers: {
-      location: `${buildLocalePath(locale, "/checkout-success")}?buyer=${encodeURIComponent(checkout.buyerId)}&product=${checkout.productCode}&order=${encodeURIComponent(checkout.orderId)}`
-    },
-    body: "Redirecting to checkout success"
-  };
+    return {
+      status: 303,
+      contentType: "text/plain; charset=utf-8",
+      headers: {
+        location: `${buildLocalePath(locale, "/checkout-success")}?buyer=${encodeURIComponent(checkout.buyerId)}&product=${checkout.productCode}&order=${encodeURIComponent(checkout.orderId)}`
+      },
+      body: "Redirecting to checkout success"
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("SELLING_BLOCKED")) {
+      const product = getProductByCode(productCode);
+      const localizedProduct = product ? getLocalizedProduct(product, locale) : null;
+      const waitlistBody = `
+    <main>
+      <section class="hero">
+        <div class="hero-inner">
+          <div class="hero-kicker">${t(locale, "noos.checkout.hero_kicker")}</div>
+          <h1>${escapeHtml(localizedProduct?.name ?? t(locale, "noos.product.default_name"))}</h1>
+          <p class="hero-copy">${t(locale, "noos.checkout.waitlist_mode_body")}</p>
+          <div class="hero-actions">
+            <a class="button" href="/products?buyer=${encodeURIComponent(buyerId)}">${t(locale, "noos.btn.back_to_products")}</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  `;
+      return {
+        status: 200,
+        contentType: "text/html; charset=utf-8",
+        body: layout({
+          title: t(locale, "noos.checkout.waitlist_page_title"),
+          active: "/products",
+          body: waitlistBody,
+          buyerId,
+          canonicalPath: "/checkout",
+          locale,
+          description: t(locale, "noos.checkout.waitlist_page_description"),
+          noindex: true
+        })
+      };
+    }
+    throw error;
+  }
 }
 
 export async function renderRoute(pathname: string, searchParams: URLSearchParams): Promise<RouteResponse> {
