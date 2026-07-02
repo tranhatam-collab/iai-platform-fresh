@@ -43,8 +43,6 @@ jobs:
       - name: Install pnpm
         if: steps.release_guard.outputs.release_enabled == 'true'
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node cache
         if: steps.release_guard.outputs.release_enabled == 'true'
