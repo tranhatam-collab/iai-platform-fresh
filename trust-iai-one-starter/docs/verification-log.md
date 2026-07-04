@@ -1,29 +1,29 @@
 # verification-log.md
 
-Last build: 2026-05-01T19:54:32.796Z
-Build commit: 81d1aab
+Last build: 2026-06-16T07:28:22.929Z
+Build commit: 147d44e
 Probe method: dig + curl HEAD
 Stale after: 30 days
 Status enum: verified | declared | unverified
 
 ## Module 1 — Official Domains
 
-Counts: verified=13, declared=4
+Counts: verified=12, declared=4, unverified=1
 
-- iai.one | status: verified | role: constitutional root | owner: founder | http: 200 | dns: 172.67.139.112, 104.21.8.122
-- home.iai.one | status: verified | role: routing portal | owner: trust-pmo | http: 200 | dns: 172.67.139.112, 104.21.8.122
-- trust.iai.one | status: verified | role: operational trust surface | owner: trust-pmo | http: 200 | dns: 172.67.139.112, 104.21.8.122
-- dash.iai.one | status: verified | role: operator surface | owner: team-2 | http: 200 | dns: 172.67.139.112, 104.21.8.122
-- noos.iai.one | status: verified | role: commerce surface | owner: team-3 | http: 200 | dns: 172.67.139.112, 104.21.8.122
-- nft.iai.one | status: verified | role: verifiable asset surface | owner: trust-pmo | http: 200 | dns: 104.21.8.122, 172.67.139.112
-- flow.iai.one | status: verified | role: orchestration surface | owner: team-flow | http: 200 | dns: 104.21.8.122, 172.67.139.112
-- app.iai.one | status: verified | role: authenticated app surface | owner: team-app | http: 200 | dns: 104.21.8.122, 172.67.139.112
-- developer.iai.one | status: verified | role: developer onboarding | owner: team-a | http: 200 | dns: 104.21.8.122, 172.67.139.112
-- docs.iai.one | status: verified | role: documentation | owner: team-a | http: 200 | dns: 104.21.8.122, 172.67.139.112
-- api.flow.iai.one | status: declared | role: developer api | owner: team-a | http: 404 | dns: 172.67.139.112, 104.21.8.122
-- cios.iai.one | status: verified | role: internal operations system | owner: team-c | http: 200 | dns: 104.21.8.122, 172.67.139.112
-- pay.iai.one | status: verified | role: payment control plane | owner: pay-email | http: 200 | dns: 104.21.8.122, 172.67.139.112
-- mail.iai.one | status: verified | role: mail control plane | owner: pay-email | http: 200 | dns: 89.167.116.167
+- iai.one | status: verified | role: constitutional root | owner: founder | http: 200 | dns: 104.21.8.122
+- home.iai.one | status: verified | role: routing portal | owner: trust-pmo | http: 200 | dns: 172.67.139.112
+- trust.iai.one | status: verified | role: operational trust surface | owner: trust-pmo | http: 200 | dns: 104.21.8.122
+- dash.iai.one | status: verified | role: operator surface | owner: team-2 | http: 200 | dns: 104.21.8.122
+- noos.iai.one | status: verified | role: commerce surface | owner: team-3 | http: 200 | dns: 172.67.139.112
+- nft.iai.one | status: verified | role: verifiable asset surface | owner: trust-pmo | http: 200 | dns: 172.67.139.112
+- flow.iai.one | status: verified | role: orchestration surface | owner: team-flow | http: 200 | dns: 172.67.139.112
+- app.iai.one | status: verified | role: authenticated app surface | owner: team-app | http: 200 | dns: 104.21.8.122
+- developer.iai.one | status: verified | role: developer onboarding | owner: team-a | http: 200 | dns: 104.21.8.122
+- docs.iai.one | status: verified | role: documentation | owner: team-a | http: 200 | dns: 104.21.8.122
+- api.flow.iai.one | status: declared | role: developer api | owner: team-a | http: 404 | dns: 172.67.139.112
+- cios.iai.one | status: verified | role: internal operations system | owner: team-c | http: 200 | dns: 172.67.139.112
+- pay.iai.one | status: verified | role: payment control plane | owner: pay-email | http: 200 | dns: 172.67.139.112
+- mail.iai.one | status: unverified | role: mail control plane | owner: pay-email | http: — | dns: 89.167.116.167
 - cdn.iai.one | status: declared | role: cdn edge | owner: team-b-cdn | http: — | dns: —
 - flows.iai.one | status: declared | role: automation surface | owner: team-b-flows | http: — | dns: —
 - web.iai.one | status: declared | role: web surface | owner: team-5 | http: — | dns: —

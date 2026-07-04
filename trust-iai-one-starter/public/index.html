@@ -14,28 +14,28 @@
       <div class="topbar">
         <strong id="appTitle">Trust IAI</strong>
         <div class="topbar-right">
-          <a href="#m1" class="ghost ghost-link" id="navJump">Modules</a>
+          <a href="#m1" class="ghost ghost-link" id="navJump">Các mục</a>
           <button id="langBtn" class="ghost" type="button">EN</button>
         </div>
       </div>
-      <span class="badge" id="phaseBadge">Phase 1 · Static-first</span>
+      <span class="badge" id="phaseBadge">Giai đoạn 1 · Ưu tiên tĩnh</span>
       <h1 id="heroTitle">Bề mặt vận hành niềm tin</h1>
       <p id="heroSubtitle">Mỗi tuyên bố trên trang này có bằng chứng inline hoặc công bố rõ "chưa xác minh được".</p>
-      <p class="hero-meta" id="heroMeta">Tạo lúc: — · Build commit: —</p>
-      <nav class="hero-nav" aria-label="Modules">
-        <a href="#m1">1. Official Domains</a>
-        <a href="#m2">2. Official Teams</a>
-        <a href="#m3">3. Official Channels</a>
-        <a href="#m4">4. Verification Methods</a>
-        <a href="#m5">5. /go/* Short Links</a>
-        <a href="#m6">6. Report &amp; Impersonation</a>
-        <a href="#m7">7. Trust Page Builder</a>
+      <p class="hero-meta" id="heroMeta">Tạo lúc: — · Commit bản dựng: —</p>
+      <nav class="hero-nav" aria-label="Các mục">
+        <a href="#m1" id="navM1">1. Domain chính thức</a>
+        <a href="#m2" id="navM2">2. Team chính thức</a>
+        <a href="#m3" id="navM3">3. Kênh chính thức</a>
+        <a href="#m4" id="navM4">4. Phương pháp xác minh</a>
+        <a href="#m5" id="navM5">5. Short link /go/*</a>
+        <a href="#m6" id="navM6">6. Báo cáo &amp; giả mạo</a>
+        <a href="#m7" id="navM7">7. Trình tạo trang Tin cậy</a>
       </nav>
     </header>
 
     <!-- Module 1: Official Domains -->
     <section class="panel" id="m1">
-      <h2 id="m1Title">1. Official Domains</h2>
+      <h2 id="m1Title">1. Domain chính thức</h2>
       <p id="m1Lead">Trang này hiển thị trạng thái xác minh của hệ thống tại thời điểm build gần nhất. Không phải runtime monitoring.</p>
       <div class="grid grid-4" id="m1Stats" aria-label="Counts"></div>
 
@@ -53,7 +53,7 @@
 
     <!-- Module 2: Official Teams -->
     <section class="panel" id="m2">
-      <h2 id="m2Title">2. Official Teams</h2>
+      <h2 id="m2Title">2. Team chính thức</h2>
       <p id="m2Lead">Phase 1 công bố ranh giới trách nhiệm team ở mức public-safe.</p>
       <div class="list" id="m2List"></div>
       <p id="m2UnverifiedLead" class="meta">Mục team sẽ giữ trạng thái Declared cho đến khi đủ bằng chứng public.</p>
@@ -61,7 +61,7 @@
 
     <!-- Module 3: Official Channels -->
     <section class="panel" id="m3">
-      <h2 id="m3Title">3. Official Channels</h2>
+      <h2 id="m3Title">3. Kênh chính thức</h2>
       <p id="m3Lead">Kênh public chính thức phải có scope, use case, status và disclosure rõ ràng.</p>
       <div class="list" id="m3List"></div>
       <p class="meta" id="m3Footer">Phase 1 chỉ công bố kênh public-safe; không công bố inbox nội bộ.</p>
@@ -69,7 +69,7 @@
 
     <!-- Module 4: Verification Methods -->
     <section class="panel" id="m4">
-      <h2 id="m4Title">4. Verification Methods</h2>
+      <h2 id="m4Title">4. Phương pháp xác minh</h2>
       <p id="m4Lead">Mỗi phương pháp phải ghi rõ phạm vi, giới hạn, và loại bằng chứng.</p>
       <div class="list" id="m4List"></div>
       <p class="meta" id="m4Note">Phương pháp thiếu bằng chứng public không được gắn Verified.</p>
@@ -77,15 +77,15 @@
 
     <!-- Module 5: /go/* Short Links -->
     <section class="panel" id="m5">
-      <h2 id="m5Title">5. /go/* Short Links</h2>
+      <h2 id="m5Title">5. Short link /go/*</h2>
       <p id="m5Lead">Đã ghi nhận, không che giấu. Mỗi giới hạn có ID, ngày báo, trạng thái.</p>
       <div id="m5List" class="list"></div>
-      <p class="meta" id="m5Note">Báo giới hạn chưa được công bố qua form ở Module 7. Cam kết phản hồi trong vòng 7 ngày.</p>
+      <p class="meta" id="m5Note">Short link mơ hồ, stale, hoặc chưa có owner phải là Đã khai báo hoặc Chưa xác minh.</p>
     </section>
 
     <!-- Module 6: Report & Impersonation -->
     <section class="panel" id="m6">
-      <h2 id="m6Title">6. Report &amp; Impersonation</h2>
+      <h2 id="m6Title">6. Báo cáo &amp; giả mạo</h2>
       <p id="m6Lead">Theo dõi sự cố thật, không tạo sự cố giả.</p>
       <div id="m6List" class="list"></div>
       <div id="m6Empty" class="item" hidden>
@@ -97,7 +97,7 @@
 
     <!-- Module 7: Trust Page Builder -->
     <section class="panel" id="m7">
-      <h2 id="m7Title">7. Trust Page Builder</h2>
+      <h2 id="m7Title">7. Trình tạo trang Tin cậy</h2>
       <p id="m7Lead">Phase 1 cung cấp form báo lỗi/yêu cầu sửa. API export/delete sẽ có ở Phase 2.</p>
       <div class="list" id="m7BuilderList"></div>
 
