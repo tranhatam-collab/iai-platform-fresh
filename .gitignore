@@ -11,6 +11,13 @@ package-lock.json
 .wrangler/
 *.log
 
+# Nested git repos — have their own .git, cannot be added as regular files
+pay.iai.one/
+trust-iai-one-starter/
+
+# Git coordination lock files
+.git-coordination-lock*
+
 # Team 1 local-only GitHub guard for iai.one docs/plans/evidence.
 # Existing tracked files are not removed by .gitignore; this blocks new leaks.
 docs/**
