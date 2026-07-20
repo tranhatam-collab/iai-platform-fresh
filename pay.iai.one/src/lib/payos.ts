@@ -217,7 +217,11 @@ export async function createPayOSCheckoutSession(env: PayOSEnv, payload: CreateP
         amount: integerValue(data.amount) || payload.amount,
         status: scalarValue(data.status) || null,
         checkout_url: stringValue(data.checkoutUrl) || null,
-        qr_code: stringValue(data.qrCode) || null
+        qr_code: stringValue(data.qrCode) || null,
+        bank_bin: stringValue(data.bin) || null,
+        account_no: stringValue(data.accountNumber) || null,
+        account_name: stringValue(data.accountName) || null,
+        transfer_note: stringValue(data.description) || null
       },
       raw: bodyObject
     }

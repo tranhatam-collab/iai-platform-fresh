@@ -1,5 +1,17 @@
 # pay.iai.one
 
+## Tenant-scoped PayOS production credentials
+
+Live PayOS checkout and webhook verification are fail-closed per tenant. A tenant can transact only when its `provider_accounts` row has:
+
+- `provider_code = 'payos'`
+- `status = 'active'`
+- `live_mode = 1`
+- a non-empty `merchant_reference`
+- a validated uppercase `secret_binding_prefix`
+
+For prefix `NLA_PAYOS`, provision Worker secrets `NLA_PAYOS_CLIENT_ID`, `NLA_PAYOS_API_KEY`, and `NLA_PAYOS_CHECKSUM_KEY` through the secure Cloudflare channel. `NLA_PAYOS_PARTNER_CODE` is optional. The checkout and webhook paths never fall back to global `PAYOS_*` credentials when tenant mapping is missing or incomplete.
+
 Central payment orchestration service for the IAI ecosystem.
 
 `pay.iai.one` is not an acquiring bank or a raw card vault. It is a private payment layer that gives every site in the system one API, one event model, one receipt pipeline, and one security baseline while routing transactions to licensed payment providers.
