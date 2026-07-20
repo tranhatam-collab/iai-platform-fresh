@@ -34,11 +34,13 @@ import {
   buildInternalExistingCheckoutResponse,
   buildInternalOpenApiSpec,
   INTERNAL_CHECKOUT_ROUTE,
+  INTERNAL_ORDER_STATUS_ROUTE,
   renderInternalDocsHtml,
   toProviderCheckoutPayload,
   validateInternalCheckoutRequest
 } from "./lib/internal-contract";
 import { cancelPayOSPaymentRequest, confirmPayOSWebhook, createPayOSCheckoutSession, getPayOSPaymentRequest, handlePayOSWebhook, validatePayOSCheckoutPayload } from "./lib/payos";
+import { resolveTenantPayOSEnvironment } from "./lib/provider-account";
 import { PROVIDERS, missingProviderEnvKeys, providerByCode } from "./lib/providers";
 import {
   authorizeInternalCheckoutSiteKey,
@@ -75,6 +77,7 @@ import { sendPaymentEmailWithEvidence } from "./lib/email-evidence";
 import { readJsonBody, scalarValue, sha256Hex, stringValue, integerValue } from "./lib/utils";
 
 export interface Env {
+  [key: string]: unknown;
   PAYMENTS_DB?: D1Database;
   PAY_ENV?: string;
   PAY_API_BASE_URL?: string;
@@ -157,6 +160,13 @@ async function executeCheckoutSessionPayload(payload: Record<string, unknown>, e
     const db = requireDb(env);
     const tenant = await ensureTenant(db, validation.value.tenant_code);
     const site = await ensureMerchantSite(db, tenant.id, validation.value.site_code, validation.value.return_url);
+    const tenantProvider = await resolveTenantPayOSEnvironment(db, env, {
+      tenantId: tenant.id,
+      tenantCode: validation.value.tenant_code
+    });
+    if (!tenantProvider.ok) {
+      return { status: tenantProvider.status, body: tenantProvider.body };
+    }
     const metadata = validation.value.metadata || {};
     const callbackUrl =
       stringValue(metadata.callback_url) ||
@@ -183,7 +193,7 @@ async function executeCheckoutSessionPayload(payload: Record<string, unknown>, e
         ...validation.value.metadata
       }
     });
-    const providerResponse = await createPayOSCheckoutSession(env, validation.value);
+    const providerResponse = await createPayOSCheckoutSession(tenantProvider.env, validation.value);
     const providerRaw = readJsonBody(providerResponse.body.raw);
     const providerNormalized = readJsonBody(providerResponse.body.normalized);
 
@@ -351,6 +361,86 @@ async function createInternalCheckoutSession(request: Request, env: Env): Promis
   }
 }
 
+async function getInternalOrderStatus(request: Request, env: Env): Promise<Response> {
+  const db = requireDb(env);
+  const url = new URL(request.url);
+  const tenantCode = stringValue(url.searchParams.get("tenant_code"));
+  const siteCode = stringValue(url.searchParams.get("site_code"));
+  const internalOrderId = stringValue(url.searchParams.get("internal_order_id"));
+  const requestedProviderOrderId = stringValue(url.searchParams.get("provider_order_id"));
+
+  if (!tenantCode || !siteCode || !internalOrderId) {
+    return json(
+      {
+        ok: false,
+        success: false,
+        contract_version: "2026-04-15",
+        code: "ORDER_STATUS_INPUT_REQUIRED",
+        message: "tenant_code, site_code, and internal_order_id are required."
+      },
+      422
+    );
+  }
+
+  const siteAuthorization = await authorizeInternalCheckoutSiteKey(db, request, { tenantCode, siteCode });
+  if (!siteAuthorization.ok) return siteAuthorization.response;
+
+  const payment = await getPaymentByInternalOrderId(db, internalOrderId);
+  if (!payment || payment.tenant_code !== tenantCode || payment.site_code !== siteCode) {
+    return json(
+      {
+        ok: false,
+        success: false,
+        contract_version: "2026-04-15",
+        code: "PAYMENT_NOT_FOUND",
+        message: "Payment intent not found for this tenant/site contract."
+      },
+      404
+    );
+  }
+
+  const attempts = await listPaymentAttempts(db, payment.id);
+  const metadataProviderOrderId = stringValue(payment.metadata_json?.order_code);
+  const matchingAttempt = requestedProviderOrderId
+    ? attempts.find((attempt) => stringValue(attempt.provider_order_id) === requestedProviderOrderId)
+    : attempts[0] || null;
+
+  if (requestedProviderOrderId && requestedProviderOrderId !== metadataProviderOrderId && !matchingAttempt) {
+    return json(
+      {
+        ok: false,
+        success: false,
+        contract_version: "2026-04-15",
+        code: "PROVIDER_ORDER_MISMATCH",
+        message: "provider_order_id does not belong to this payment intent."
+      },
+      409
+    );
+  }
+
+  const normalizedStatus = stringValue(payment.payment_status).toLowerCase();
+  const paid = ["paid", "captured", "completed", "confirmed", "fulfilled"].includes(normalizedStatus);
+  const providerOrderId =
+    requestedProviderOrderId || metadataProviderOrderId || stringValue(matchingAttempt?.provider_order_id) || null;
+  const providerRef =
+    stringValue(matchingAttempt?.capture_reference) || stringValue(matchingAttempt?.provider_transaction_id) || null;
+
+  return json({
+    ok: true,
+    success: true,
+    contract_version: "2026-04-15",
+    internal_order_id: payment.internal_order_id,
+    provider_order_id: providerOrderId,
+    status: normalizedStatus || "unknown",
+    payment_status: normalizedStatus || "unknown",
+    paid,
+    verified: paid,
+    provider_ref: providerRef,
+    paid_at: payment.paid_at || null,
+    fulfillment_status: payment.fulfillment_status || "pending"
+  });
+}
+
 async function createVetuongLaiCheckoutSession(request: Request, env: Env): Promise<Response> {
   const db = requireDb(env);
   const siteAuthorization = await authorizeInternalCheckoutSiteKey(db, request, {
@@ -486,6 +576,10 @@ export default {
 
       if (path === INTERNAL_CHECKOUT_ROUTE && request.method === "POST") {
         return await createInternalCheckoutSession(request, env);
+      }
+
+      if (path === INTERNAL_ORDER_STATUS_ROUTE && request.method === "GET") {
+        return await getInternalOrderStatus(request, env);
       }
 
       if (path === VETUONGLAI_CHECKOUT_ROUTE && request.method === "POST") {
@@ -1243,7 +1337,13 @@ export default {
         const tenantCode = decodeURIComponent(path.replace("/v1/webhooks/payos/", ""));
         const db = requireDb(env);
         const rawBody = await request.text();
-        const result = await handlePayOSWebhook(env, new Request(request.url, { method: "POST", headers: request.headers, body: rawBody }), tenantCode);
+        const tenantProvider = await resolveTenantPayOSEnvironment(db, env, { tenantCode });
+        if (!tenantProvider.ok) return json(tenantProvider.body, tenantProvider.status);
+        const result = await handlePayOSWebhook(
+          tenantProvider.env,
+          new Request(request.url, { method: "POST", headers: request.headers, body: rawBody }),
+          tenantCode
+        );
         const payload = readJsonBody(result.body.raw);
         const webhookData = readJsonBody(payload.data);
         const providerOrderId = scalarValue(webhookData.orderCode);

@@ -4,6 +4,7 @@ import { readJsonBody, normalizeUrl, scalarValue, stringValue, integerValue, sha
 
 export const INTERNAL_CONTRACT_VERSION = "2026-04-15";
 export const INTERNAL_CHECKOUT_ROUTE = "/internal/checkout-session";
+export const INTERNAL_ORDER_STATUS_ROUTE = "/internal/order-status";
 export const INTERNAL_LIVE_PROVIDER = "payos";
 export const INTERNAL_LIVE_CURRENCY = "VND";
 export const INTERNAL_PLANNED_EVENT_TYPES = [
@@ -44,6 +45,11 @@ export interface InternalCheckoutSessionContractResponse {
   payment_session_id: string | null;
   internal_order_id: string;
   checkout_url: string | null;
+  qr_code?: string | null;
+  bank_bin?: string | null;
+  account_no?: string | null;
+  account_name?: string | null;
+  transfer_note?: string | null;
   expires_at: string | null;
   amount: number;
   currency: string;
@@ -61,6 +67,7 @@ export interface InternalCheckoutAttemptSummary {
   provider_order_id: string | null;
   provider_transaction_id: string | null;
   provider_payment_url: string | null;
+  response_json?: Record<string, unknown>;
 }
 
 /**
@@ -242,6 +249,7 @@ export function buildInternalCheckoutResponse(
 ): InternalCheckoutSessionContractResponse {
   const persistence = readJsonBody(body.persistence);
   const normalized = readJsonBody(body.normalized);
+  const rawData = readJsonBody(readJsonBody(body.raw).data);
   const missingEnvKeys = Array.isArray(body.missing_env_keys)
     ? body.missing_env_keys.filter((item): item is string => typeof item === "string")
     : undefined;
@@ -257,6 +265,11 @@ export function buildInternalCheckoutResponse(
     payment_session_id: stringValue(persistence.payment_intent_id) || null,
     internal_order_id: input.internal_order_id,
     checkout_url: checkoutUrl,
+    qr_code: stringValue(normalized.qr_code) || null,
+    bank_bin: stringValue(normalized.bank_bin) || stringValue(rawData.bin) || null,
+    account_no: stringValue(normalized.account_no) || stringValue(rawData.accountNumber) || null,
+    account_name: stringValue(normalized.account_name) || stringValue(rawData.accountName) || null,
+    transfer_note: stringValue(normalized.transfer_note) || stringValue(rawData.description) || null,
     expires_at: stringValue(normalized.expired_at) || null,
     amount: input.amount,
     currency: input.currency,
@@ -275,6 +288,9 @@ export function buildInternalExistingCheckoutResponse(
   attempts: InternalCheckoutAttemptSummary[]
 ): InternalCheckoutSessionContractResponse {
   const latestAttempt = attempts[0];
+  const latestResponse = readJsonBody(latestAttempt?.response_json);
+  const normalized = readJsonBody(latestResponse.normalized);
+  const rawData = readJsonBody(readJsonBody(latestResponse.raw).data);
   return {
     ok: true,
     success: true,
@@ -283,6 +299,11 @@ export function buildInternalExistingCheckoutResponse(
     payment_session_id: payment.id,
     internal_order_id: payment.internal_order_id,
     checkout_url: latestAttempt?.provider_payment_url || null,
+    qr_code: stringValue(normalized.qr_code) || null,
+    bank_bin: stringValue(normalized.bank_bin) || stringValue(rawData.bin) || null,
+    account_no: stringValue(normalized.account_no) || stringValue(rawData.accountNumber) || null,
+    account_name: stringValue(normalized.account_name) || stringValue(rawData.accountName) || null,
+    transfer_note: stringValue(normalized.transfer_note) || stringValue(rawData.description) || null,
     expires_at: null,
     amount: payment.amount,
     currency: payment.currency,
