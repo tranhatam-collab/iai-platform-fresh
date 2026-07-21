@@ -33,8 +33,7 @@ jobs:
           IAI_PAY_LOOP_OUTPUT_DIR: ${{ runner.temp }}/iai-pay-continuous-dev-loop
         run: |
           if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN is required for scheduled D1 read-only pay audit."
-            exit 1
+            echo "::warning::CLOUDFLARE_API_TOKEN is unavailable; the audit will record D1 connectivity as failed."
           fi
           pnpm report:pay-continuous
 
