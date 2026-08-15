@@ -10,7 +10,9 @@ Live PayOS checkout and webhook verification are fail-closed per tenant. A tenan
 - a non-empty `merchant_reference`
 - a validated uppercase `secret_binding_prefix`
 
-For prefix `NLA_PAYOS`, provision Worker secrets `NLA_PAYOS_CLIENT_ID`, `NLA_PAYOS_API_KEY`, and `NLA_PAYOS_CHECKSUM_KEY` through the secure Cloudflare channel. `NLA_PAYOS_PARTNER_CODE` is optional. The checkout and webhook paths never fall back to global `PAYOS_*` credentials when tenant mapping is missing or incomplete.
+For prefix `NLA_PAYOS`, provision Worker secrets `NLA_PAYOS_CLIENT_ID`, `NLA_PAYOS_API_KEY`, `NLA_PAYOS_CHECKSUM_KEY`, and `NLA_PAYOS_CALLBACK_HMAC` through the secure Cloudflare channel. `NLA_PAYOS_PARTNER_CODE` is optional. The checkout and webhook paths never fall back to global `PAYOS_*` credentials when tenant mapping is missing or incomplete.
+
+If a site requests a downstream callback, `merchant_sites.callback_url` must match that exact HTTPS URL. Successful payOS captures are signed with the tenant-scoped callback HMAC and dispatched with `x-iai-signature` plus an idempotency key. Missing merchant mapping, callback registration, or callback secret fails closed.
 
 Central payment orchestration service for the IAI ecosystem.
 
@@ -138,6 +140,8 @@ Health endpoints:
 Contract gates:
 
 - `npm run check:nhachung-catalog`
+- `npm run check:tenant-payos-routing`
+- `npm run check:tenant-payment-callback`
 
 ## Security Principles
 

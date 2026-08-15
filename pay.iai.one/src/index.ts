@@ -74,6 +74,7 @@ import {
   escalateReconciliationCase
 } from "./lib/reconciliation";
 import { sendPaymentEmailWithEvidence } from "./lib/email-evidence";
+import { dispatchTenantPaymentCallback, type TenantPaymentCallbackResult } from "./lib/tenant-payment-callback";
 import { readJsonBody, scalarValue, sha256Hex, stringValue, integerValue } from "./lib/utils";
 
 export interface Env {
@@ -160,6 +161,25 @@ async function executeCheckoutSessionPayload(payload: Record<string, unknown>, e
     const db = requireDb(env);
     const tenant = await ensureTenant(db, validation.value.tenant_code);
     const site = await ensureMerchantSite(db, tenant.id, validation.value.site_code, validation.value.return_url);
+    const metadata = validation.value.metadata || {};
+    const requestedCallbackUrl =
+      stringValue(metadata.callback_url) ||
+      stringValue(metadata.member_webhook_url) ||
+      null;
+    const configuredCallbackUrl = stringValue(site.callback_url) || null;
+    if (requestedCallbackUrl && requestedCallbackUrl !== configuredCallbackUrl) {
+      return {
+        status: 503,
+        body: {
+          ok: false,
+          code: "TENANT_CALLBACK_NOT_READY",
+          message: "The requested callback URL is not registered for this merchant site.",
+          tenant_code: validation.value.tenant_code,
+          site_code: validation.value.site_code,
+          callback_configured: Boolean(configuredCallbackUrl)
+        }
+      };
+    }
     const tenantProvider = await resolveTenantPayOSEnvironment(db, env, {
       tenantId: tenant.id,
       tenantCode: validation.value.tenant_code
@@ -167,11 +187,19 @@ async function executeCheckoutSessionPayload(payload: Record<string, unknown>, e
     if (!tenantProvider.ok) {
       return { status: tenantProvider.status, body: tenantProvider.body };
     }
-    const metadata = validation.value.metadata || {};
-    const callbackUrl =
-      stringValue(metadata.callback_url) ||
-      stringValue(metadata.member_webhook_url) ||
-      null;
+    const callbackUrl = configuredCallbackUrl;
+    if (callbackUrl && !tenantProvider.callbackHmac) {
+      return {
+        status: 503,
+        body: {
+          ok: false,
+          code: "TENANT_CALLBACK_SECRET_MISSING",
+          message: "The tenant callback HMAC binding is not configured.",
+          tenant_code: validation.value.tenant_code,
+          site_code: validation.value.site_code
+        }
+      };
+    }
     const paymentIntent = await createPaymentIntentRecord(db, {
       tenantId: tenant.id,
       siteId: site.id,
@@ -185,6 +213,8 @@ async function executeCheckoutSessionPayload(payload: Record<string, unknown>, e
       callbackUrl,
       metadata: {
         provider: "payos",
+        merchant_reference: tenantProvider.account.merchant_reference,
+        provider_live_mode: true,
         tenant_code: validation.value.tenant_code,
         site_code: validation.value.site_code,
         order_code: validation.value.order_code,
@@ -218,6 +248,11 @@ async function executeCheckoutSessionPayload(payload: Record<string, unknown>, e
       status: providerResponse.status,
       body: {
         ...providerResponse.body,
+        provider_account: {
+          tenant_scoped: true,
+          merchant_reference: tenantProvider.account.merchant_reference,
+          live_mode: true
+        },
         persistence: {
           payment_intent_id: paymentIntent.id,
           internal_order_id: validation.value.order_id,
@@ -1354,6 +1389,7 @@ export default {
         let providerEventProcessed = Boolean(result.body.signature_valid);
         let providerEventErrorDetail = result.body.signature_valid ? null : "Webhook signature invalid";
         let memberWebhookSummary: VetuongLaiMemberWebhookDispatchSummary | null = null;
+        let tenantCallbackSummary: TenantPaymentCallbackResult | null = null;
         let ledgerPostingResult: { ok: boolean; transferId?: string; error?: string } | null = null;
         let emailEvidenceResult: { ok: boolean; emailReceiptId?: string; error?: string } | null = null;
 
@@ -1490,6 +1526,26 @@ export default {
                 paid: true
               });
             }
+          } else if (payosSuccess && attempt.callback_url) {
+            tenantCallbackSummary = await dispatchTenantPaymentCallback({
+              callbackUrl: attempt.callback_url,
+              callbackHmac: tenantProvider.callbackHmac,
+              providerEventId,
+              providerOrderId: providerOrderId || attempt.internal_order_id,
+              internalOrderId: attempt.internal_order_id,
+              amount: attempt.amount,
+              currency: attempt.currency,
+              metadata: attempt.metadata_json
+            });
+            providerEventProcessed = tenantCallbackSummary.ok;
+            providerEventErrorDetail = tenantCallbackSummary.ok
+              ? null
+              : `${tenantCallbackSummary.code}: ${tenantCallbackSummary.message}`;
+            await updatePaymentIntentStatus(db, attempt.payment_intent_id, {
+              paymentStatus: "paid",
+              fulfillmentStatus: tenantCallbackSummary.ok ? "tenant_callback_dispatched" : "dispatch_failed",
+              paid: true
+            });
           }
         }
 
@@ -1571,6 +1627,24 @@ export default {
           });
         }
 
+        if (tenantCallbackSummary) {
+          await recordAuditLog(db, {
+            tenantId: attempt?.tenant_id || null,
+            actorType: "system",
+            actorId: "pay.iai.one",
+            action: tenantCallbackSummary.ok ? "tenant_webhook.dispatched" : "tenant_webhook.failed",
+            targetType: "payment_intent",
+            targetId: attempt?.payment_intent_id || null,
+            detail: {
+              provider_event_id: providerEventId,
+              status: tenantCallbackSummary.status,
+              code: tenantCallbackSummary.code,
+              retryable: tenantCallbackSummary.retryable,
+              target_url: tenantCallbackSummary.target_url
+            }
+          });
+        }
+
         const responseBody = memberWebhookSummary
           ? {
               ...result.body,
@@ -1580,6 +1654,7 @@ export default {
             }
           : {
               ...result.body,
+              ...(tenantCallbackSummary ? { tenant_webhook: tenantCallbackSummary } : {}),
               ...(ledgerPostingResult ? { ledger: ledgerPostingResult } : {}),
               ...(emailEvidenceResult ? { email_evidence: emailEvidenceResult } : {})
             };
@@ -1591,6 +1666,18 @@ export default {
               ok: false,
               code: "MEMBER_WEBHOOK_DELIVERY_FAILED",
               message: "payOS webhook was verified, but member.vetuonglai.com delivery failed."
+            },
+            502
+          );
+        }
+
+        if (tenantCallbackSummary && tenantCallbackSummary.ok === false) {
+          return json(
+            {
+              ...responseBody,
+              ok: false,
+              code: "TENANT_CALLBACK_DELIVERY_FAILED",
+              message: "payOS webhook was verified, but the tenant callback delivery failed."
             },
             502
           );

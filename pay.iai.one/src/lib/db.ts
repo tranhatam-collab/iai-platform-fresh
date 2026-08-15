@@ -159,9 +159,9 @@ export async function ensureMerchantSite(db: D1Database, tenantId: string, siteC
   const fallbackOrigin = normalizedReturnUrl ? new URL(normalizedReturnUrl).origin : "http://localhost";
 
   const existing = await db
-    .prepare("SELECT id, site_code, domain, allowed_origin FROM merchant_sites WHERE site_code = ?1 LIMIT 1")
+    .prepare("SELECT id, site_code, domain, allowed_origin, callback_url FROM merchant_sites WHERE site_code = ?1 LIMIT 1")
     .bind(normalizedCode)
-    .first<{ id: string; site_code: string; domain: string; allowed_origin: string }>();
+    .first<{ id: string; site_code: string; domain: string; allowed_origin: string; callback_url: string | null }>();
 
   if (existing) return existing;
 
@@ -175,7 +175,7 @@ export async function ensureMerchantSite(db: D1Database, tenantId: string, siteC
     .bind(id, tenantId, normalizedCode, fallbackDomain, fallbackOrigin, now, now)
     .run();
 
-  return { id, site_code: normalizedCode, domain: fallbackDomain, allowed_origin: fallbackOrigin };
+  return { id, site_code: normalizedCode, domain: fallbackDomain, allowed_origin: fallbackOrigin, callback_url: null };
 }
 
 export async function createPaymentIntentRecord(

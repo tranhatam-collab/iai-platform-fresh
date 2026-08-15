@@ -8,6 +8,7 @@
     "deploy": "./node_modules/wrangler/bin/wrangler.js deploy",
     "check:nhachung-catalog": "node scripts/check-nhachung-catalog.mjs",
     "check:tenant-payos-routing": "node scripts/check-tenant-payos-routing.mjs",
+    "check:tenant-payment-callback": "node scripts/check-tenant-payment-callback.mjs",
     "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit"
   },
   "devDependencies": {

@@ -13,7 +13,8 @@ const checks = [
   ["pending merchant fails closed", /PAYOS_TENANT_ACCOUNT_NOT_READY/],
   ["missing tenant credentials fail closed", /PAYOS_TENANT_CREDENTIALS_MISSING/],
   ["live mode is mandatory", /status !== "active" \|\| !liveMode \|\| !merchantReference/],
-  ["secret prefix is validated", /\^\[A-Z\]\[A-Z0-9_\]\{2,48\}\$/]
+  ["secret prefix is validated", /\^\[A-Z\]\[A-Z0-9_\]\{2,48\}\$/],
+  ["checkout exposes non-secret merchant proof", /merchant_reference: tenantProvider\.account\.merchant_reference/]
 ];
 
 const combined = `${indexSource}\n${accountSource}`;

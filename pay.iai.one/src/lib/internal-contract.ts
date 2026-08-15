@@ -57,6 +57,11 @@ export interface InternalCheckoutSessionContractResponse {
   provider_order_id: string | null;
   provider_payment_id: string | null;
   persistence: Record<string, unknown> | null;
+  provider_account: {
+    tenant_scoped: boolean;
+    merchant_reference: string | null;
+    live_mode: boolean;
+  } | null;
   reused?: boolean;
   code?: string | null;
   message?: string | null;
@@ -256,6 +261,7 @@ export function buildInternalCheckoutResponse(
   const provider = stringValue(body.provider) || input.provider;
   const checkoutUrl = stringValue(normalized.checkout_url) || null;
   const ok = Boolean(body.ok);
+  const providerAccount = readJsonBody(body.provider_account);
 
   return {
     ok,
@@ -277,6 +283,13 @@ export function buildInternalCheckoutResponse(
     provider_order_id: scalarValue(normalized.order_code) || null,
     provider_payment_id: scalarValue(normalized.payment_link_id) || null,
     persistence: Object.keys(persistence).length ? persistence : null,
+    provider_account: Object.keys(providerAccount).length
+      ? {
+          tenant_scoped: providerAccount.tenant_scoped === true,
+          merchant_reference: stringValue(providerAccount.merchant_reference) || null,
+          live_mode: providerAccount.live_mode === true
+        }
+      : null,
     code: scalarValue(body.code) || null,
     message: stringValue(body.message || body.desc) || null,
     missing_env_keys: missingEnvKeys
@@ -291,6 +304,7 @@ export function buildInternalExistingCheckoutResponse(
   const latestResponse = readJsonBody(latestAttempt?.response_json);
   const normalized = readJsonBody(latestResponse.normalized);
   const rawData = readJsonBody(readJsonBody(latestResponse.raw).data);
+  const metadata = readJsonBody(payment.metadata_json);
   return {
     ok: true,
     success: true,
@@ -315,6 +329,11 @@ export function buildInternalExistingCheckoutResponse(
       internal_order_id: payment.internal_order_id,
       tenant_code: payment.tenant_code,
       site_code: payment.site_code
+    },
+    provider_account: {
+      tenant_scoped: true,
+      merchant_reference: stringValue(metadata.merchant_reference) || null,
+      live_mode: metadata.provider_live_mode === true
     },
     reused: true,
     code: null,
