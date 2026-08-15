@@ -10,7 +10,7 @@ interface ProviderAccountRow {
 }
 
 export type TenantPayOSResolution =
-  | { ok: true; env: PayOSEnv; account: ProviderAccountRow }
+  | { ok: true; env: PayOSEnv; callbackHmac: string; account: ProviderAccountRow }
   | { ok: false; status: 503; body: Record<string, unknown> };
 
 export async function resolveTenantPayOSEnvironment(
@@ -89,5 +89,10 @@ export async function resolveTenantPayOSEnvironment(
     };
   }
 
-  return { ok: true, env: scopedEnv, account };
+  return {
+    ok: true,
+    env: scopedEnv,
+    callbackHmac: stringValue(env[`${prefix}_CALLBACK_HMAC`]),
+    account
+  };
 }
