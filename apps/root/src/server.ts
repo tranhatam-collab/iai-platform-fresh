@@ -38,6 +38,16 @@ interface OAuthProviderConfig {
   scope: string;
 }
 
+// The OAuth callback only ever carries a code, a state and a few provider fields.
+const maxOAuthCallbackBodyBytes = 16 * 1024;
+
+class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super("Request body is too large.");
+    this.name = "RequestBodyTooLargeError";
+  }
+}
+
 export function createRootServer(options: RootServerOptions = {}): Server {
   return createServer(createRootRequestHandler(options));
 }
@@ -46,7 +56,9 @@ export function createRootRequestHandler(options: RootServerOptions = {}) {
   const config = resolveConfig(options);
 
   return (request: IncomingMessage, response: ServerResponse) => {
-    void handleRequest(request, response, config);
+    handleRequest(request, response, config).catch((error: unknown) => {
+      respondUnhandledError(response, error);
+    });
   };
 }
 
@@ -110,7 +122,13 @@ async function handleRequest(
   config: ResolvedRootConfig
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  const url = parseRequestUrl(request);
+
+  if (!url) {
+    respondBadRequest(response);
+    return;
+  }
+
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
   const authProviderStatuses = getAuthProviderStatuses(config);
 
@@ -308,10 +326,21 @@ async function completeOAuthCallback(
   locale: Locale
 ): Promise<void> {
   const provider = url.pathname === "/auth/apple/callback" ? config.oauth.apple : config.oauth.google;
-  const params =
-    (request.method ?? "GET") === "POST"
-      ? new URLSearchParams(await readRequestBody(request))
-      : url.searchParams;
+  let params = url.searchParams;
+
+  if ((request.method ?? "GET") === "POST") {
+    try {
+      params = new URLSearchParams(await readRequestBody(request, maxOAuthCallbackBodyBytes));
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        respondPayloadTooLarge(response, locale);
+        return;
+      }
+
+      throw error;
+    }
+  }
+
   const cookies = parseCookies(normalizeHeaderValue(request.headers.cookie));
   const expectedState = cookies[provider.cookieName] ?? "";
   const receivedState = params.get("state") ?? "";
@@ -363,11 +392,80 @@ async function completeOAuthCallback(
   );
 }
 
+function parseRequestUrl(request: IncomingMessage): URL | null {
+  try {
+    return new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    return null;
+  }
+}
+
+function respondBadRequest(response: ServerResponse): void {
+  respondJson(
+    response,
+    400,
+    {
+      ok: false,
+      error: {
+        code: "BAD_REQUEST",
+        message: "Request URL is malformed."
+      }
+    },
+    "en"
+  );
+}
+
+function respondPayloadTooLarge(response: ServerResponse, locale: Locale): void {
+  // Close the connection so an oversized upload is not left half-read on a kept-alive socket.
+  response.setHeader("connection", "close");
+  respondJson(
+    response,
+    413,
+    {
+      ok: false,
+      error: {
+        code: "PAYLOAD_TOO_LARGE",
+        message: "OAuth callback body is too large."
+      }
+    },
+    locale
+  );
+}
+
+function respondUnhandledError(response: ServerResponse, error: unknown): void {
+  console.error("[iai-root] unhandled request error", error);
+
+  try {
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+
+    respondJson(
+      response,
+      500,
+      {
+        ok: false,
+        error: {
+          code: "ROOT_SERVER_ERROR",
+          message: t("en", "root.error.server")
+        }
+      },
+      "en"
+    );
+  } catch {
+    // The socket is already gone, so there is nothing left to send.
+  }
+}
+
 function respondHtml(response: ServerResponse, statusCode: number, html: string, locale: Locale): void {
   response.statusCode = statusCode;
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "text/html; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("x-frame-options", "DENY");
   response.end(html);
 }
 
@@ -376,6 +474,8 @@ function respondJson(response: ServerResponse, statusCode: number, payload: unkn
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "application/json; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
   response.end(JSON.stringify(payload));
 }
 
@@ -453,11 +553,25 @@ function expireStateCookie(name: string, domain: string | null): string {
     .join("; ");
 }
 
-async function readRequestBody(request: IncomingMessage): Promise<string> {
+async function readRequestBody(request: IncomingMessage, maxBytes: number): Promise<string> {
+  const declaredLength = Number(request.headers["content-length"]);
+
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new RequestBodyTooLargeError();
+  }
+
   const chunks: Buffer[] = [];
+  let receivedBytes = 0;
 
   for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    receivedBytes += buffer.length;
+
+    if (receivedBytes > maxBytes) {
+      throw new RequestBodyTooLargeError();
+    }
+
+    chunks.push(buffer);
   }
 
   return Buffer.concat(chunks).toString("utf8");
@@ -478,7 +592,11 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
       continue;
     }
 
-    cookies[name] = decodeURIComponent(rawValue.join("="));
+    try {
+      cookies[name] = decodeURIComponent(rawValue.join("="));
+    } catch {
+      // A cookie with a malformed escape is ignored, as if it was never sent.
+    }
   }
 
   return cookies;
@@ -502,6 +620,8 @@ function respondSvg(response: ServerResponse, statusCode: number, svg: string, l
   response.setHeader("cache-control", "public, max-age=300");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "image/svg+xml; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
   response.end(svg);
 }
 
