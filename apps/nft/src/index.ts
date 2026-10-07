@@ -1,6 +1,6 @@
 import { createNftServer } from "./server.js";
 
-const port = parsePort(process.env.NFT_PORT, 4380);
+const port = parsePort(process.env.NFT_PORT, 4400);
 const host = process.env.NFT_HOST ?? "127.0.0.1";
 
 const server = createNftServer();
