@@ -1,3 +1,5 @@
+import { Readable } from "node:stream";
+
 function normalizeHeaders(headers = {}) {
   const normalized = {};
 
@@ -38,23 +40,14 @@ export async function dispatchToHandler(
   } = {}
 ) {
   const requestBody = normalizeBody(body);
-  const request = {
-    headers: normalizeHeaders(headers),
-    method,
-    url,
-    async *[Symbol.asyncIterator]() {
-      if (requestBody === undefined) {
-        return;
-      }
-
-      if (Buffer.isBuffer(requestBody)) {
-        yield requestBody;
-        return;
-      }
-
-      yield Buffer.from(requestBody);
-    }
-  };
+  // A real Readable, like IncomingMessage, so handlers can use iterator() and resume() on it.
+  const request = Object.assign(
+    Readable.from(
+      requestBody === undefined ? [] : [Buffer.isBuffer(requestBody) ? requestBody : Buffer.from(requestBody)],
+      { objectMode: false }
+    ),
+    { headers: normalizeHeaders(headers), method, url }
+  );
 
   return new Promise((resolve, reject) => {
     const responseHeaders = new Headers();

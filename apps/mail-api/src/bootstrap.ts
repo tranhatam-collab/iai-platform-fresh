@@ -124,6 +124,15 @@ export function bootstrapFromEnv(
     );
   }
 
+  // The shipped env example carries a REPLACE_WITH_* placeholder; running with it would mean a guessable token.
+  if (env.NODE_ENV === "production" && env.MAIL_SMTP_REMOTE_TOKEN?.trim().startsWith("REPLACE_WITH")) {
+    return Promise.reject(
+      new Error(
+        "MAIL_SMTP_REMOTE_TOKEN is still the REPLACE_WITH_* placeholder from the env example. Set it to a long random value (openssl rand -hex 32) shared with mail-smtp."
+      )
+    );
+  }
+
   const server = createFlowApiServer(options);
 
   return new Promise((resolve, reject) => {
