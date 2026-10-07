@@ -5,14 +5,21 @@ services:
     container_name: iai-mail-api-internal
     image: node:22-alpine
     working_dir: /workspace
-    command: ["node", "apps/mail-api/dist/index.js"]
+    # dist/index.js only re-exports the library API and exits immediately;
+    # dist/bootstrap.js is the entrypoint that reads PORT / API_FLOW_BIND_ADDRESS and listens.
+    command: ["node", "apps/mail-api/dist/bootstrap.js"]
     restart: unless-stopped
     environment:
       NODE_ENV: "production"
       PORT: "8787"
       API_FLOW_BIND_ADDRESS: "0.0.0.0"
       MAIL_DB_URL: "sqlite:/data/iai-mail-flow.sqlite"
-      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN}"
+      # Required: without it mail-api refuses to start in production (and the
+      # internal SMTP routes would reject every call). Compose aborts if unset/empty.
+      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN:?set MAIL_SMTP_REMOTE_TOKEN (openssl rand -hex 32)}"
+      # Optional: bearer key for POST /v1/send and GET /v1/messages/:id[/events].
+      # The SMTP internal-first path does not use it; while empty those routes answer 503.
+      MAIL_API_KEY: "${MAIL_API_KEY:-}"
     volumes:
       - type: bind
         source: ${MAIL_REPO_ROOT}
@@ -67,7 +74,7 @@ services:
       MAIL_SMTP_METRICS_ENABLED: "false"
       MAIL_SMTP_BACKEND_MODE: "remote"
       MAIL_SMTP_REMOTE_BASE_URL: "${MAIL_SMTP_REMOTE_BASE_URL}"
-      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN}"
+      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN:?set MAIL_SMTP_REMOTE_TOKEN (openssl rand -hex 32)}"
       MAIL_API_HEALTH_URL: "http://mail-api:8787/health"
       MAIL_API_DEPENDENCIES_HEALTH_URL: "http://mail-api:8787/v1/health/dependencies"
       MAIL_SMTP_QUEUE_URL: "${MAIL_SMTP_QUEUE_URL:-redis://placeholder:6379/0}"

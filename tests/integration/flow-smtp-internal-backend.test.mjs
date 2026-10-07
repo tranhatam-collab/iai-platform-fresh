@@ -8,6 +8,9 @@ import { createFlowApiRequestHandler } from "../../apps/mail-api/dist/server.js"
 import { createSmtpInternalBackend } from "../../apps/mail-api/dist/smtp-internal.js";
 import { dispatchToHandler } from "../support/http-handler.mjs";
 
+const SERVICE_TOKEN = "flow-smtp-internal-test-token";
+const SERVICE_AUTH_HEADERS = { authorization: `Bearer ${SERVICE_TOKEN}` };
+
 function createBackendConfig() {
   return {
     password: "smtp-secret",
@@ -21,6 +24,7 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
   const seed = createBackendConfig();
   const backend = createSmtpInternalBackend({
     databaseUrl: `sqlite:${dbPath}`,
+    remoteToken: SERVICE_TOKEN,
     seed
   });
   const handler = createFlowApiRequestHandler({
@@ -41,6 +45,7 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
       secure: true,
       username: seed.username
     }),
+    headers: SERVICE_AUTH_HEADERS,
     method: "POST",
     url: "/v1/internal/smtp/auth"
   });
@@ -62,6 +67,7 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
       recipients: ["user@example.com"],
       stream: "transactional"
     }),
+    headers: SERVICE_AUTH_HEADERS,
     method: "POST",
     url: "/v1/internal/smtp/normalize"
   });
@@ -92,6 +98,7 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
       traceId: normalizePayload.traceId,
       workspaceId: normalizePayload.workspaceId
     }),
+    headers: SERVICE_AUTH_HEADERS,
     method: "POST",
     url: "/v1/internal/smtp/queue"
   });
@@ -132,6 +139,7 @@ test("internal smtp backend recipient check returns suppression rejection", asyn
   const seed = createBackendConfig();
   const backend = createSmtpInternalBackend({
     databaseUrl: `sqlite:${dbPath}`,
+    remoteToken: SERVICE_TOKEN,
     seed
   });
   const handler = createFlowApiRequestHandler({
@@ -152,6 +160,7 @@ test("internal smtp backend recipient check returns suppression rejection", asyn
       secure: true,
       username: seed.username
     }),
+    headers: SERVICE_AUTH_HEADERS,
     method: "POST",
     url: "/v1/internal/smtp/auth"
   });
@@ -165,6 +174,7 @@ test("internal smtp backend recipient check returns suppression rejection", asyn
       recipientCount: 1,
       stream: "transactional"
     }),
+    headers: SERVICE_AUTH_HEADERS,
     method: "POST",
     url: "/v1/internal/smtp/recipient"
   });

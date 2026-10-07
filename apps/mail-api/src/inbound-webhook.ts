@@ -73,6 +73,9 @@ export const DEFAULT_INBOUND_WEBHOOK_MAX_BODY_BYTES = 256 * 1024;
 export const INBOUND_WEBHOOK_TIMESTAMP_HEADER = "x-mail-webhook-timestamp";
 export const INBOUND_WEBHOOK_SIGNATURE_HEADER = "x-mail-webhook-signature";
 
+/** HMAC-SHA256 hex digest: exactly 64 hex characters. */
+const SIGNATURE_HEX_PATTERN = /^[0-9a-f]{64}$/iu;
+
 interface VerifyOk {
   ok: true;
   timestamp: number;
@@ -149,7 +152,12 @@ export function verifyInboundWebhook(input: InboundWebhookVerifyInput): InboundW
     .update(`${timestamp}.${input.rawBody}`)
     .digest("hex");
 
-  if (sigHeader.length !== expected.length) {
+  // Only a full 64-char hex digest can match. Checking the shape before
+  // decoding matters: Buffer.from(x, "hex") silently truncates at the first
+  // non-hex character, so a 64-char non-hex header would decode to a shorter
+  // buffer and make timingSafeEqual throw (a 500 with a stack) instead of
+  // being rejected as an invalid signature.
+  if (!SIGNATURE_HEX_PATTERN.test(sigHeader)) {
     return {
       ok: false,
       code: "MAIL_WEBHOOK_SIGNATURE_INVALID",
@@ -368,16 +376,27 @@ async function readRawBody(request: IncomingMessage, maxBytes: number): Promise<
     const chunks: Buffer[] = [];
 
     request.on("data", (chunk: Buffer) => {
+      if (tooLarge) {
+        // Already answered (or about to): keep reading and discarding so the
+        // rest of the upload does not pile up in memory.
+        return;
+      }
       total += chunk.length;
       if (total > maxBytes) {
         tooLarge = true;
-        request.destroy();
+        chunks.length = 0;
+        // Do not destroy the request here: that tears the socket down before
+        // the 413 can be written, so the client only sees a reset. Report the
+        // overflow right away and let the remaining body drain unbuffered.
+        resolve({ raw: "", tooLarge: true });
         return;
       }
       chunks.push(chunk);
     });
     request.on("end", () => {
-      resolve({ raw: Buffer.concat(chunks).toString("utf8"), tooLarge });
+      if (!tooLarge) {
+        resolve({ raw: Buffer.concat(chunks).toString("utf8"), tooLarge: false });
+      }
     });
     request.on("error", (err) => {
       reject(err);

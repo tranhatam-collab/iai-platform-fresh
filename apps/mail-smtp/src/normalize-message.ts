@@ -38,6 +38,13 @@ interface ParsedMimeContent {
   to: MailAddress[];
 }
 
+// The address regexes below backtrack quadratically on long dotted / angle-
+// bracket input (seconds for an 80 KB header value), so length is capped first.
+// 254 is the RFC 5321 forward-path limit; 998 is the RFC 5322 header-line limit,
+// which no single mailbox (display name + address) needs to exceed.
+const MAX_EMAIL_LENGTH = 254;
+const MAX_ADDRESS_LENGTH = 998;
+
 type NormalizedMessageOverrides = Partial<
   Omit<NormalizedMessage, "source" | "rawMime">
 > & {
@@ -488,6 +495,10 @@ function parseSingleAddress(value?: string) {
 }
 
 function parseAddress(value: string) {
+  if (value.length > MAX_ADDRESS_LENGTH) {
+    return undefined;
+  }
+
   const trimmed = (decodeMimeWords(value) ?? value).trim();
   if (!trimmed) {
     return undefined;
@@ -517,6 +528,10 @@ function parseAddress(value: string) {
 
 function normalizeEmail(value: string) {
   const email = value.trim().toLowerCase();
+  if (email.length > MAX_EMAIL_LENGTH) {
+    return undefined;
+  }
+
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/u.test(email) ? email : undefined;
 }
 
