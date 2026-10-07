@@ -11,6 +11,8 @@
  * Billing phải đi từ usage ledger / aggregate table / billing events.
  */
 
+import { isKnownTenant } from "./tenant-resolver.js";
+
 export type Environment = "development" | "staging" | "production" | "sandbox";
 
 export interface UsageEvent {
@@ -35,6 +37,33 @@ export class UsageEventValidationError extends Error {
     super(`UsageEvent validation failed: ${message}`);
     this.name = "UsageEventValidationError";
   }
+}
+
+const ISO_TIMESTAMP =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-](\d{2}):(\d{2}))$/;
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/**
+ * Strict ISO 8601 date-time with an explicit timezone (`Z` or `+hh:mm`).
+ *
+ * Date.parse alone is not enough: V8 accepts "1" and rolls "2026-02-31"
+ * over to March, so the calendar fields are checked explicitly.
+ */
+export function isIsoTimestamp(value: string): boolean {
+  const m = ISO_TIMESTAMP.exec(value);
+  if (!m) return false;
+
+  const [year, month, day, hour, minute, second] = m.slice(1, 7).map(Number) as [
+    number, number, number, number, number, number
+  ];
+  const leapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const daysInMonth = month === 2 && leapYear ? 29 : (DAYS_IN_MONTH[month - 1] ?? 0);
+
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth) return false;
+  if (hour > 23 || minute > 59 || second > 59) return false;
+  if (m[7] !== undefined && (Number(m[7]) > 23 || Number(m[8]) > 59)) return false;
+
+  return Number.isFinite(Date.parse(value));
 }
 
 /**
@@ -70,9 +99,21 @@ export function validateUsageEvent(event: unknown): asserts event is UsageEvent 
     throw new UsageEventValidationError("missing or invalid field: subject_id");
   }
 
-  // usage_amount: non-negative number
-  if (typeof e.usage_amount !== "number" || Number.isNaN(e.usage_amount) || e.usage_amount < 0) {
-    throw new UsageEventValidationError("usage_amount must be a non-negative number");
+  // tenant: must be one of the locked tenants (never echo the caller's value).
+  if (!isKnownTenant(e.tenant as string)) {
+    throw new UsageEventValidationError("unknown tenant");
+  }
+
+  // usage_amount: finite, non-negative number (JSON `1e999` parses to Infinity).
+  if (typeof e.usage_amount !== "number" || !Number.isFinite(e.usage_amount) || e.usage_amount < 0) {
+    throw new UsageEventValidationError("usage_amount must be a finite non-negative number");
+  }
+
+  // occurred_at: real ISO 8601 timestamp, not just a non-empty string.
+  if (!isIsoTimestamp(e.occurred_at as string)) {
+    throw new UsageEventValidationError(
+      "occurred_at must be an ISO 8601 timestamp with timezone (e.g. 2026-01-31T09:30:00Z)"
+    );
   }
 
   // environment: known value
@@ -97,19 +138,29 @@ export function emitUsageEvent(event: UsageEvent): UsageEvent {
 /**
  * Insert a validated usage event directly into D1.
  * Used when USAGE_LEDGER_DB binding is available.
+ *
+ * Idempotent: the row `id` is the producer-assigned `event_id`, so a queue
+ * redelivery or client retry of the same event hits the primary key and is
+ * ignored instead of throwing (which would retry the whole queue batch).
+ * Only the `id` conflict is swallowed; other constraint failures still throw.
+ * Idempotency therefore relies on producers reusing `event_id` when they
+ * resend an event.
+ *
+ * Resolves to true when a row was inserted, false when it was a duplicate.
  */
 export async function emitUsageEventToD1(
   event: UsageEvent,
   db: D1Database
-): Promise<void> {
+): Promise<boolean> {
   validateUsageEvent(event);
-  await db
+  const result = await db
     .prepare(
       `INSERT INTO usage_events
        (id, tenant, workspace_id, actor_id, domain_surface, event_type,
         usage_amount, usage_unit, source_object_id, metadata, environment,
         occurred_at, received_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO NOTHING`
     )
     .bind(
       event.event_id,
@@ -127,6 +178,8 @@ export async function emitUsageEventToD1(
       Date.now()
     )
     .run();
+  const changes = result?.meta?.changes;
+  return changes === undefined ? true : changes > 0;
 }
 
 /**

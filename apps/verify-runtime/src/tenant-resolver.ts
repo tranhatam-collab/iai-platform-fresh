@@ -73,6 +73,6 @@ export function resolveTenant(request: Request): TenantResolutionResult {
   );
 }
 
-function isKnownTenant(code: string): code is KnownTenant {
+export function isKnownTenant(code: string): code is KnownTenant {
   return (KNOWN_TENANTS as readonly string[]).includes(code);
 }
