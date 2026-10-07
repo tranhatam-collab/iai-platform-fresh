@@ -133,22 +133,15 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, port: nu
       respondPayloadTooLarge(req, res);
       return;
     }
+    // Upstream and filesystem errors carry URLs and paths; keep them in the server log only.
+    console.error("[noos-web] render error", error);
     res.writeHead(500, {
       "content-type": "application/json; charset=utf-8",
       "referrer-policy": "strict-origin-when-cross-origin",
       "x-content-type-options": "nosniff",
       "x-noos-commerce-source": getCommerceSourceMode()
     });
-    res.end(
-      JSON.stringify(
-        {
-          code: "noos_web_render_error",
-          message: error instanceof Error ? error.message : "Unknown render error"
-        },
-        null,
-        2
-      )
-    );
+    res.end(JSON.stringify({ code: "noos_web_render_error", message: "Unexpected server error" }, null, 2));
   }
 }
 

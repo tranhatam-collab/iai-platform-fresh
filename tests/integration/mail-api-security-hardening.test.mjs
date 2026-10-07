@@ -407,6 +407,19 @@ test("bootstrap refuses to start in production without a service token", async (
   );
 });
 
+test("bootstrap refuses to start in production with the example placeholder as the service token", async () => {
+  await assert.rejects(
+    () =>
+      bootstrapFromEnv({
+        MAIL_API_BIND_ADDRESS: "127.0.0.1",
+        MAIL_SMTP_REMOTE_TOKEN: "REPLACE_WITH_OPENSSL_RAND_HEX_32",
+        NODE_ENV: "production",
+        PORT: "0"
+      }),
+    /placeholder/u
+  );
+});
+
 test("bootstrap CLI exits non-zero with a clear error in production without a service token", () => {
   const result = spawnSync(process.execPath, [BOOTSTRAP_PATH], {
     encoding: "utf8",

@@ -624,6 +624,8 @@ async function handleRequest(
         ok: false,
         error: { code: "PAYLOAD_TOO_LARGE", message: "Request body is too large." }
       });
+      // Discard what the client is still sending so the response can finish.
+      request.resume();
       return;
     }
 
@@ -684,7 +686,8 @@ async function readBodyText(request: IncomingMessage, maxBytes: number): Promise
   const chunks: Buffer[] = [];
   let receivedBytes = 0;
 
-  for await (const chunk of request) {
+  // destroyOnReturn: false keeps the socket open so the caller can still write the 413.
+  for await (const chunk of request.iterator({ destroyOnReturn: false })) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     receivedBytes += buffer.length;
 
