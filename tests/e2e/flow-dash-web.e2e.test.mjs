@@ -245,7 +245,7 @@ describe("flow, dash and web against a real mail-api", { skip: built ? false : "
       assert.match(flowPage.text, /Flow not found/);
     });
 
-    test("an unknown flow answers 404 instead of a 200 error page", { todo: "the flow detail route renders 'Flow not found.' with HTTP 200" }, async () => {
+    test("an unknown flow answers 404 instead of a 200 error page", { todo: "known gap, tracked on the team board" }, async () => {
       const response = await dashGet("/flows/flow_that_does_not_exist?lang=en");
       assert.equal(response.status, 404);
     });
