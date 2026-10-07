@@ -14,6 +14,6 @@
     "seed:prod": "wrangler d1 execute trust_iai_one_db --remote --file=./scripts/seed.sql"
   },
   "devDependencies": {
-    "wrangler": "latest"
+    "wrangler": "4.148.0"
   }
 }
