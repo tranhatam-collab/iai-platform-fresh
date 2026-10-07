@@ -96,6 +96,15 @@ export const worker = {
         // Rejects unknown tenants, non-finite amounts and non-ISO timestamps.
         validateUsageEvent(event);
 
+        // Same rule as the quota routes: the event must belong to the tenant the request resolves to.
+        const resolved = resolveTenant(request);
+        if (event.tenant !== resolved.tenant) {
+          return Response.json(
+            { error: "tenant_mismatch", resolved: resolved.tenant, body: event.tenant },
+            { status: 403 }
+          );
+        }
+
         if (env.USAGE_EVENTS_QUEUE) {
           await emitUsageEventToQueue(event, env.USAGE_EVENTS_QUEUE);
           return Response.json({ ok: true, channel: "queue" });

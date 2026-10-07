@@ -157,7 +157,7 @@ describe("worker routes", () => {
     };
     const req = makeRequest("/usage/emit", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-iai-tenant": "iai" },
       body: JSON.stringify(event),
     });
     const resp = await (worker as any).fetch(req, makeEnv(), {} as any);
@@ -350,9 +350,29 @@ describe("worker routes: /usage/emit validation", () => {
 
   it("accepts every known tenant", async () => {
     for (const tenant of ["iai", "dsts", "nhachung", "muonnoi", "aal"]) {
-      const { status } = await post(makeEnv(), "/usage/emit", makeUsageEvent({ tenant }), {});
+      const { status } = await post(makeEnv(), "/usage/emit", makeUsageEvent({ tenant }), { "x-iai-tenant": tenant });
       assert.strictEqual(status, 200, tenant);
     }
+  });
+
+  it("binds the event tenant to the tenant the request resolves to", async () => {
+    const d1 = createMockD1();
+    const sent: unknown[] = [];
+    const queue = { send: async (message: unknown) => void sent.push(message) } as unknown as Queue;
+    const env = makeEnv({ USAGE_LEDGER_DB: d1.db, USAGE_EVENTS_QUEUE: queue });
+
+    // resolved as iai, event claims dsts
+    const mismatch = await post(env, "/usage/emit", makeUsageEvent({ tenant: "dsts" }), { "x-iai-tenant": "iai" });
+    assert.strictEqual(mismatch.status, 403);
+    assert.strictEqual(mismatch.json.error, "tenant_mismatch");
+    assert.strictEqual(mismatch.json.resolved, "iai");
+
+    // no tenant hint at all is a tenant-resolution failure, not a default tenant
+    const unresolved = await post(env, "/usage/emit", makeUsageEvent({ tenant: "iai" }), {});
+    assert.strictEqual(unresolved.status, 403);
+
+    assert.strictEqual(sent.length, 0);
+    assert.strictEqual(d1.rows.size, 0);
   });
 
   it("rejects Infinity and other non-finite usage_amount", async () => {
@@ -410,7 +430,7 @@ describe("worker routes: /usage/emit validation", () => {
     const event = makeUsageEvent({ event_id: "evt_replay" });
 
     for (let i = 0; i < 3; i++) {
-      const { status, json } = await post(env, "/usage/emit", event, {});
+      const { status, json } = await post(env, "/usage/emit", event);
       assert.strictEqual(status, 200);
       assert.deepStrictEqual(json, { ok: true, channel: "d1" });
     }
@@ -423,7 +443,7 @@ describe("worker routes: /usage/emit validation", () => {
     const queue = { send: async (message: unknown) => void sent.push(message) } as unknown as Queue;
     const env = makeEnv({ USAGE_EVENTS_QUEUE: queue });
 
-    const ok = await post(env, "/usage/emit", makeUsageEvent(), {});
+    const ok = await post(env, "/usage/emit", makeUsageEvent());
     assert.deepStrictEqual(ok.json, { ok: true, channel: "queue" });
     assert.strictEqual(sent.length, 1);
 

@@ -255,6 +255,13 @@ describe("verify-runtime Worker", { skip }, () => {
       assert.deepEqual(response.json, { ok: true, channel: "validate-only" });
     });
 
+    test("an event for a different tenant than the request resolves to is refused (403 tenant_mismatch)", async () => {
+      const response = await post(bare, "/usage/emit", usageEvent({ tenant: "dsts" }), { "x-iai-tenant": "iai" });
+      assert.equal(response.status, 403, response.text);
+      assert.equal(response.json.error, "tenant_mismatch");
+      assert.equal(response.json.resolved, "iai");
+    });
+
     test("missing or empty required fields are rejected with 400", async () => {
       for (const field of ["event_id", "tenant", "workspace_id", "subject_id", "domain_surface", "event_type", "usage_unit", "source_object_id", "occurred_at", "environment", "usage_amount"]) {
         const event = usageEvent();
@@ -343,7 +350,7 @@ describe("verify-runtime Worker", { skip }, () => {
     test("with the queue bound, /usage/emit enqueues and the consumer writes each event to D1 exactly once", { timeout: 60_000 }, async () => {
       const events = [usageEvent(), usageEvent({ usage_amount: 3 }), usageEvent({ tenant: "dsts", workspace_id: "ws-other" })];
       for (const event of events) {
-        const response = await post(full, "/usage/emit", event);
+        const response = await post(full, "/usage/emit", event, { "x-iai-tenant": event.tenant });
         assert.equal(response.status, 200, response.text);
         assert.deepEqual(response.json, { ok: true, channel: "queue" });
       }

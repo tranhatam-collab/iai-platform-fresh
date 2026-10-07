@@ -148,7 +148,7 @@ for (const surface of SURFACES) {
       assert.ok(response.status < 500, `HEAD -> ${response.status}`);
     });
 
-    test("malformed request targets are rejected and the process keeps serving", async () => {
+    test("malformed request targets never crash or 5xx the server, and it keeps serving", async () => {
       const targets = [
         "//",
         "///",

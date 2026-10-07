@@ -7,12 +7,41 @@ export interface NoosWebServerOptions {
   port?: number;
 }
 
-async function readFormBody(req: AsyncIterable<Buffer | string>): Promise<URLSearchParams> {
-  let body = "";
-  for await (const chunk of req) {
-    body += chunk.toString();
+// A checkout form is a handful of short fields; anything larger is not a real checkout.
+const MAX_FORM_BODY_BYTES = 64 * 1024;
+
+class FormBodyTooLargeError extends Error {}
+
+async function readFormBody(req: IncomingMessage): Promise<URLSearchParams> {
+  const declaredLength = Number(req.headers["content-length"]);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_FORM_BODY_BYTES) {
+    throw new FormBodyTooLargeError();
   }
-  return new URLSearchParams(body);
+
+  const chunks: Buffer[] = [];
+  let size = 0;
+  // destroyOnReturn: false keeps the socket open so the 413 below can still be written.
+  for await (const chunk of req.iterator({ destroyOnReturn: false })) {
+    const buffer = typeof chunk === "string" ? Buffer.from(chunk) : (chunk as Buffer);
+    size += buffer.length;
+    if (size > MAX_FORM_BODY_BYTES) {
+      throw new FormBodyTooLargeError();
+    }
+    chunks.push(buffer);
+  }
+  return new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+}
+
+function respondPayloadTooLarge(req: IncomingMessage, res: ServerResponse): void {
+  res.writeHead(413, {
+    connection: "close",
+    "content-type": "text/plain; charset=utf-8",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "x-content-type-options": "nosniff"
+  });
+  res.end("Payload too large");
+  // Discard the rest of the upload without buffering it.
+  req.resume();
 }
 
 function parseRequestUrl(requestUrl: string, port: number): URL | null {
@@ -100,6 +129,10 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, port: nu
     });
     res.end(response.body);
   } catch (error) {
+    if (error instanceof FormBodyTooLargeError) {
+      respondPayloadTooLarge(req, res);
+      return;
+    }
     res.writeHead(500, {
       "content-type": "application/json; charset=utf-8",
       "referrer-policy": "strict-origin-when-cross-origin",

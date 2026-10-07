@@ -21,6 +21,7 @@ Standalone project workspace for the mail platform handoff pack and initial repo
   - `pnpm test:mail-smtp`, `pnpm test:mail-api`, `pnpm test:mail-web`, `pnpm test:mail-worker`
   - `pnpm test:flow`, `pnpm test:dash`, `pnpm test:web`, `pnpm test:docs`, `pnpm test:developer`
   - `pnpm test:root`, `pnpm test:home`, `pnpm test:app`, `pnpm test:nft`, `pnpm test:pay`, `pnpm test:pay-ops`
+  - `pnpm test:hardening` (malformed-request and input-limit regression suites for the Node surfaces)
   - `pnpm test:verify-runtime`, `pnpm test:noos-web`, `pnpm test:noos-commerce-contracts`
 - Keep lane-specific commands for focused debugging, but do not remove them from the default gate.
 - `pnpm test:e2e` builds everything and runs the process-level end-to-end suites in `tests/e2e/`
