@@ -5,6 +5,7 @@ import {
   emitUsageEvent,
   emitUsageEventToD1,
   isIsoTimestamp,
+  usageEventRowId,
   UsageEventValidationError,
   type UsageEvent,
 } from "../src/usage-emission.js";
@@ -176,11 +177,22 @@ describe("emitUsageEventToD1", () => {
     assert.match(d1.statements[0]!, /ON\s+CONFLICT\s*\(\s*id\s*\)\s+DO\s+NOTHING/i);
   });
 
-  it("uses the producer event_id as the row id, so a replay is a duplicate", async () => {
+  it("uses the tenant-scoped event_id as the row id, so a replay is a duplicate", async () => {
     const d1 = createMockD1();
     await emitUsageEventToD1(makeEvent({ event_id: "evt_a" }), d1.db);
     await emitUsageEventToD1(makeEvent({ event_id: "evt_b" }), d1.db);
-    assert.deepStrictEqual([...d1.rows.keys()], ["evt_a", "evt_b"]);
+    assert.deepStrictEqual([...d1.rows.keys()], ["iai:evt_a", "iai:evt_b"]);
+  });
+
+  it("two tenants reusing an event_id get distinct rows and do not suppress each other", async () => {
+    const d1 = createMockD1();
+    assert.strictEqual(await emitUsageEventToD1(makeEvent({ event_id: "evt_same", tenant: "iai" }), d1.db), true);
+    assert.strictEqual(await emitUsageEventToD1(makeEvent({ event_id: "evt_same", tenant: "dsts" }), d1.db), true);
+    assert.deepStrictEqual([...d1.rows.keys()].sort(), ["dsts:evt_same", "iai:evt_same"]);
+    assert.notStrictEqual(
+      usageEventRowId({ tenant: "iai", event_id: "evt_same" }),
+      usageEventRowId({ tenant: "dsts", event_id: "evt_same" })
+    );
   });
 
   it("propagates real D1 failures so the message can be retried", async () => {

@@ -3,20 +3,23 @@ import assert from "node:assert";
 import {
   QUOTA_STATE_KEY,
   handleQuotaRequest,
+  type QuotaHandlerOptions,
   type QuotaStorage,
 } from "../src/quota-handler.js";
-import {
-  DEFAULT_QUOTA_LIMIT,
-  MAX_QUOTA_AMOUNT,
-  MAX_QUOTA_LIMIT,
-} from "../src/request-validation.js";
+import { DEFAULT_QUOTA_LIMIT, MAX_QUOTA_AMOUNT } from "../src/request-validation.js";
+import { DEFAULT_QUOTA_PLAN, resolveQuotaPlan } from "../src/quota-plan.js";
 import type { QuotaState } from "../src/quota-do.js";
 
 /** Storage that, like Durable Object storage, never hands out shared references. */
-function memoryStorage(): QuotaStorage & { map: Map<string, unknown> } {
+function memoryStorage(
+  plan: { limit?: number; windowMs?: number; now?: () => number } = {}
+): QuotaStorage & { map: Map<string, unknown>; options: QuotaHandlerOptions } {
   const map = new Map<string, unknown>();
+  const { now, ...tenantPlan } = plan;
   return {
     map,
+    // Quota plans are server-side configuration: tests set them here, never in a request body.
+    options: { plans: JSON.stringify({ default: tenantPlan }), now },
     async get<T>(key: string) {
       return map.has(key) ? (structuredClone(map.get(key)) as T) : undefined;
     },
@@ -38,7 +41,8 @@ async function call(
     new Request("http://do/quota", {
       method: "POST",
       body: typeof body === "string" ? body : JSON.stringify(body),
-    })
+    }),
+    (storage as { options?: QuotaHandlerOptions }).options
   );
   return { status: resp.status, json: (await resp.json()) as Json };
 }
@@ -73,8 +77,8 @@ describe("quota handler: amount validation", () => {
 
   for (const action of ["increment", "check"] as const) {
     it(`${action} rejects invalid amounts with 400 and leaves used unchanged`, async () => {
-      const storage = memoryStorage();
-      const seeded = await call(storage, { action: "increment", ...ids, amount: 5, limit: 10 });
+      const storage = memoryStorage({ limit: 10 });
+      const seeded = await call(storage, { action: "increment", ...ids, amount: 5 });
       assert.strictEqual(seeded.status, 200);
 
       for (const amount of badAmounts) {
@@ -96,11 +100,11 @@ describe("quota handler: amount validation", () => {
   it("a non-numeric amount can no longer disable enforcement", async () => {
     // Regression: amount "abc" used to make used the string "0abc", after which
     // `used + amount > limit` was always false.
-    const storage = memoryStorage();
-    await call(storage, { action: "increment", ...ids, amount: "abc", limit: 2 });
+    const storage = memoryStorage({ limit: 2 });
+    await call(storage, { action: "increment", ...ids, amount: "abc" });
     assert.strictEqual(storedState(storage), undefined);
 
-    assert.strictEqual((await call(storage, { action: "increment", ...ids, amount: 1, limit: 2 })).status, 200);
+    assert.strictEqual((await call(storage, { action: "increment", ...ids, amount: 1 })).status, 200);
     assert.strictEqual((await call(storage, { action: "increment", ...ids, amount: 1 })).status, 200);
     const over = await call(storage, { action: "increment", ...ids, amount: 1 });
     assert.strictEqual(over.status, 429);
@@ -108,16 +112,16 @@ describe("quota handler: amount validation", () => {
   });
 
   it("a negative amount cannot grant quota", async () => {
-    const storage = memoryStorage();
-    await call(storage, { action: "increment", ...ids, amount: 3, limit: 5 });
+    const storage = memoryStorage({ limit: 5 });
+    await call(storage, { action: "increment", ...ids, amount: 3 });
     const res = await call(storage, { action: "increment", ...ids, amount: -1_000_000 });
     assert.strictEqual(res.status, 400);
     assert.strictEqual(storedState(storage)!.used, 3);
   });
 
   it("defaults a missing amount to 1 and accepts the maximum amount", async () => {
-    const storage = memoryStorage();
-    const first = await call(storage, { action: "increment", ...ids, limit: MAX_QUOTA_AMOUNT });
+    const storage = memoryStorage({ limit: MAX_QUOTA_AMOUNT });
+    const first = await call(storage, { action: "increment", ...ids });
     assert.strictEqual(first.status, 200);
     assert.strictEqual(first.json.used, 1);
 
@@ -129,14 +133,14 @@ describe("quota handler: amount validation", () => {
 
 describe("quota handler: counting and limits", () => {
   it("increments up to the limit then returns 429 without changing used", async () => {
-    const storage = memoryStorage();
+    const storage = memoryStorage({ limit: 3 });
     for (let expected = 1; expected <= 3; expected++) {
-      const res = await call(storage, { action: "increment", ...ids, limit: 3 });
+      const res = await call(storage, { action: "increment", ...ids });
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.json.used, expected);
     }
 
-    const over = await call(storage, { action: "increment", ...ids, limit: 3 });
+    const over = await call(storage, { action: "increment", ...ids });
     assert.strictEqual(over.status, 429);
     assert.deepStrictEqual(over.json, { error: "quota_exceeded", used: 3, limit: 3 });
     assert.strictEqual(storedState(storage)!.used, 3);
@@ -146,8 +150,8 @@ describe("quota handler: counting and limits", () => {
   });
 
   it("rejects an amount larger than the remaining quota but accepts the exact remainder", async () => {
-    const storage = memoryStorage();
-    await call(storage, { action: "increment", ...ids, amount: 7, limit: 10 });
+    const storage = memoryStorage({ limit: 10 });
+    await call(storage, { action: "increment", ...ids, amount: 7 });
 
     const tooMuch = await call(storage, { action: "increment", ...ids, amount: 4 });
     assert.strictEqual(tooMuch.status, 429);
@@ -159,8 +163,8 @@ describe("quota handler: counting and limits", () => {
   });
 
   it("check does not mutate used", async () => {
-    const storage = memoryStorage();
-    await call(storage, { action: "increment", ...ids, amount: 8, limit: 10 });
+    const storage = memoryStorage({ limit: 10 });
+    await call(storage, { action: "increment", ...ids, amount: 8 });
 
     const ok = await call(storage, { action: "check", ...ids, amount: 2 });
     assert.deepStrictEqual(ok.json, { allowed: true, remaining: 2 });
@@ -170,8 +174,8 @@ describe("quota handler: counting and limits", () => {
   });
 
   it("getState returns the stored state", async () => {
-    const storage = memoryStorage();
-    await call(storage, { action: "increment", ...ids, amount: 2, limit: 9 });
+    const storage = memoryStorage({ limit: 9 });
+    await call(storage, { action: "increment", ...ids, amount: 2 });
     const { status, json } = await call(storage, { action: "getState", ...ids });
     assert.strictEqual(status, 200);
     assert.strictEqual(json.tenant, "iai");
@@ -181,60 +185,84 @@ describe("quota handler: counting and limits", () => {
   });
 });
 
-describe("quota handler: limit validation", () => {
-  const badLimits = [
-    "0",
-    "-1",
-    "1.5",
-    '"abc"',
-    '"100"',
-    "null",
-    "true",
-    "1e999",
-    "-1e999",
-    String(MAX_QUOTA_LIMIT + 1),
-  ];
-
-  it("rejects invalid limits with 400 and does not create a quota", async () => {
+describe("quota handler: limit source", () => {
+  it("uses the default plan limit when the server configures none", async () => {
     const storage = memoryStorage();
-    for (const limit of badLimits) {
-      const { status, json } = await call(
-        storage,
-        `{"action":"getState","tenant":"iai","workspaceId":"ws_001","limit":${limit}}`
-      );
-      assert.strictEqual(status, 400, `limit ${limit} should be rejected`);
-      assert.strictEqual(json.error, "invalid_limit", `limit ${limit}`);
-    }
-    assert.strictEqual(storedState(storage), undefined);
-  });
-
-  it("still rejects an invalid limit once the quota exists", async () => {
-    const storage = memoryStorage();
-    await call(storage, { action: "getState", ...ids, limit: 5 });
-    const res = await call(storage, { action: "increment", ...ids, limit: -5 });
-    assert.strictEqual(res.status, 400);
-    assert.strictEqual(storedState(storage)!.limit, 5);
-  });
-
-  it("uses the default limit when none is supplied", async () => {
-    const storage = memoryStorage();
+    storage.options = {};
     const { json } = await call(storage, { action: "getState", ...ids });
     assert.strictEqual(json.limit, DEFAULT_QUOTA_LIMIT);
   });
 
-  it("accepts the maximum limit", async () => {
-    const storage = memoryStorage();
-    const { status, json } = await call(storage, { action: "getState", ...ids, limit: MAX_QUOTA_LIMIT });
-    assert.strictEqual(status, 200);
-    assert.strictEqual(json.limit, MAX_QUOTA_LIMIT);
+  it("ignores a limit sent by the caller, on creation and afterwards", async () => {
+    const storage = memoryStorage({ limit: 5 });
+    const created = await call(storage, { action: "getState", ...ids, limit: 1_000_000 });
+    assert.strictEqual(created.json.limit, 5);
+
+    for (const limit of [1_000_000, 0, -1, "abc", null]) {
+      const res = await call(storage, { action: "increment", ...ids, amount: 6, limit });
+      assert.strictEqual(res.status, 429, `limit ${String(limit)}`);
+    }
+    assert.strictEqual(storedState(storage)!.limit, 5);
+    assert.strictEqual(storedState(storage)!.used, 0);
   });
 
-  it("fixes the limit at creation: a later caller cannot raise it", async () => {
-    const storage = memoryStorage();
-    await call(storage, { action: "getState", ...ids, limit: 5 });
-    const later = await call(storage, { action: "increment", ...ids, amount: 6, limit: 1_000_000 });
-    assert.strictEqual(later.status, 429);
-    assert.strictEqual(storedState(storage)!.limit, 5);
+  it("applies a changed server-side plan to an existing quota without losing usage", async () => {
+    const storage = memoryStorage({ limit: 10 });
+    await call(storage, { action: "increment", ...ids, amount: 4 });
+    storage.options = { plans: JSON.stringify({ default: { limit: 6 } }) };
+    const { json } = await call(storage, { action: "getState", ...ids });
+    assert.strictEqual(json.limit, 6);
+    assert.strictEqual(json.used, 4);
+  });
+
+  it("resolves plans per tenant with a default fallback and ignores malformed config", () => {
+    const plans = JSON.stringify({ default: { limit: 7 }, dsts: { limit: 20, windowMs: 1000 } });
+    assert.deepStrictEqual(resolveQuotaPlan("iai", plans), { limit: 7, windowMs: DEFAULT_QUOTA_PLAN.windowMs });
+    assert.deepStrictEqual(resolveQuotaPlan("dsts", plans), { limit: 20, windowMs: 1000 });
+    for (const bad of [undefined, "", "not json", "[]", "null", '{"default":{"limit":-1,"windowMs":"x"}}']) {
+      assert.deepStrictEqual(resolveQuotaPlan("iai", bad), { ...DEFAULT_QUOTA_PLAN }, String(bad));
+    }
+    assert.deepStrictEqual(resolveQuotaPlan("__proto__", plans), resolveQuotaPlan("iai", plans));
+  });
+});
+
+describe("quota handler: usage window", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it("resets used and starts a new window once the window has elapsed", async () => {
+    let clock = 1_000_000;
+    const storage = memoryStorage({ limit: 3, windowMs: DAY, now: () => clock });
+    for (let i = 0; i < 3; i++) assert.strictEqual((await call(storage, { action: "increment", ...ids })).status, 200);
+    assert.strictEqual((await call(storage, { action: "increment", ...ids })).status, 429);
+
+    clock += DAY - 1;
+    assert.strictEqual((await call(storage, { action: "increment", ...ids })).status, 429, "still inside the window");
+
+    clock += 1;
+    const next = await call(storage, { action: "increment", ...ids });
+    assert.strictEqual(next.status, 200);
+    assert.strictEqual(next.json.used, 1);
+    assert.strictEqual(next.json.windowStart, clock);
+    assert.strictEqual(storedState(storage)!.windowStart, clock);
+  });
+
+  it("check and getState also see the fresh window", async () => {
+    let clock = 5_000;
+    const storage = memoryStorage({ limit: 2, windowMs: DAY, now: () => clock });
+    await call(storage, { action: "increment", ...ids, amount: 2 });
+    assert.deepStrictEqual((await call(storage, { action: "check", ...ids })).json, { allowed: false, remaining: 0 });
+
+    clock += 3 * DAY;
+    assert.deepStrictEqual((await call(storage, { action: "check", ...ids })).json, { allowed: true, remaining: 2 });
+    assert.strictEqual((await call(storage, { action: "getState", ...ids })).json.used, 0);
+  });
+
+  it("does not reset when the clock moves backwards", async () => {
+    let clock = 10 * DAY;
+    const storage = memoryStorage({ limit: 1, windowMs: DAY, now: () => clock });
+    await call(storage, { action: "increment", ...ids });
+    clock -= 5 * DAY;
+    assert.strictEqual((await call(storage, { action: "increment", ...ids })).status, 429);
   });
 });
 

@@ -11,8 +11,12 @@
 import { DurableObject } from "cloudflare:workers";
 import { handleQuotaRequest } from "./quota-handler.js";
 
-export class QuotaDurableObject extends DurableObject {
+interface QuotaDurableObjectEnv {
+  QUOTA_PLANS?: string;
+}
+
+export class QuotaDurableObject extends DurableObject<QuotaDurableObjectEnv> {
   async fetch(request: Request): Promise<Response> {
-    return handleQuotaRequest(this.ctx.storage, request);
+    return handleQuotaRequest(this.ctx.storage, request, { plans: this.env.QUOTA_PLANS });
   }
 }

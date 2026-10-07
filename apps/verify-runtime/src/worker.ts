@@ -16,9 +16,14 @@ import {
   RequestValidationError,
   parseQuotaAmount,
   parseQuotaIdentifier,
-  parseQuotaLimit,
   readJsonObject,
 } from "./request-validation.js";
+
+/**
+ * Delivery attempts per usage message before the platform moves it to the dead
+ * letter queue. Must match `max_retries` of the consumer in wrangler.toml.
+ */
+export const USAGE_QUEUE_MAX_RETRIES = 3;
 
 export interface Env {
   QUOTA_DO: DurableObjectNamespace;
@@ -50,14 +55,13 @@ async function forwardQuotaRequest(
   }
   const workspaceId = parseQuotaIdentifier(body.workspaceId, "workspaceId");
   const amount = parseQuotaAmount(body.amount);
-  const limit = parseQuotaLimit(body.limit);
 
   const id = env.QUOTA_DO.idFromName(`${resolved.tenant}:${workspaceId}`);
   const stub = env.QUOTA_DO.get(id);
   return stub.fetch(
     new Request("http://do/quota", {
       method: "POST",
-      body: JSON.stringify({ action, tenant: resolved.tenant, workspaceId, amount, limit }),
+      body: JSON.stringify({ action, tenant: resolved.tenant, workspaceId, amount }),
     })
   );
 }
@@ -138,7 +142,9 @@ export const worker = {
    * D1 inserts are idempotent on event_id (a redelivered event is a no-op), an
    * invalid message can never succeed and is acknowledged and dropped (it must
    * not block or fail the rest of the batch), and a transient D1 failure
-   * retries only that message.
+   * retries only that message. After USAGE_QUEUE_MAX_RETRIES retries the platform
+   * moves a message that keeps failing to the dead letter queue instead of
+   * dropping it, so it is retried with a growing delay and never acknowledged.
    */
   async queue(batch: MessageBatch, env: Env, ctx: ExecutionContext): Promise<void> {
     for (const message of batch.messages) {
@@ -166,7 +172,7 @@ export const worker = {
         } else {
           // eslint-disable-next-line no-console
           console.error("[verify-runtime] Usage event delivery failed; will retry", err);
-          message.retry();
+          message.retry({ delaySeconds: Math.min(60 * message.attempts, 900) });
         }
       }
     }

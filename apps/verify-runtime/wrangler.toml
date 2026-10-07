@@ -25,7 +25,7 @@ database_name = "verify_usage_ledger"
 database_id = "REPLACE_AFTER_CREATE"
 
 # Queue for async usage emission.
-# NOTE: queue must be created with `wrangler queues create`.
+# NOTE: queues (including the dead letter queue) must be created with `wrangler queues create`.
 [[queues.producers]]
 binding = "USAGE_EVENTS_QUEUE"
 queue = "verify-usage-events"
@@ -34,7 +34,13 @@ queue = "verify-usage-events"
 queue = "verify-usage-events"
 max_batch_size = 10
 max_batch_timeout = 5
+# A message that still fails after max_retries retries goes to the dead letter queue.
+max_retries = 3
+dead_letter_queue = "verify-usage-events-dlq"
 
 [vars]
 APP_NAME = "verify-runtime"
 ENVIRONMENT = "development"
+# Server-side quota plans (JSON): per-tenant limit and windowMs, `default` applies to the rest.
+# Callers never choose a limit. Unset or malformed falls back to the built-in plan.
+QUOTA_PLANS = '{"default":{"limit":100,"windowMs":2592000000}}'

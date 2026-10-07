@@ -149,10 +149,11 @@ describe("verify-runtime surface", () => {
   it("durable-object.js exports a Durable Object that validates and counts", async () => {
     const { QuotaDurableObject } = await import(dist("durable-object.js").href);
     const state = memoryDurableObjectState();
-    const quota = new QuotaDurableObject({ storage: state.storage }, {});
+    // The limit is server-side configuration (QUOTA_PLANS), never part of the request.
+    const quota = new QuotaDurableObject({ storage: state.storage }, { QUOTA_PLANS: JSON.stringify({ default: { limit: 3 } }) });
 
     const base = { tenant: "iai", workspaceId: "ws_1" };
-    const first = await quota.fetch(quotaRequest({ action: "increment", ...base, amount: 2, limit: 3 }));
+    const first = await quota.fetch(quotaRequest({ action: "increment", ...base, amount: 2, limit: 1_000_000 }));
     assert.equal(first.status, 200);
     assert.equal((await first.json()).used, 2);
 

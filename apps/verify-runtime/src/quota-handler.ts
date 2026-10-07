@@ -10,12 +10,11 @@
  */
 
 import type { QuotaState } from "./quota-do.js";
+import { resolveQuotaPlan } from "./quota-plan.js";
 import {
-  DEFAULT_QUOTA_LIMIT,
   RequestValidationError,
   parseQuotaAmount,
   parseQuotaIdentifier,
-  parseQuotaLimit,
   readJsonObject,
 } from "./request-validation.js";
 
@@ -35,7 +34,13 @@ interface QuotaRequest {
   tenant: string;
   workspaceId: string;
   amount: number;
-  limit: number | undefined;
+}
+
+export interface QuotaHandlerOptions {
+  /** Raw `QUOTA_PLANS` variable (JSON); see quota-plan.ts. */
+  plans?: string;
+  /** Clock, injectable so window changes can be tested. */
+  now?: () => number;
 }
 
 async function parseQuotaRequest(request: Request): Promise<QuotaRequest> {
@@ -49,13 +54,13 @@ async function parseQuotaRequest(request: Request): Promise<QuotaRequest> {
     tenant: parseQuotaIdentifier(body.tenant, "tenant"),
     workspaceId: parseQuotaIdentifier(body.workspaceId, "workspaceId"),
     amount: parseQuotaAmount(body.amount),
-    limit: parseQuotaLimit(body.limit),
   };
 }
 
 export async function handleQuotaRequest(
   storage: QuotaStorage,
-  request: Request
+  request: Request,
+  options: QuotaHandlerOptions = {}
 ): Promise<Response> {
   let req: QuotaRequest;
   try {
@@ -65,7 +70,7 @@ export async function handleQuotaRequest(
     throw err;
   }
 
-  const state = await loadOrCreateState(storage, req);
+  const state = await loadOrCreateState(storage, req, options);
 
   if (req.action === "check") {
     const remaining = state.limit - state.used;
@@ -88,31 +93,39 @@ export async function handleQuotaRequest(
 }
 
 /**
- * Load the workspace quota, creating it on first use.
+ * Load the workspace quota for the current window, creating it on first use.
  *
- * Trust boundary: there is no server-side plan/entitlement source yet, so the
- * limit of a new quota comes from the first request that touches the
- * workspace (`req.limit`, falling back to DEFAULT_QUOTA_LIMIT) and is then
- * fixed for the lifetime of this Durable Object; later `limit` values are
- * ignored. The value is validated (positive safe integer <= MAX_QUOTA_LIMIT)
- * but not authenticated: any caller that can reach /quota/* can choose it.
- * Until the limit is resolved server-side, only trusted callers may reach
- * these routes.
- *
- * `windowStart` is recorded for a future usage window but is not read: used
- * never resets, so a quota is currently a lifetime allowance.
+ * The limit and window come from the server-side plan (quota-plan.ts), never
+ * from the request, and are re-applied on every load so a plan change takes
+ * effect. Once `windowMs` has elapsed since `windowStart`, the counter resets
+ * and a new window starts.
  */
-async function loadOrCreateState(storage: QuotaStorage, req: QuotaRequest): Promise<QuotaState> {
+async function loadOrCreateState(
+  storage: QuotaStorage,
+  req: QuotaRequest,
+  options: QuotaHandlerOptions
+): Promise<QuotaState> {
+  const now = (options.now ?? Date.now)();
+  const plan = resolveQuotaPlan(req.tenant, options.plans);
   const stored = await storage.get<QuotaState>(QUOTA_STATE_KEY);
-  if (stored) return stored;
+
+  if (stored) {
+    const expired = now - stored.windowStart >= plan.windowMs;
+    if (!expired && stored.limit === plan.limit) return stored;
+    const refreshed: QuotaState = expired
+      ? { ...stored, used: 0, limit: plan.limit, windowStart: now }
+      : { ...stored, limit: plan.limit };
+    await storage.put<QuotaState>(QUOTA_STATE_KEY, refreshed);
+    return refreshed;
+  }
 
   const fresh: QuotaState = {
     tenant: req.tenant,
     workspaceId: req.workspaceId,
     unit: "run_count",
     used: 0,
-    limit: req.limit ?? DEFAULT_QUOTA_LIMIT,
-    windowStart: Date.now(),
+    limit: plan.limit,
+    windowStart: now,
   };
   await storage.put<QuotaState>(QUOTA_STATE_KEY, fresh);
   return fresh;

@@ -136,10 +136,19 @@ export function emitUsageEvent(event: UsageEvent): UsageEvent {
 }
 
 /**
+ * Ledger row id for an event. Producer-assigned event ids are only unique per
+ * tenant, so the tenant is part of the id: two tenants reusing an event_id
+ * never collide or suppress each other's rows.
+ */
+export function usageEventRowId(event: Pick<UsageEvent, "tenant" | "event_id">): string {
+  return `${event.tenant}:${event.event_id}`;
+}
+
+/**
  * Insert a validated usage event directly into D1.
  * Used when USAGE_LEDGER_DB binding is available.
  *
- * Idempotent: the row `id` is the producer-assigned `event_id`, so a queue
+ * Idempotent: the row `id` is the tenant-scoped `event_id`, so a queue
  * redelivery or client retry of the same event hits the primary key and is
  * ignored instead of throwing (which would retry the whole queue batch).
  * Only the `id` conflict is swallowed; other constraint failures still throw.
@@ -163,7 +172,7 @@ export async function emitUsageEventToD1(
        ON CONFLICT(id) DO NOTHING`
     )
     .bind(
-      event.event_id,
+      usageEventRowId(event),
       event.tenant,
       event.workspace_id,
       event.subject_id,

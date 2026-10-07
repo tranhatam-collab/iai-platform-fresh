@@ -5,11 +5,11 @@
  * Keep this module free of `cloudflare:*` imports so Node tests can load it.
  */
 
-/** Limit applied when the first request for a workspace does not supply one. */
+/** Limit of the built-in default plan (see quota-plan.ts). */
 export const DEFAULT_QUOTA_LIMIT = 100;
 /** Largest amount a single check/increment call may request. */
 export const MAX_QUOTA_AMOUNT = 1_000_000;
-/** Largest limit a workspace quota may be created with. */
+/** Largest limit a server-side quota plan may set. */
 export const MAX_QUOTA_LIMIT = 1_000_000_000;
 /** Longest accepted tenant / workspace identifier (Durable Object names are capped at 2048 bytes). */
 export const MAX_IDENTIFIER_LENGTH = 128;
@@ -20,7 +20,6 @@ export type RequestValidationErrorCode =
   | "invalid_tenant"
   | "invalid_workspace_id"
   | "invalid_amount"
-  | "invalid_limit"
   | "unknown_action";
 
 /** A request the caller must fix. Always maps to HTTP 400. */
@@ -85,18 +84,6 @@ export function parseQuotaAmount(value: unknown): number {
     throw new RequestValidationError(
       "invalid_amount",
       `amount must be a positive integer no greater than ${MAX_QUOTA_AMOUNT}.`
-    );
-  }
-  return value;
-}
-
-/** Optional limit for a new quota. Absent stays undefined (the DO applies its default). */
-export function parseQuotaLimit(value: unknown): number | undefined {
-  if (value === undefined) return undefined;
-  if (!isBoundedPositiveInteger(value, MAX_QUOTA_LIMIT)) {
-    throw new RequestValidationError(
-      "invalid_limit",
-      `limit must be a positive integer no greater than ${MAX_QUOTA_LIMIT}.`
     );
   }
   return value;
