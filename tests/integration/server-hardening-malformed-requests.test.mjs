@@ -46,6 +46,7 @@ const servers = [
   { name: "app", module: "../../apps/app/dist/server.js", factory: "createAppServer", okPath: "/health", htmlPath: "/" },
   { name: "flow", module: "../../apps/flow/dist/server.js", factory: "createFlowServer", okPath: "/health", htmlPath: "/" },
   { name: "docs", module: "../../apps/docs/dist/server.js", factory: "createDocsServer", okPath: "/health", htmlPath: "/" },
+  { name: "pay", module: "../../apps/pay/dist/server.js", factory: "createPayServer", okPath: "/health", htmlPath: "/" },
   {
     name: "nft",
     module: "../../apps/nft/dist/server.js",

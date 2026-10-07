@@ -177,6 +177,7 @@ async function handleRequest(
 
     if (request.method === "GET" && url.pathname === "/health") {
       const onboardingContract = await loadSharedOnboardingContract(config, requestId, fetchImpl);
+      response.setHeader("cache-control", "no-store");
       respondJson(response, 200, {
         ok: true,
         data: {
