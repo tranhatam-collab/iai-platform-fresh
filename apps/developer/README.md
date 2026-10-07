@@ -25,7 +25,7 @@ It must not:
 
 ## Environment
 
-- `DEVELOPER_PORT`
+- `DEVELOPER_PORT` (default `4380`)
 - `DEVELOPER_HOST`
 - `DEVELOPER_ROOT_URL`
 - `DEVELOPER_HOME_URL`

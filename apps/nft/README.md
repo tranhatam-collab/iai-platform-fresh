@@ -25,7 +25,7 @@ It must not:
 
 ## Environment
 
-- `NFT_PORT`
+- `NFT_PORT` (default `4400`)
 - `NFT_HOST`
 - `NFT_ROOT_URL`
 - `NFT_HOME_URL`
