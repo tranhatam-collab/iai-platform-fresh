@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -9,6 +9,12 @@ const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, '..');
 const docsRoot = path.join(workspaceRoot, 'docs', 'noos');
 const fixturesRoot = path.join(docsRoot, 'NOOS_COMMERCE_FIXTURES_v0.1');
+
+// The pack lives under gitignored docs/**; skip (not fail) where it is absent unless enforced.
+if (!existsSync(docsRoot) && process.env.REQUIRE_DOCS_FIXTURES !== '1') {
+  console.log(`SKIP noos commerce contract check: ${path.relative(workspaceRoot, docsRoot)} not present (set REQUIRE_DOCS_FIXTURES=1 to enforce)`);
+  process.exit(0);
+}
 
 function loadJson(filePath) {
   return JSON.parse(readFileSync(filePath, 'utf8'));

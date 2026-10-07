@@ -1,4 +1,8 @@
 import test from "node:test";
+
+import { docsFixtureSkip } from "../support/docs-fixtures.mjs";
+
+const skip = docsFixtureSkip("docs/PAY_IAI_ONE_SITE_PAYMENT_ACTIVATION_INTAKE_BOARD_2026.md");
 import assert from "node:assert/strict";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
@@ -12,7 +16,7 @@ import {
 
 const root = process.cwd();
 
-test("Team D intake board covers the locked 17-row scope and passes validation", async () => {
+test("Team D intake board covers the locked 17-row scope and passes validation", { skip }, async () => {
   const boardPath = path.join(root, "docs", "PAY_IAI_ONE_SITE_PAYMENT_ACTIVATION_INTAKE_BOARD_2026.md");
   const gatePath = path.join(root, "docs", "reports", "team1", "PAY_IAI_ONE_GATE_VERDICT_2026-04-22.md");
 
@@ -32,7 +36,7 @@ test("Team D intake board covers the locked 17-row scope and passes validation",
   assert.equal(validation.pass, true);
 });
 
-test("Team D onboarding forms include activation routing and sender package intake fields", async () => {
+test("Team D onboarding forms include activation routing and sender package intake fields", { skip }, async () => {
   const vnFormPath = path.join(
     root,
     "docs",
@@ -68,7 +72,7 @@ test("Team D onboarding forms include activation routing and sender package inta
   });
 });
 
-test("tranhatam.com payment email live checklist locks sender policy and external evidence gate", async () => {
+test("tranhatam.com payment email live checklist locks sender policy and external evidence gate", { skip }, async () => {
   const checklistPath = path.join(
     root,
     "docs",

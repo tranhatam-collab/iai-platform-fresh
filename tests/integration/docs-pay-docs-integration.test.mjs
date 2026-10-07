@@ -4,9 +4,11 @@ import { promisify } from "node:util";
 import path from "node:path";
 import test from "node:test";
 
+import { docsFixtureSkip } from "../support/docs-fixtures.mjs";
+
 const execFileAsync = promisify(execFile);
 
-test("pay docs integration checker passes in no-write mode", async () => {
+test("pay docs integration checker passes in no-write mode", { skip: docsFixtureSkip("docs/README.md") }, async () => {
   const root = path.resolve(import.meta.dirname, "..", "..");
   const scriptPath = path.join(root, "scripts", "pay-docs-integration-check.mjs");
 
