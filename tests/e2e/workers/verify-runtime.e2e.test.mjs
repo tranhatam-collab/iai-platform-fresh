@@ -119,12 +119,15 @@ describe("verify-runtime Worker", { skip }, () => {
 
     test("a request whose body.tenant differs from the resolved tenant is refused with tenant_mismatch (403)", async () => {
       for (const route of ["check", "increment"]) {
-        for (const bodyTenant of ["dsts", "stranger", undefined]) {
+        for (const bodyTenant of ["dsts", "stranger"]) {
           const response = await quota(route, { tenant: bodyTenant, workspaceId: "ws-mismatch", limit: 5 }, { "x-iai-tenant": "iai" });
           assert.equal(response.status, 403, `${route} body.tenant=${bodyTenant}`);
           assert.equal(response.json.error, "tenant_mismatch");
           assert.equal(response.json.resolved, "iai");
         }
+        // a body without a tenant is invalid input (400), not a mismatch
+        const missing = await quota(route, { workspaceId: "ws-mismatch", limit: 5 }, { "x-iai-tenant": "iai" });
+        assert.equal(missing.status, 400, `${route} without body.tenant`);
       }
       // nothing was counted for the refused requests
       const check = await quota("check", { tenant: "iai", workspaceId: "ws-mismatch", limit: 5 });
@@ -225,14 +228,14 @@ describe("verify-runtime Worker", { skip }, () => {
       }
     });
 
-    test("malformed JSON is a client error (400), not an internal error", { todo: "request.json() throws inside the handler and is reported as 500 'Internal error'" }, async () => {
+    test("malformed JSON is a client error (400), not an internal error", async () => {
       for (const route of ["check", "increment"]) {
         const response = await quota(route, "{not json");
         assert.equal(response.status, 400, `${route} -> ${response.status}`);
       }
     });
 
-    test("a request without workspaceId is rejected instead of sharing one default counter", { todo: "workspaceId is not validated; all such calls hit the DO named '<tenant>:undefined'" }, async () => {
+    test("a request without workspaceId is rejected instead of sharing one default counter", async () => {
       const response = await quota("increment", { tenant: "iai", limit: 3 });
       assert.equal(response.status, 400, `${response.status} ${response.text}`);
     });
@@ -287,22 +290,22 @@ describe("verify-runtime Worker", { skip }, () => {
       }
     });
 
-    test("an event for a tenant outside the known tenant matrix is rejected", { todo: "validateUsageEvent only checks that tenant is a non-empty string" }, async () => {
+    test("an event for a tenant outside the known tenant matrix is rejected", async () => {
       const response = await emit(usageEvent({ tenant: "not-in-the-matrix" }));
       assert.ok(response.status >= 400 && response.status < 500, `${response.status} ${response.text}`);
     });
 
-    test("occurred_at must be an ISO-8601 timestamp", { todo: "occurred_at is only checked to be a non-empty string" }, async () => {
+    test("occurred_at must be an ISO-8601 timestamp", async () => {
       const response = await emit(usageEvent({ occurred_at: "yesterday-ish" }));
       assert.equal(response.status, 400, `${response.status} ${response.text}`);
     });
 
-    test("an out-of-range number (1e999 parses to Infinity) is rejected", { todo: "Infinity passes the NaN/negative checks" }, async () => {
+    test("an out-of-range number (1e999 parses to Infinity) is rejected", async () => {
       const response = await emit(JSON.stringify(usageEvent()).replace('"usage_amount":1', '"usage_amount":1e999'));
       assert.equal(response.status, 400, `${response.status} ${response.text}`);
     });
 
-    test("malformed JSON is a client error (400)", { todo: "request.json() throws inside the handler and is reported as 500 'Internal error'" }, async () => {
+    test("malformed JSON is a client error (400)", async () => {
       const response = await emit("{not json");
       assert.equal(response.status, 400, `${response.status} ${response.text}`);
     });
@@ -329,7 +332,7 @@ describe("verify-runtime Worker", { skip }, () => {
       assert.equal((await d1Only.d1.query("SELECT COUNT(*) AS c FROM usage_events"))[0].c, before);
     });
 
-    test("emitting the same event_id twice is idempotent instead of failing", { todo: "the second INSERT violates usage_events.id and surfaces as 500 'Internal error' (no ON CONFLICT handling)" }, async () => {
+    test("emitting the same event_id twice is idempotent instead of failing", async () => {
       const event = usageEvent();
       assert.equal((await post(d1Only, "/usage/emit", event)).status, 200);
       const second = await post(d1Only, "/usage/emit", event);
@@ -351,7 +354,7 @@ describe("verify-runtime Worker", { skip }, () => {
       assert.equal(new Set(rows.map((row) => row.id)).size, rows.length, "no duplicates");
     });
 
-    test("a redelivered event is stored once and does not take unrelated events in the same batch down with it", { timeout: 60_000, todo: "the consumer inserts without ON CONFLICT: the duplicate throws, the whole batch is retried and finally dropped, losing the later event too" }, async () => {
+    test("a redelivered event is stored once and does not take unrelated events in the same batch down with it", { timeout: 60_000 }, async () => {
       const duplicate = usageEvent();
       const later = usageEvent({ usage_amount: 5 });
       for (const event of [duplicate, duplicate, later]) assert.equal((await post(full, "/usage/emit", event)).status, 200);

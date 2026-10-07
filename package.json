@@ -50,6 +50,7 @@
     "test:web": "pnpm --filter @iai/mail-core build && pnpm --filter @iai/mail-api build && pnpm --filter @iai/web build && node --test tests/integration/web-*.test.mjs",
     "test:noos-commerce-contracts": "node scripts/noos-commerce-contract-check.mjs",
     "test:e2e": "pnpm build && node --test tests/e2e/*.e2e.test.mjs",
+    "test:e2e:workers": "cd tests/e2e/workers && npm ci && E2E_WORKERS_REQUIRE=1 npm test",
     "test:noos-stack": "pnpm --filter @iai/noos-web build && node --test tests/integration/noos-commerce-stack.test.mjs",
     "test:noos-web": "pnpm --filter @iai/noos-web build && node --test tests/integration/noos-web-surface.test.mjs tests/integration/noos-commerce-surface.test.mjs",
     "report:lane": "node scripts/team1-lane-status-check.mjs",
