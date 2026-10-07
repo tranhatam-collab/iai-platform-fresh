@@ -1,0 +1,17 @@
+{
+  "name": "iai-worker-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Process-level E2E tests for the Cloudflare Worker sub-projects. Deliberately NOT a pnpm workspace member: it installs its own pinned wrangler (workerd) so the monorepo lockfile is untouched.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 ./pay-iai-one.e2e.test.mjs ./trust-iai-one.e2e.test.mjs ./verify-runtime.e2e.test.mjs",
+    "test:pay": "node --test ./pay-iai-one.e2e.test.mjs",
+    "test:trust": "node --test ./trust-iai-one.e2e.test.mjs",
+    "test:verify-runtime": "node --test ./verify-runtime.e2e.test.mjs"
+  },
+  "devDependencies": {
+    "smol-toml": "1.9.0",
+    "wrangler": "4.131.2"
+  }
+}
