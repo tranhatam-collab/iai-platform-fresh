@@ -16,27 +16,15 @@ function id(prefix) {
   return `${prefix}_${crypto.randomUUID()}`;
 }
 
-function getUserId(request) {
-  return request.headers.get("x-user-id") || "public_anonymous";
-}
+// Client-supplied identity headers are not trusted: reports are always anonymous in Phase 1.
+const ANONYMOUS_USER = "public_anonymous";
 
 function corsHeaders() {
   return {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type,x-user-id"
+    "access-control-allow-headers": "content-type"
   };
-}
-
-async function logEvent(env, { user_id, type, action, metadata }) {
-  if (!env.DB) return;
-  try {
-    await env.DB.prepare(
-      "INSERT INTO audit_logs (id, user_id, type, action, metadata) VALUES (?, ?, ?, ?, ?)"
-    ).bind(id("log"), user_id, type, action, JSON.stringify(metadata || {})).run();
-  } catch {
-    // fail open per Phase 1 rule: never block UI on logging
-  }
 }
 
 async function readTrustState(env) {
@@ -100,21 +88,28 @@ async function handleApi(request, env) {
 
   // /api/trust/report — accept user-submitted report; logged for human review
   if (url.pathname === "/api/trust/report" && request.method === "POST") {
-    const body = await request.json().catch(() => ({}));
-    const message = String(body.message || "").trim();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return json({ error: "message_required" }, 400);
+    }
+    if (body.message !== undefined && typeof body.message !== "string") {
+      return json({ error: "message_must_be_string" }, 400);
+    }
+    const message = (body.message || "").trim();
     if (!message) return json({ error: "message_required" }, 400);
-    const user_id = getUserId(request);
-    await logEvent(env, {
-      user_id,
-      type: "report",
-      action: "issue_reported",
-      metadata: {
+    if (!env.DB) return json({ error: "report_storage_unavailable" }, 503);
+    try {
+      await env.DB.prepare(
+        "INSERT INTO audit_logs (id, user_id, type, action, metadata) VALUES (?, ?, ?, ?, ?)"
+      ).bind(id("log"), ANONYMOUS_USER, "report", "issue_reported", JSON.stringify({
         type: String(body.type || "issue").slice(0, 64),
         affected: String(body.affected || "").slice(0, 200),
         message: message.slice(0, 1000),
         contact: String(body.contact || "").slice(0, 200)
-      }
-    });
+      })).run();
+    } catch {
+      return json({ error: "report_storage_unavailable" }, 503);
+    }
     return json({
       ok: true,
       status: "received",

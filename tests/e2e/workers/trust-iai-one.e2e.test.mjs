@@ -6,7 +6,7 @@
  * cannot run; set E2E_WORKERS_REQUIRE=1 to make that a failure instead.
  */
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 
@@ -95,10 +95,16 @@ describe("trust.iai.one Worker", { skip }, () => {
       assert.doesNotMatch(response.text, /<title>Trust IAI<\/title>/);
     });
 
-    test("data files are published once: no stray ' 2' duplicates are served", { todo: "public/data/trust-state 2.json is committed and served" }, async () => {
+    test("data files are published once: no stray ' 2' duplicates are served", async () => {
       const leftovers = readdirSync(path.join(PUBLIC_DIR, "data")).filter((name) => / 2\.\w+$/.test(name));
       for (const name of leftovers) assert.equal((await get(`/data/${encodeURIComponent(name)}`)).status, 404, name);
       assert.deepEqual(leftovers, []);
+    });
+
+    test("the state builder only writes the canonical trust-state.json outputs", () => {
+      const builder = readFileSync(path.join(TRUST_DIR, "scripts", "trust-state-builder.mjs"), "utf8");
+      assert.doesNotMatch(builder, /trust-state \d/);
+      assert.equal(existsSync(path.join(PUBLIC_DIR, "data", "trust-state 2.json")), false);
     });
   });
 
@@ -223,16 +229,53 @@ describe("trust.iai.one Worker", { skip }, () => {
       assert.equal(await count(), before);
     });
 
-    test("a JSON null body is a client error (400), not a Worker crash", { todo: "body.message is read on null -> uncaught TypeError (src/index.js handleApi /report)" }, async () => {
+    test("a JSON null body is a client error (400), not a Worker crash", async () => {
       const response = await get("/api/trust/report", json("null"));
       assert.equal(response.status, 400, `${response.status} ${response.text.slice(0, 120)}`);
     });
 
-    test("a non-string message is rejected instead of being stored as '[object Object]'", { todo: "String(body.message) coerces objects" }, async () => {
+    test("a non-string message is rejected instead of being stored as '[object Object]'", async () => {
       const before = await count();
       const response = await get("/api/trust/report", json({ message: { nested: true } }));
       assert.equal(response.status, 400, response.text);
       assert.equal(await count(), before);
     });
+    test("the x-user-id header is not trusted: the report is stored as public_anonymous", async () => {
+      const marker = `uid-${Date.now()}`;
+      const response = await get("/api/trust/report", json({ message: marker }, { headers: { "content-type": "application/json", "x-user-id": "usr_forged" } }));
+      assert.equal(response.status, 200, response.text);
+      const [row] = await rows(`metadata LIKE '%${marker}%'`);
+      assert.equal(row.user_id, "public_anonymous");
+      assert.equal((await rows("user_id = 'usr_forged'")).length, 0);
+    });
   });
+});
+
+describe("trust.iai.one Worker without working report storage", { skip }, () => {
+  const startTrust = (options) => startWorker({ name: "trust-nodb", dir: "trust-iai-one-starter", config: "wrangler.toml", readyPath: "/api/trust/health", ...options });
+  const report = (worker, message) => request(worker.baseUrl, "/api/trust/report", json({ message }));
+
+  test("a missing DB binding answers 503 report_storage_unavailable, never 'received'", async () => {
+    const worker = await startTrust({ transform: (cfg) => { delete cfg.d1_databases; } });
+    try {
+      const response = await report(worker, "no binding");
+      assert.equal(response.status, 503, response.text);
+      assert.equal(response.json.error, "report_storage_unavailable");
+      assert.notEqual(response.json.status, "received");
+    } finally {
+      await worker.stop();
+    }
+  }, { timeout: 120_000 });
+
+  test("a failing D1 write (schema not migrated) answers 503 report_storage_unavailable", async () => {
+    const worker = await startTrust({});
+    try {
+      const response = await report(worker, "unmigrated database");
+      assert.equal(response.status, 503, response.text);
+      assert.equal(response.json.error, "report_storage_unavailable");
+      assert.notEqual(response.json.status, "received");
+    } finally {
+      await worker.stop();
+    }
+  }, { timeout: 120_000 });
 });
