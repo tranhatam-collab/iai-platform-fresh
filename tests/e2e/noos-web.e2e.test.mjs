@@ -328,7 +328,7 @@ describe("noos-web", { skip: skipReason }, () => {
       assert.match(response.headers.get("location"), /%0D%0A/i);
     });
 
-    test("an unknown product code in the form is a client error", { todo: "executeCheckoutFlowAsync throws and the server answers 500 with the raw message (apps/noos-web/src/server.ts)" }, async () => {
+    test("an unknown product code in the form is a client error", { todo: "known gap, tracked on the team board" }, async () => {
       const response = await request(selling.baseUrl, "/en/checkout", form({ product: "P99" }));
       assert.ok(response.status >= 400 && response.status < 500, `status ${response.status}`);
     });
