@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { createAiAgentClient, type AiAgentClient, type AiAgentMode } from "./aiagent-client.js";
+import {
+  createAiAgentClient,
+  defaultAiAgentTimeoutMs,
+  type AiAgentClient,
+  type AiAgentMode
+} from "./aiagent-client.js";
 import { createWebEventRecorder, type WebEventRecorder } from "./event-log.js";
 import { buildFlowContractUrl } from "./flow-contract.js";
 import { resolveLocale } from "./i18n.js";
@@ -27,6 +32,7 @@ export interface WebServerOptions extends Partial<SharedContractConfig> {
   aiAgentApiBase?: string;
   aiAgentMode?: AiAgentMode;
   aiAgentClient?: AiAgentClient;
+  aiAgentTimeoutMs?: number;
   publicationHold?: boolean;
 }
 
@@ -35,6 +41,7 @@ interface WebRuntimeConfig extends SharedContractConfig {
   aiBuilderEnabled: boolean;
   aiAgentApiBase: string;
   aiAgentMode: AiAgentMode;
+  aiAgentTimeoutMs: number;
   publicationHold: boolean;
 }
 
@@ -58,6 +65,18 @@ interface SharedOnboardingContractPayload extends SharedContractConfig {
   };
 }
 
+// Every body this server reads is a small form or JSON document.
+const maxRequestBodyBytes = 64 * 1024;
+const maxBusinessNameLength = 200;
+const maxGoalLength = 2_000;
+
+class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super("Request body is too large.");
+    this.name = "RequestBodyTooLargeError";
+  }
+}
+
 const validRoles: OnboardingRole[] = ["starter", "builder", "operator"];
 const validIntents: OnboardingIntent[] = ["information", "leads", "commerce"];
 
@@ -75,11 +94,16 @@ export function createWebRequestHandler(options: WebServerOptions = {}) {
       apiBase: config.aiAgentApiBase,
       mode: config.aiAgentMode,
       apiKey: process.env.WEB_AIAGENT_API_KEY,
+      timeoutMs: config.aiAgentTimeoutMs,
       fetchImpl
     });
 
   return (request: IncomingMessage, response: ServerResponse) => {
-    void handleRequest(request, response, config, fetchImpl, eventRecorder, aiAgentClient);
+    handleRequest(request, response, config, fetchImpl, eventRecorder, aiAgentClient).catch(
+      (error: unknown) => {
+        respondUnhandledError(response, error);
+      }
+    );
   };
 }
 
@@ -100,12 +124,21 @@ function resolveConfig(options: WebServerOptions): WebRuntimeConfig {
     aiAgentApiBase:
       options.aiAgentApiBase ?? process.env.WEB_AIAGENT_API_BASE ?? "https://api.aiagent.iai.one",
     aiAgentMode: options.aiAgentMode ?? parseAiAgentMode(process.env.WEB_AIAGENT_MODE),
+    aiAgentTimeoutMs:
+      options.aiAgentTimeoutMs ??
+      parsePositiveInteger(process.env.WEB_AIAGENT_TIMEOUT_MS) ??
+      defaultAiAgentTimeoutMs,
     publicationHold: options.publicationHold ?? process.env.WEB_PUBLICATION_HOLD !== "false"
   };
 }
 
 function parseAiAgentMode(value: string | undefined): AiAgentMode {
   return value === "byok" ? "byok" : "free-demo";
+}
+
+function parsePositiveInteger(value: string | undefined): number | undefined {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 async function handleRequest(
@@ -131,7 +164,16 @@ async function handleRequest(
       return;
     }
 
-    const url = new URL(request.url, "http://127.0.0.1");
+    let url: URL;
+    try {
+      url = new URL(request.url, "http://127.0.0.1");
+    } catch {
+      respondJson(response, 400, {
+        ok: false,
+        error: { code: "BAD_REQUEST", message: "Request URL is malformed." }
+      });
+      return;
+    }
 
     if (request.method === "GET" && url.pathname === "/health") {
       const onboardingContract = await loadSharedOnboardingContract(config, requestId, fetchImpl);
@@ -452,17 +494,46 @@ async function handleRequest(
 
     // ─── AI Site Generation API (v1 contract) ───
     if (request.method === "POST" && url.pathname === "/v1/site/generate") {
+      // Same feature flag, and the same disabled response, as the /build route.
+      if (!config.aiBuilderEnabled) {
+        respondJson(response, 404, {
+          ok: false,
+          error: { code: "NOT_FOUND", message: "Route not found." }
+        });
+        return;
+      }
+
       const body = await readJsonBody(request);
 
-      const businessName = normalizeString(String(body.businessName ?? ""));
-      const goal = normalizeString(String(body.goal ?? ""));
-      const intent = parseIntent(String(body.intent ?? "")) ?? "information";
-      const role = parseRole(String(body.role ?? "")) ?? "starter";
+      if (!body) {
+        respondJson(response, 400, {
+          ok: false,
+          error: { code: "INVALID_REQUEST", message: "Request body must be a JSON object." }
+        });
+        return;
+      }
+
+      const businessName =
+        typeof body.businessName === "string" ? normalizeString(body.businessName) : undefined;
+      const goal = typeof body.goal === "string" ? normalizeString(body.goal) : undefined;
+      const intent = parseIntent(typeof body.intent === "string" ? body.intent : null) ?? "information";
+      const role = parseRole(typeof body.role === "string" ? body.role : null) ?? "starter";
 
       if (!businessName || !goal) {
         respondJson(response, 400, {
           ok: false,
           error: { code: "INVALID_REQUEST", message: "businessName and goal are required." }
+        });
+        return;
+      }
+
+      if (businessName.length > maxBusinessNameLength || goal.length > maxGoalLength) {
+        respondJson(response, 400, {
+          ok: false,
+          error: {
+            code: "INVALID_REQUEST",
+            message: `businessName must be at most ${maxBusinessNameLength} characters and goal at most ${maxGoalLength}.`
+          }
         });
         return;
       }
@@ -545,46 +616,102 @@ async function handleRequest(
       error: { code: "NOT_FOUND", message: "Route not found." }
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown runtime error.";
+    if (error instanceof RequestBodyTooLargeError) {
+      // Close the connection so an oversized upload is not left half-read on a kept-alive socket.
+      response.setHeader("connection", "close");
+      respondJson(response, 413, {
+        ok: false,
+        error: { code: "PAYLOAD_TOO_LARGE", message: "Request body is too large." }
+      });
+      return;
+    }
+
+    // Details stay in the server log; callers only learn that the request failed.
+    console.error("[iai-web] request failed", requestId, error);
     respondJson(response, 502, {
       ok: false,
       error: {
         code: "SHARED_CONTRACT_ERROR",
-        message
+        message: "Upstream request failed."
       }
     });
+  }
+}
+
+function respondUnhandledError(response: ServerResponse, error: unknown) {
+  console.error("[iai-web] unhandled request error", error);
+
+  try {
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+
+    respondJson(response, 500, {
+      ok: false,
+      error: { code: "WEB_SERVER_ERROR", message: "Unexpected server error." }
+    });
+  } catch {
+    // The socket is already gone, so there is nothing left to send.
   }
 }
 
 function respondHtml(response: ServerResponse, statusCode: number, body: string) {
   response.statusCode = statusCode;
   response.setHeader("content-type", "text/html; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("x-frame-options", "DENY");
   response.end(body);
 }
 
 function respondJson(response: ServerResponse, statusCode: number, payload: Record<string, unknown>) {
   response.statusCode = statusCode;
   response.setHeader("content-type", "application/json; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
   response.end(JSON.stringify(payload));
 }
 
-async function readFormBody(request: AsyncIterable<Buffer | string>): Promise<URLSearchParams> {
-  let body = "";
-  for await (const chunk of request) {
-    body += chunk.toString();
+async function readBodyText(request: IncomingMessage, maxBytes: number): Promise<string> {
+  const declaredLength = Number(request.headers["content-length"]);
+
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new RequestBodyTooLargeError();
   }
-  return new URLSearchParams(body);
+
+  const chunks: Buffer[] = [];
+  let receivedBytes = 0;
+
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    receivedBytes += buffer.length;
+
+    if (receivedBytes > maxBytes) {
+      throw new RequestBodyTooLargeError();
+    }
+
+    chunks.push(buffer);
+  }
+
+  return Buffer.concat(chunks).toString("utf8");
 }
 
-async function readJsonBody(request: AsyncIterable<Buffer | string>): Promise<Record<string, unknown>> {
-  let body = "";
-  for await (const chunk of request) {
-    body += chunk.toString();
-  }
+async function readFormBody(request: IncomingMessage): Promise<URLSearchParams> {
+  return new URLSearchParams(await readBodyText(request, maxRequestBodyBytes));
+}
+
+// Returns null unless the body is a JSON object (not null, an array or a scalar).
+async function readJsonBody(request: IncomingMessage): Promise<Record<string, unknown> | null> {
+  const body = await readBodyText(request, maxRequestBodyBytes);
+
   try {
-    return JSON.parse(body) as Record<string, unknown>;
+    const parsed = JSON.parse(body) as unknown;
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
-    return {};
+    return null;
   }
 }
 
