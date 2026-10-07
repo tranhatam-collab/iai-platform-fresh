@@ -14,7 +14,9 @@ export function createHomeRequestHandler(options: HomeServerOptions = {}) {
   const config = resolveConfig(options);
 
   return (request: IncomingMessage, response: ServerResponse) => {
-    void handleRequest(request, response, config);
+    handleRequest(request, response, config).catch((error: unknown) => {
+      respondUnhandledError(response, error);
+    });
   };
 }
 
@@ -43,7 +45,13 @@ async function handleRequest(
   config: ResolvedHomeConfig
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  const url = parseRequestUrl(request);
+
+  if (!url) {
+    respondBadRequest(response);
+    return;
+  }
+
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
 
   try {
@@ -110,11 +118,63 @@ async function handleRequest(
   }
 }
 
+function parseRequestUrl(request: IncomingMessage): URL | null {
+  try {
+    return new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    return null;
+  }
+}
+
+function respondBadRequest(response: ServerResponse): void {
+  respondJson(
+    response,
+    400,
+    {
+      ok: false,
+      error: {
+        code: "BAD_REQUEST",
+        message: "Request URL is malformed."
+      }
+    },
+    "en"
+  );
+}
+
+function respondUnhandledError(response: ServerResponse, error: unknown): void {
+  console.error("[iai-home] unhandled request error", error);
+
+  try {
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+
+    respondJson(
+      response,
+      500,
+      {
+        ok: false,
+        error: {
+          code: "HOME_SERVER_ERROR",
+          message: t("en", "home.error.server")
+        }
+      },
+      "en"
+    );
+  } catch {
+    // The socket is already gone, so there is nothing left to send.
+  }
+}
+
 function respondHtml(response: ServerResponse, statusCode: number, html: string, locale: Locale): void {
   response.statusCode = statusCode;
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "text/html; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("x-frame-options", "DENY");
   response.end(html);
 }
 
@@ -123,6 +183,8 @@ function respondJson(response: ServerResponse, statusCode: number, payload: unkn
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "application/json; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
   response.end(JSON.stringify(payload));
 }
 
