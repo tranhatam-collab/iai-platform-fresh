@@ -10,7 +10,9 @@ name: Full lane (pinned private fixtures)
 # Configuration (repository settings, nothing is stored in the repo):
 #   variables: DOCS_PACK_REPO, DOCS_PACK_SHA, CIOS_REPO, CIOS_SHA   (the SHAs must be full 40-hex commit ids)
 #   optional variable: DOCS_PACK_SUBDIR (folder inside the docs pack repo that holds the docs tree, default ".")
-#   secret: DOCS_PACK_TOKEN (read-only token for the two private repositories)
+#   secret: DOCS_PACK_TOKEN (read-only token for the two private repositories), stored as a secret of the
+#   "full-lane" environment, not as a repository secret. Restrict that environment to the main branch (and
+#   optionally require a reviewer) so a workflow edited on another branch cannot read the token.
 # A missing variable, secret or fixture makes this workflow fail on purpose.
 
 on:
@@ -36,6 +38,7 @@ jobs:
   full-lane:
     name: Full suite with pinned private fixtures
     runs-on: ubuntu-latest
+    environment: full-lane
     timeout-minutes: 45
     env:
       DOCS_PACK_REPO: ${{ vars.DOCS_PACK_REPO }}
@@ -47,6 +50,10 @@ jobs:
     steps:
       - name: Preflight (configuration must be complete and pinned)
         run: |
+          # Keep private repository names out of the public log (the checkout action prints them).
+          for name in DOCS_PACK_REPO CIOS_REPO; do
+            if [ -n "${!name}" ]; then echo "::add-mask::${!name}"; fi
+          done
           missing=""
           for name in DOCS_PACK_REPO DOCS_PACK_SHA CIOS_REPO CIOS_SHA; do
             if [ -z "${!name}" ]; then missing="$missing $name"; fi
@@ -62,6 +69,12 @@ jobs:
               exit 1
             fi
           done
+          case "${DOCS_PACK_SUBDIR:-.}" in
+            /* | *..*)
+              echo "::error::DOCS_PACK_SUBDIR must be a relative path without '..'"
+              exit 1
+              ;;
+          esac
 
       - name: Checkout this repository
         uses: actions/checkout@v4
@@ -146,4 +159,8 @@ jobs:
 
       # Local emulation only (wrangler dev --local); no Cloudflare credentials.
       - name: Workers end-to-end
-        run: pnpm test:e2e:workers
+        run: |
+          pnpm test:e2e:workers > "$RUNNER_TEMP/workers.log" 2>&1 && status=0 || status=$?
+          grep -E '^# (tests|pass|fail|skipped|todo) ' "$RUNNER_TEMP/workers.log" || true
+          grep -E '^\s*not ok ' "$RUNNER_TEMP/workers.log" | head -50 || true
+          exit $status

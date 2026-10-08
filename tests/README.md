@@ -18,5 +18,11 @@ present and `REQUIRE_DOCS_FIXTURES=1`, so a missing fixture is a failure rather 
 - Pins live in repository settings, not in the repo: variables `DOCS_PACK_REPO`, `DOCS_PACK_SHA`, `CIOS_REPO`,
   `CIOS_SHA` (full 40-character commit ids) and secret `DOCS_PACK_TOKEN` (read-only). Optional variable
   `DOCS_PACK_SUBDIR` names the folder inside the docs pack repository that holds the docs tree.
+- The job uses the `full-lane` environment: store `DOCS_PACK_TOKEN` as a secret of that environment, limit the
+  environment to the `main` branch and, if you want, require a reviewer, so a workflow edited on another branch
+  cannot read the token. Remember that a manual run with `ref` set to a pull request head executes that code next
+  to the fixtures, so only run it on heads you have read.
+- Until the variables and the secret exist, every push to `main` and the nightly run fail at the preflight step on
+  purpose.
 - Logs are public, so the workflow prints only counts and failing test names; reproduce a failure locally with
   the same pinned commits and `REQUIRE_DOCS_FIXTURES=1 pnpm test`.
