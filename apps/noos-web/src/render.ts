@@ -82,6 +82,13 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
+// Real buyer ids look like `buyer_alpha001`; anything outside this shape is ignored, not rendered.
+const buyerIdPattern = /^[A-Za-z0-9_.:-]{1,64}$/;
+
+function resolveBuyerId(value: string | null | undefined): string {
+  return value && buyerIdPattern.test(value) ? value : getDefaultBuyerId();
+}
+
 function formatUsd(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -285,7 +292,7 @@ function renderLanguageSwitcher(locale: Locale, currentPath: string): string {
         ${alternatives
           .map((entry) => {
             const meta = localeMeta[entry];
-            return `<a href="${buildLocalePath(entry, currentPath)}"><span class="lang-flag" aria-hidden="true">${meta.flag}</span><span>${escapeHtml(meta.nativeLabel)}</span></a>`;
+            return `<a href="${escapeHtml(buildLocalePath(entry, currentPath))}"><span class="lang-flag" aria-hidden="true">${meta.flag}</span><span>${escapeHtml(meta.nativeLabel)}</span></a>`;
           })
           .join("")}
       </div>
@@ -300,7 +307,7 @@ function nav(active: string, buyerId: string, locale: Locale, currentPath: strin
     { href: "/documents", key: "documents", label: chrome.nav.documents },
     { href: "/programs", key: "programs", label: chrome.nav.programs },
     { href: "/licenses", key: "licenses", label: chrome.nav.licenses },
-    { href: `/library?buyer=${buyerId}`, key: "library", label: chrome.nav.library },
+    { href: `/library?buyer=${encodeURIComponent(buyerId)}`, key: "library", label: chrome.nav.library },
     { href: "/operations", key: "operations", label: chrome.nav.operations }
   ];
 
@@ -311,7 +318,7 @@ function nav(active: string, buyerId: string, locale: Locale, currentPath: strin
         ${links
           .map(({ href, key, label }) => {
             const current = active === href || (active === "/library" && key === "library");
-            return `<a href="${href}"${current ? ' aria-current="page"' : ""}>${escapeHtml(label)}</a>`;
+            return `<a href="${escapeHtml(href)}"${current ? ' aria-current="page"' : ""}>${escapeHtml(label)}</a>`;
           })
           .join("")}
       </nav>
@@ -319,6 +326,9 @@ function nav(active: string, buyerId: string, locale: Locale, currentPath: strin
     </header>
   `;
 }
+
+// Exported so regression tests can exercise the navigation sink without catalog fixtures.
+export { nav as renderNav };
 
 function layout({
   title,
@@ -1037,7 +1047,7 @@ function redirectResponse(location: string, buyerId: string, locale: Locale): Ro
           <h1>${t(locale, "noos.text.legacy_investor_routes")}</h1>
           <p class="hero-copy">${t(locale, "noos.text.legacy_investor_redirect")}</p>
           <div class="hero-actions">
-            <a class="button" href="${localizedLocation}">${escapeHtml(chrome.buttons.continue)}</a>
+            <a class="button" href="${escapeHtml(localizedLocation)}">${escapeHtml(chrome.buttons.continue)}</a>
             <a class="secondary-button" href="/products?buyer=${encodeURIComponent(buyerId)}">${escapeHtml(chrome.buttons.openCatalog)}</a>
           </div>
         </div>
@@ -2525,7 +2535,7 @@ Sitemap: https://noos.iai.one/sitemap.xml
 }
 
 export async function renderCheckoutFromForm(body: URLSearchParams, locale: Locale = defaultLocale): Promise<RouteResponse> {
-  const buyerId = body.get("buyer") ?? getDefaultBuyerId();
+  const buyerId = resolveBuyerId(body.get("buyer"));
   const productCode = (body.get("product") as ProductCode | null) ?? "P11";
   const buyerEmail = body.get("email") ?? undefined;
   const licenseType = body.get("license") ?? undefined;
@@ -2594,7 +2604,7 @@ export async function renderRoute(pathname: string, searchParams: URLSearchParam
   }
 
   const localized = parseLocalizedPath(pathname);
-  const buyerId = searchParams.get("buyer") ?? getDefaultBuyerId();
+  const buyerId = resolveBuyerId(searchParams.get("buyer"));
   const role = getLocalizedRoleProfile(searchParams.get("role"), localized.locale).role;
   const locale = localized.locale;
   const querySuffix = searchParamsSuffix(searchParams);

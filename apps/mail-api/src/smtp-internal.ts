@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { type IncomingMessage, type ServerResponse } from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import { URL } from "node:url";
@@ -15,6 +15,28 @@ import {
 
 const SUPPORTED_STREAMS = new Set(["transactional", "system", "marketing", "alerts"]);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+// RFC 5321 caps a forward-path at 254 characters. EMAIL_PATTERN backtracks
+// quadratically on long dotted input (~4 s for an 80 KB value), so the length
+// is checked before the regex ever runs.
+const MAX_EMAIL_LENGTH = 254;
+
+/**
+ * Default request-body cap for /v1/send and /v1/internal/smtp/*: 64 MiB.
+ *
+ * Sized for base64 payloads: the SMTP gateway accepts up to 20 MiB of raw MIME
+ * by default (MAIL_SMTP_MAX_MESSAGE_SIZE_BYTES), which is ~26.7 MiB as base64,
+ * and the queue call can additionally carry the decoded html/text parts.
+ * Override with MAIL_API_MAX_BODY_BYTES (or the `maxBodyBytes` option) when
+ * the gateway limit is raised.
+ */
+export const DEFAULT_SMTP_INTERNAL_MAX_BODY_BYTES = 64 * 1024 * 1024;
+
+const ALLOW_UNAUTHENTICATED_INTERNAL_ENV = "MAIL_SMTP_ALLOW_UNAUTHENTICATED_INTERNAL";
+
+// Well-known dev credential. Seeded only outside production (or by an
+// explicit seed); never a production default.
+const DEFAULT_DEV_USERNAME = "smtp-dev";
+const DEFAULT_DEV_PASSWORD = "dev-secret";
 
 type SmtpOperation = "auth" | "mail-from" | "recipient" | "normalize" | "queue" | "audit";
 type QueueJobStatus = "queued" | "processing" | "completed" | "failed";
@@ -158,9 +180,24 @@ interface AuditLogInput {
 }
 
 export interface SmtpInternalBackendOptions {
+  /**
+   * Explicit dev/test opt-in: serve /v1/internal/smtp/* without a service
+   * token when none is configured. Off by default (the routes then answer 503).
+   * The same opt-in is available as MAIL_SMTP_ALLOW_UNAUTHENTICATED_INTERNAL=1,
+   * but that env flag is ignored when NODE_ENV=production.
+   */
+  allowUnauthenticatedInternal?: boolean;
   apiKey?: string;
   databaseUrl?: string;
+  /** Request-body cap in bytes (default: MAIL_API_MAX_BODY_BYTES, then 64 MiB). */
+  maxBodyBytes?: number;
   remoteToken?: string;
+  /**
+   * Provisions the first workspace/credential. Outside production a missing
+   * seed falls back to the dev defaults (ws_dev / smtp-dev); in production
+   * nothing is seeded unless this is passed, and it must carry
+   * username and password.
+   */
   seed?: {
     allowedStreams?: string[];
     blockedRecipient?: string;
@@ -204,17 +241,37 @@ class MailPersistenceStore {
 
   constructor(
     databaseUrl: string,
-    seed: ResolvedSeedConfig
+    seed: ResolvedSeedConfig | undefined
   ) {
     this.db = new DatabaseSync(resolveSqliteDatabasePath(databaseUrl));
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA busy_timeout = 2000;");
     this.ensureSchema();
-    this.ensureSeed(seed);
+    if (seed) {
+      this.ensureSeed(seed);
+    }
   }
 
   close() {
     this.db.close();
+  }
+
+  /** True when the well-known dev credential (smtp-dev / dev-secret) is stored and active. */
+  hasDefaultDevCredential() {
+    const row = this.db
+      .prepare(
+        `
+          SELECT credential_id AS credentialId
+          FROM smtp_credentials
+          WHERE username = ?
+            AND password = ?
+            AND status = 'active'
+          LIMIT 1;
+        `
+      )
+      .get(DEFAULT_DEV_USERNAME, DEFAULT_DEV_PASSWORD) as { credentialId?: string } | undefined;
+
+    return Boolean(row?.credentialId);
   }
 
   checkConnectivity() {
@@ -1432,14 +1489,60 @@ class MailPersistenceStore {
   }
 }
 
+export type SmtpInternalAuthMode = "token" | "unauthenticated_opt_in" | "unconfigured";
+
+export interface SmtpInternalAuth {
+  /** `unconfigured` means /v1/internal/smtp/* answers 503 to every request. */
+  mode: SmtpInternalAuthMode;
+  token?: string;
+}
+
+/**
+ * Decide how /v1/internal/smtp/* is protected. Fails closed: without a service
+ * token the routes are only open when the dev/test opt-in is explicitly set.
+ * The env form of the opt-in is ignored in production; the `allowUnauthenticatedInternal`
+ * option is an explicit code-level decision and is honored everywhere.
+ */
+export function resolveSmtpInternalAuth(
+  options: Pick<SmtpInternalBackendOptions, "allowUnauthenticatedInternal" | "remoteToken"> = {},
+  env: NodeJS.ProcessEnv = process.env
+): SmtpInternalAuth {
+  const token = normalizeSecret(options.remoteToken ?? env.MAIL_SMTP_REMOTE_TOKEN);
+  if (token) {
+    return { mode: "token", token };
+  }
+
+  const optedIn =
+    options.allowUnauthenticatedInternal ??
+    (env.NODE_ENV !== "production" && isTruthyFlag(env[ALLOW_UNAUTHENTICATED_INTERNAL_ENV]));
+
+  return { mode: optedIn ? "unauthenticated_opt_in" : "unconfigured" };
+}
+
+let reportedInternalAuthMode: SmtpInternalAuthMode | undefined;
+
 export function createSmtpInternalBackend(
   options: SmtpInternalBackendOptions = {}
 ): SmtpInternalBackend {
-  const expectedApiKey = options.apiKey ?? process.env.MAIL_API_KEY;
-  const seed = resolveSeed(options.seed);
-  const expectedToken = options.remoteToken ?? process.env.MAIL_SMTP_REMOTE_TOKEN;
+  const expectedApiKey = normalizeSecret(options.apiKey ?? process.env.MAIL_API_KEY);
+  const internalAuth = resolveSmtpInternalAuth(options);
+  const maxBodyBytes = resolveMaxBodyBytes(options.maxBodyBytes);
+  const seed = resolveSeed(options.seed, process.env.NODE_ENV);
   const databaseUrl = options.databaseUrl ?? process.env.MAIL_DB_URL ?? "sqlite:/tmp/iai-mail.db";
   const store = new MailPersistenceStore(databaseUrl, seed);
+
+  reportInternalAuthPosture(internalAuth);
+  if (process.env.NODE_ENV === "production" && store.hasDefaultDevCredential()) {
+    // eslint-disable-next-line no-console
+    console.error(
+      JSON.stringify({
+        level: "error",
+        msg: "mail_api_default_smtp_credential_present",
+        detail: `smtp_credentials still holds the well-known dev login ${DEFAULT_DEV_USERNAME}/${DEFAULT_DEV_PASSWORD} (seeded by an earlier release). Delete or rotate that row; it is no longer created automatically in production.`,
+        ts: new Date().toISOString()
+      })
+    );
+  }
 
   return {
     close() {
@@ -1490,7 +1593,7 @@ export function createSmtpInternalBackend(
         try {
           assertApiAuthorization(request, expectedApiKey);
           const workspaceId = requireWorkspaceId(request, url);
-          const body = await readRequestBody(request);
+          const body = await readRequestBody(request, maxBodyBytes);
           const payload = asRecord(body) as MailApiSendRequest;
           const result = handleSendOperation(store, payload, {
             requestId,
@@ -1522,6 +1625,26 @@ export function createSmtpInternalBackend(
         const messageRoute = matchMessageReadRoute(url.pathname);
 
         if (workspaceId && messageRoute && store.hasPersistedMessage(messageRoute.messageId, workspaceId)) {
+          // The workspace comes from the client, so reads need the same API key
+          // as POST /v1/send; otherwise knowing a message id is enough to read it.
+          try {
+            assertApiAuthorization(request, expectedApiKey);
+          } catch (error) {
+            if (error instanceof SmtpBackendError) {
+              writeErrorEnvelope(
+                response,
+                requestId,
+                error.statusCode,
+                error.errorCode,
+                error.message,
+                error.details
+              );
+              return true;
+            }
+
+            throw error;
+          }
+
           if (messageRoute.resource === "detail") {
             const detail = store.getPersistedMessageDetail(messageRoute.messageId, workspaceId);
             if (detail) {
@@ -1557,9 +1680,9 @@ export function createSmtpInternalBackend(
       }
 
       try {
-        assertAuthorization(request, expectedToken);
+        assertAuthorization(request, internalAuth);
         const operation = getOperationFromPath(url.pathname);
-        const body = await readRequestBody(request);
+        const body = await readRequestBody(request, maxBodyBytes);
 
         switch (operation) {
           case "auth": {
@@ -2224,7 +2347,7 @@ function buildSendResponse(
 
 function requireEmail(value: string | undefined, field: string) {
   const normalized = normalizeRequiredString(value, field).toLowerCase();
-  if (!EMAIL_PATTERN.test(normalized)) {
+  if (normalized.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(normalized)) {
     throw new SmtpBackendError(422, "VALIDATION_ERROR", `${field} must be a valid email address.`, 550);
   }
 
@@ -2286,7 +2409,24 @@ function parseJsonStringArray(value: string | undefined, fallback: string[]) {
   }
 }
 
-function resolveSeed(seed: SmtpInternalBackendOptions["seed"]) {
+function resolveSeed(
+  seed: SmtpInternalBackendOptions["seed"],
+  nodeEnv: string | undefined
+): ResolvedSeedConfig | undefined {
+  if (nodeEnv === "production") {
+    // The dev defaults (ws_dev / smtp-dev / dev-secret) must never be created
+    // implicitly in production: only an explicit, complete seed provisions anything.
+    if (!seed) {
+      return undefined;
+    }
+
+    if (!seed.username?.trim() || !seed.password?.trim()) {
+      throw new Error(
+        "createSmtpInternalBackend: seed.username and seed.password are required when NODE_ENV=production (the dev default credential is not used in production)."
+      );
+    }
+  }
+
   const workspaceId = seed?.workspaceId?.trim() || "ws_dev";
   const defaultStream = normalizeSeedStream(seed?.defaultStream) ?? "transactional";
   const allowedStreams = normalizeSeedAllowedStreams(seed?.allowedStreams, defaultStream);
@@ -2297,11 +2437,11 @@ function resolveSeed(seed: SmtpInternalBackendOptions["seed"]) {
     credentialId: seed?.credentialId?.trim() || "smtpcred_dev",
     defaultSender: seed?.defaultSender?.trim().toLowerCase() || "no-reply@tx.iai.one",
     defaultStream,
-    password: seed?.password?.trim() || "dev-secret",
+    password: seed?.password?.trim() || DEFAULT_DEV_PASSWORD,
     primaryDomain: seed?.primaryDomain?.trim().toLowerCase() || "tx.iai.one",
     providerRouteId: seed?.providerRouteId?.trim() || "transactional_primary",
     seededSenderIdentityId: "sender_dev_default",
-    username: seed?.username?.trim() || "smtp-dev",
+    username: seed?.username?.trim() || DEFAULT_DEV_USERNAME,
     workspaceId
   };
 }
@@ -2361,11 +2501,33 @@ function parseTimestamp(value: string | undefined) {
   return new Date(timestamp).toISOString();
 }
 
-async function readRequestBody(request: IncomingMessage) {
-  const chunks: Buffer[] = [];
+async function readRequestBody(request: IncomingMessage, maxBytes: number) {
+  const declaredLength = Number.parseInt(getHeaderValue(request, "content-length") ?? "", 10);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw payloadTooLarge(maxBytes);
+  }
 
-  for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+  // Walk the iterator by hand: leaving a `for await` early calls return(),
+  // which destroys the request and its socket before the 413 can be written.
+  const iterator = request[Symbol.asyncIterator]();
+
+  for (;;) {
+    const next = await iterator.next();
+    if (next.done) {
+      break;
+    }
+
+    const chunk = Buffer.isBuffer(next.value) ? next.value : Buffer.from(next.value);
+    totalBytes += chunk.length;
+    if (totalBytes > maxBytes) {
+      // Keep reading (and discarding) the rest of the upload so the response still reaches the client.
+      void drainRequest(iterator);
+      throw payloadTooLarge(maxBytes);
+    }
+
+    chunks.push(chunk);
   }
 
   if (chunks.length === 0) {
@@ -2381,6 +2543,24 @@ async function readRequestBody(request: IncomingMessage) {
     return JSON.parse(rawBody) as unknown;
   } catch {
     throw new SmtpBackendError(400, "INVALID_JSON", "Request body must be valid JSON.");
+  }
+}
+
+function payloadTooLarge(maxBytes: number) {
+  return new SmtpBackendError(
+    413,
+    "PAYLOAD_TOO_LARGE",
+    `Request body exceeds the ${maxBytes} byte limit.`
+  );
+}
+
+async function drainRequest(iterator: AsyncIterator<unknown>) {
+  try {
+    while (!(await iterator.next()).done) {
+      // discard
+    }
+  } catch {
+    // The client went away mid-upload; nothing left to drain.
   }
 }
 
@@ -2408,13 +2588,24 @@ function getOperationFromPath(pathname: string): SmtpOperation {
   throw new SmtpBackendError(404, "NOT_FOUND", `Route ${pathname} was not found.`);
 }
 
-function assertAuthorization(request: IncomingMessage, expectedToken?: string) {
-  if (!expectedToken) {
-    return;
+function assertAuthorization(request: IncomingMessage, internalAuth: SmtpInternalAuth) {
+  if (!internalAuth.token) {
+    if (internalAuth.mode === "unauthenticated_opt_in") {
+      return;
+    }
+
+    // Fail closed: an unset token must never leave the internal routes open.
+    // 451 (temporary failure) tells the SMTP gateway this is a server-side
+    // misconfiguration, not a rejected login.
+    throw new SmtpBackendError(
+      503,
+      "INTERNAL_ERROR",
+      "MAIL_SMTP_REMOTE_TOKEN is not configured for /v1/internal/smtp/*.",
+      451
+    );
   }
 
-  const authorization = getHeaderValue(request, "authorization");
-  if (authorization !== `Bearer ${expectedToken}`) {
+  if (!matchesBearerToken(getHeaderValue(request, "authorization"), internalAuth.token)) {
     throw new SmtpBackendError(401, "UNAUTHORIZED", "Invalid service token.", 535);
   }
 }
@@ -2428,10 +2619,80 @@ function assertApiAuthorization(request: IncomingMessage, expectedToken?: string
     );
   }
 
-  const authorization = getHeaderValue(request, "authorization");
-  if (authorization !== `Bearer ${expectedToken}`) {
+  if (!matchesBearerToken(getHeaderValue(request, "authorization"), expectedToken)) {
     throw new SmtpBackendError(401, "UNAUTHORIZED", "Invalid API key.");
   }
+}
+
+function matchesBearerToken(authorization: string | undefined, expectedToken: string) {
+  return constantTimeEqual(authorization ?? "", `Bearer ${expectedToken}`);
+}
+
+/**
+ * Compare secrets without leaking where they differ or how long they are:
+ * both sides are hashed to a fixed length first, because timingSafeEqual
+ * throws on unequal lengths and a length pre-check would leak the secret's.
+ */
+function constantTimeEqual(provided: string, expected: string) {
+  const providedDigest = createHash("sha256").update(provided).digest();
+  const expectedDigest = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(providedDigest, expectedDigest);
+}
+
+function normalizeSecret(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function isTruthyFlag(value: string | undefined) {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
+
+function resolveMaxBodyBytes(option: number | undefined) {
+  if (option !== undefined) {
+    if (!Number.isInteger(option) || option <= 0) {
+      throw new Error(`createSmtpInternalBackend: maxBodyBytes must be a positive integer, got: ${option}`);
+    }
+
+    return option;
+  }
+
+  const raw = process.env.MAIL_API_MAX_BODY_BYTES?.trim();
+  if (!raw) {
+    return DEFAULT_SMTP_INTERNAL_MAX_BODY_BYTES;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(
+      `MAIL_API_MAX_BODY_BYTES must be a positive integer if set, got: ${JSON.stringify(raw)}`
+    );
+  }
+
+  return parsed;
+}
+
+function reportInternalAuthPosture(internalAuth: SmtpInternalAuth) {
+  if (internalAuth.mode === "token" || internalAuth.mode === reportedInternalAuthMode) {
+    return;
+  }
+
+  reportedInternalAuthMode = internalAuth.mode;
+  const unconfigured = internalAuth.mode === "unconfigured";
+  // eslint-disable-next-line no-console
+  (unconfigured ? console.error : console.warn)(
+    JSON.stringify({
+      level: unconfigured ? "error" : "warn",
+      msg: unconfigured
+        ? "mail_api_smtp_internal_auth_not_configured"
+        : "mail_api_smtp_internal_auth_disabled_by_opt_in",
+      detail: unconfigured
+        ? "MAIL_SMTP_REMOTE_TOKEN is not set: every /v1/internal/smtp/* request is rejected with 503 until it is. Set it (e.g. openssl rand -hex 32), or for local dev/tests only set MAIL_SMTP_ALLOW_UNAUTHENTICATED_INTERNAL=1."
+        : "/v1/internal/smtp/* is served WITHOUT authentication (explicit dev/test opt-in). Never use this outside local development.",
+      ts: new Date().toISOString()
+    })
+  );
 }
 
 function requireWorkspaceId(request: IncomingMessage, url: URL) {

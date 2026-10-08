@@ -1,4 +1,15 @@
-import test from "node:test";
+import baseTest from "node:test";
+
+import { docsFixtureSkip } from "../support/docs-fixtures.mjs";
+
+const fixtureSkip = docsFixtureSkip("docs/noos/NOOS_COMMERCE_FIXTURES_v0.1/catalog/product_definitions_all_v1.json");
+// These two only exercise redirects / static JSON and need no catalog fixtures.
+const fixtureFree = new Set([
+  "public routes redirect to locale-prefixed canonicals",
+  "operations trace map json exposes machine-readable wrong-asset and deny-mismatch mapping",
+  "legacy investor and fundraising routes redirect into localized NOOS routes with noindex"
+]);
+const test = (name, fn) => baseTest(name, { skip: fixtureFree.has(name) ? false : fixtureSkip }, fn);
 import assert from "node:assert/strict";
 
 import { getLocalizedChrome, getPageMetadata } from "../../apps/noos-web/dist/i18n.js";

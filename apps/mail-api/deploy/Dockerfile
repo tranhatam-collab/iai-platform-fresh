@@ -1,6 +1,11 @@
 FROM node:22-alpine
 WORKDIR /app
 
+# Production image: mail-api must not seed the dev SMTP login (smtp-dev /
+# dev-secret / ws_dev) into the database it opens. `docker run -e NODE_ENV=...`
+# or --env-file still overrides this for a local smoke.
+ENV NODE_ENV=production
+
 # su-exec is needed for the entrypoint that chowns the volume then drops to
 # the node user. apk-static add keeps image small (~250 KiB add).
 RUN apk add --no-cache su-exec
@@ -23,6 +28,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Run as root only briefly so the entrypoint can chown the bind-mount.
 # The entrypoint exec's `su-exec node:node ...` so the main process is uid 1000.
+# (No `USER node` here: that would stop the entrypoint from chowning the mount.)
 EXPOSE 3001
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "bootstrap.mjs"]

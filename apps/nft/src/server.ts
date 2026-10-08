@@ -31,7 +31,9 @@ export function createNftRequestHandler(options: NftServerOptions = {}) {
   const state = createRuntimeState();
 
   return (request: IncomingMessage, response: ServerResponse) => {
-    void handleRequest(request, response, config, state);
+    handleRequest(request, response, config, state).catch((error: unknown) => {
+      respondUnhandledError(response, error);
+    });
   };
 }
 
@@ -54,7 +56,13 @@ async function handleRequest(
   state: NftRuntimeState
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  const url = parseRequestUrl(request);
+
+  if (!url) {
+    respondBadRequest(response, "Request URL is malformed.");
+    return;
+  }
+
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
 
   try {
@@ -170,7 +178,12 @@ async function handleNftApiRequest(
       return true;
     }
 
-    const assetId = decodeURIComponent(downloadMatch[1] ?? "");
+    const assetId = decodePathSegment(downloadMatch[1] ?? "");
+    if (assetId === null) {
+      respondBadRequest(response, "Asset id is not valid percent-encoding.");
+      return true;
+    }
+
     const proxyTokenId = url.searchParams.get("proxy_token_id")?.trim() ?? "";
     const token = state.proxyTokens.get(proxyTokenId);
 
@@ -258,7 +271,12 @@ async function handleNftApiRequest(
 
   const assetAccessMatch = url.pathname.match(/^\/v1\/nft\/assets\/([^/]+)\/access-check$/);
   if (assetAccessMatch) {
-    const assetId = decodeURIComponent(assetAccessMatch[1] ?? "");
+    const assetId = decodePathSegment(assetAccessMatch[1] ?? "");
+    if (assetId === null) {
+      respondBadRequest(response, "Asset id is not valid percent-encoding.");
+      return true;
+    }
+
     const decision = evaluateAssetAccess(assetId, body, state);
     recordAuditEvent(state, decision === "allow" ? "access.allowed" : "access.denied", { assetId, decision });
     respondJson(
@@ -279,7 +297,12 @@ async function handleNftApiRequest(
 
   const proxyTokenMatch = url.pathname.match(/^\/v1\/nft\/assets\/([^/]+)\/proxy-token$/);
   if (proxyTokenMatch) {
-    const assetId = decodeURIComponent(proxyTokenMatch[1] ?? "");
+    const assetId = decodePathSegment(proxyTokenMatch[1] ?? "");
+    if (assetId === null) {
+      respondBadRequest(response, "Asset id is not valid percent-encoding.");
+      return true;
+    }
+
     const decision = evaluateAssetAccess(assetId, body, state);
 
     if (decision !== "allow") {
@@ -423,11 +446,71 @@ function respondMethodNotAllowed(response: ServerResponse, locale: Locale): void
   );
 }
 
+function parseRequestUrl(request: IncomingMessage): URL | null {
+  try {
+    return new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    return null;
+  }
+}
+
+function decodePathSegment(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+function respondBadRequest(response: ServerResponse, message: string): void {
+  respondJson(
+    response,
+    400,
+    {
+      ok: false,
+      error: {
+        code: "BAD_REQUEST",
+        message
+      }
+    },
+    "en"
+  );
+}
+
+function respondUnhandledError(response: ServerResponse, error: unknown): void {
+  console.error("[iai-nft] unhandled request error", error);
+
+  try {
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+
+    respondJson(
+      response,
+      500,
+      {
+        ok: false,
+        error: {
+          code: "NFT_SERVER_ERROR",
+          message: t("en", "nft.error.server")
+        }
+      },
+      "en"
+    );
+  } catch {
+    // The socket is already gone, so there is nothing left to send.
+  }
+}
+
 function respondHtml(response: ServerResponse, statusCode: number, html: string, locale: Locale): void {
   response.statusCode = statusCode;
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "text/html; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("x-frame-options", "DENY");
   response.end(html);
 }
 
@@ -436,6 +519,8 @@ function respondJson(response: ServerResponse, statusCode: number, payload: unkn
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "application/json; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
   response.end(JSON.stringify(payload));
 }
 

@@ -73,6 +73,9 @@ ssh root@mail.iai.one '
 | `PATH_B_PORT` | no | `3001` | Container listen port |
 | `PATH_B_BIND` | no | `0.0.0.0` | Container bind address (must be 0.0.0.0 inside container, port mapping handles host exposure) |
 | `PATH_B_EVIDENCE_DIR` | no | `/var/lib/iai-mail-api` | NDJSON evidence persistence dir |
+| `NODE_ENV` | no | `production` (set by the Dockerfile) | In production the dev SMTP login (`smtp-dev` / `dev-secret` / `ws_dev`) is never seeded |
+| `MAIL_SMTP_REMOTE_TOKEN` | no | — | Service token for `/v1/internal/smtp/*`. Path B does not need those routes: while unset they answer 503 (fail closed) and a startup error is logged. Set it only if this container should serve them |
+| `MAIL_API_KEY` | no | — | Bearer key for `POST /v1/send` and persisted `GET /v1/messages/:id[/events]`; while unset they answer 503 |
 
 ## Volume contract
 

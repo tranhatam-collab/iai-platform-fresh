@@ -22,6 +22,10 @@ Gan cung 1 gia tri moi vao:
 - runtime `mail-api`
 - runtime `mail-smtp`
 
+`MAIL_SMTP_REMOTE_TOKEN` la BAT BUOC: neu de trong thi `docker compose` bao loi
+ngay, va `mail-api` (NODE_ENV=production) tu choi khoi dong. Khong con che do
+"khong token" cho `/v1/internal/smtp/*`.
+
 Tao thu muc data tren host:
 
 ```bash
@@ -34,7 +38,7 @@ set +a
 Xac nhan 3 duong dan nay ton tai:
 
 ```bash
-test -f "$MAIL_REPO_ROOT/apps/mail-api/dist/index.js"
+test -f "$MAIL_REPO_ROOT/apps/mail-api/dist/bootstrap.js"
 test -f "$MAIL_REPO_ROOT/apps/mail-smtp/dist/index.js"
 test -f "$MAIL_TLS_CERTS_PATH/cert.pem" && test -f "$MAIL_TLS_CERTS_PATH/key.pem"
 ```
@@ -52,6 +56,39 @@ Health phai xanh:
 curl -fsS http://127.0.0.1:8787/health && echo
 curl -fsS http://127.0.0.1:9091/health && echo
 curl -fsS http://127.0.0.1:9091/health/dependencies && echo
+```
+
+## 2b. Tao SMTP credential that (production KHONG seed smtp-dev / dev-secret)
+
+Voi `NODE_ENV=production`, `mail-api` khong tu tao login mac dinh `smtp-dev` /
+`dev-secret` nua, va hien chua co admin API. Database moi se khong co credential
+nao cho toi khi chay script nay (idempotent; chay trong container `mail-api`
+sau khi stack da len o buoc 2; mot workspace cho moi database):
+
+```bash
+docker exec \
+  -e MAIL_DB_URL=sqlite:/data/iai-mail-flow.sqlite \
+  -e PROVISION_WORKSPACE_ID=ws_main \
+  -e PROVISION_SMTP_USERNAME=smtp-main \
+  -e PROVISION_SMTP_PASSWORD="$(openssl rand -hex 24)" \
+  -e PROVISION_PRIMARY_DOMAIN=tx.iai.one \
+  -e PROVISION_DEFAULT_SENDER=no-reply@tx.iai.one \
+  iai-mail-api-internal \
+  node /workspace/ops/mail-internal-first/scripts/provision-smtp-credential.mjs
+```
+
+Luu username/password vao `SMTP_SMOKE_USER` / `SMTP_SMOKE_PASS` trong `.env.production`.
+
+Database da deploy truoc day co the van con login `smtp-dev` / `dev-secret` do ban
+cu seed san; `mail-api` ghi log `mail_api_default_smtp_credential_present` khi
+khoi dong production neu con. Xoa/rotate dong do:
+
+```bash
+docker exec iai-mail-api-internal node -e "
+const { DatabaseSync } = require('node:sqlite');
+const db = new DatabaseSync('/data/iai-mail-flow.sqlite');
+console.log(db.prepare(\"DELETE FROM smtp_credentials WHERE username = 'smtp-dev' AND password = 'dev-secret'\").run());
+"
 ```
 
 ## 3. Smoke SMTP that (stack sanity)

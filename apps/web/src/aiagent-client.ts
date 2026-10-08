@@ -2,11 +2,15 @@ import type { BuilderSection } from "./render.js";
 
 export type AiAgentMode = "free-demo" | "byok";
 
+// Site generation is a slow upstream call, but it must not be able to hold a request open forever.
+export const defaultAiAgentTimeoutMs = 30_000;
+
 export interface AiAgentConfig {
   apiBase: string;
   mode: AiAgentMode;
   apiKey?: string;
   fetchImpl?: typeof globalThis.fetch;
+  timeoutMs?: number;
 }
 
 export interface SiteBuildRequest {
@@ -43,6 +47,7 @@ export interface AiAgentClient {
 
 export function createAiAgentClient(config: AiAgentConfig): AiAgentClient {
   const fetchImpl = config.fetchImpl ?? globalThis.fetch;
+  const timeoutMs = config.timeoutMs ?? defaultAiAgentTimeoutMs;
 
   return {
     async generateSite(request: SiteBuildRequest): Promise<SiteBuildResult> {
@@ -58,11 +63,15 @@ export function createAiAgentClient(config: AiAgentConfig): AiAgentClient {
         headers.authorization = `Bearer ${config.apiKey}`;
       }
 
+      // One deadline covers both the request and reading the response body.
+      const signal = AbortSignal.timeout(timeoutMs);
+
       let response: Response;
       try {
         response = await fetchImpl(new URL("/v1/site/generate", config.apiBase).toString(), {
           method: "POST",
           headers,
+          signal,
           body: JSON.stringify({
             business_name: request.businessName,
             goal: request.goal,
@@ -91,7 +100,7 @@ export function createAiAgentClient(config: AiAgentConfig): AiAgentClient {
       try {
         payload = (await response.json()) as AiAgentSuccessPayload;
       } catch {
-        return { ok: false, error: "AI_BAD_RESPONSE" };
+        return { ok: false, error: signal.aborted ? "AI_UNAVAILABLE" : "AI_BAD_RESPONSE" };
       }
 
       const sections = (payload.sections ?? [])

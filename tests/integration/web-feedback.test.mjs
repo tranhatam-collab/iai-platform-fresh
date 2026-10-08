@@ -98,7 +98,7 @@ test("POST /v1/site/generate returns 200 with site_id and sections when AI succe
       };
     }
   };
-  const handler = createWebRequestHandler({ aiAgentClient: mockClient });
+  const handler = createWebRequestHandler({ aiAgentClient: mockClient, aiBuilderEnabled: true });
 
   const response = await dispatchToHandler(handler, {
     body: JSON.stringify({
@@ -127,7 +127,7 @@ test("POST /v1/site/generate returns 200 with site_id and sections when AI succe
 });
 
 test("POST /v1/site/generate rejects missing businessName", async () => {
-  const handler = createWebRequestHandler();
+  const handler = createWebRequestHandler({ aiBuilderEnabled: true });
 
   const response = await dispatchToHandler(handler, {
     body: JSON.stringify({ goal: "Sell coffee online" }),
@@ -147,7 +147,7 @@ test("POST /v1/site/generate maps AI errors to correct HTTP status", async () =>
       return { ok: false, error: "AI_QUOTA_EXCEEDED" };
     }
   };
-  const handler = createWebRequestHandler({ aiAgentClient: mockClient });
+  const handler = createWebRequestHandler({ aiAgentClient: mockClient, aiBuilderEnabled: true });
 
   const response = await dispatchToHandler(handler, {
     body: JSON.stringify({

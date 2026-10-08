@@ -36,7 +36,9 @@ export function createDashRequestHandler(options: DashServerOptions = {}) {
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
 
   return (request: IncomingMessage, response: ServerResponse) => {
-    void handleRequest(request, response, config, fetchImpl);
+    handleRequest(request, response, config, fetchImpl).catch((error: unknown) => {
+      respondUnhandledError(response, error);
+    });
   };
 }
 
@@ -61,13 +63,18 @@ async function handleRequest(
   fetchImpl: typeof globalThis.fetch
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  const url = parseRequestUrl(request);
+  const routes = url ? matchRoutes(url.pathname) : null;
+
+  if (!url || !routes) {
+    respondBadRequest(response);
+    return;
+  }
+
+  const { flowActionRoute, flowRoute, runtimeExecutionRoute } = routes;
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
   const actionFeedback = resolveActionFeedback(url);
-  const flowActionRoute = matchFlowActionRoute(url.pathname);
-  const flowRoute = matchFlowRoute(url.pathname);
   const requestId = `req_${randomUUID()}`;
-  const runtimeExecutionRoute = matchRuntimeExecutionRoute(url.pathname);
 
   try {
     if (method !== "GET" && method !== "POST") {
@@ -262,11 +269,81 @@ function redirect(response: ServerResponse, location: string): void {
   response.end();
 }
 
+function parseRequestUrl(request: IncomingMessage): URL | null {
+  try {
+    return new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    return null;
+  }
+}
+
+// Route params are percent-decoded, so a malformed escape (for example `/flows/%E0%A4%A`)
+// must be answered as a bad request instead of throwing a URIError.
+function matchRoutes(pathname: string) {
+  try {
+    return {
+      flowActionRoute: matchFlowActionRoute(pathname),
+      flowRoute: matchFlowRoute(pathname),
+      runtimeExecutionRoute: matchRuntimeExecutionRoute(pathname)
+    };
+  } catch (error) {
+    if (error instanceof URIError) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+function respondBadRequest(response: ServerResponse): void {
+  respondJson(
+    response,
+    400,
+    {
+      error: {
+        code: "BAD_REQUEST",
+        message: "Request URL is malformed."
+      },
+      ok: false
+    },
+    "en"
+  );
+}
+
+function respondUnhandledError(response: ServerResponse, error: unknown): void {
+  console.error("[iai-dash] unhandled request error", error);
+
+  try {
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+
+    respondJson(
+      response,
+      500,
+      {
+        error: {
+          code: "DASH_SERVER_ERROR",
+          message: t("en", "dash.error.server")
+        },
+        ok: false
+      },
+      "en"
+    );
+  } catch {
+    // The socket is already gone, so there is nothing left to send.
+  }
+}
+
 function respondHtml(response: ServerResponse, statusCode: number, html: string, locale: Locale): void {
   response.statusCode = statusCode;
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "text/html; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("x-frame-options", "DENY");
   response.setHeader("x-robots-tag", "noindex, nofollow");
   response.end(html);
 }
@@ -276,6 +353,8 @@ function respondJson(response: ServerResponse, statusCode: number, payload: unkn
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "application/json; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
   response.end(JSON.stringify(payload));
 }
 

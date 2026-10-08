@@ -103,6 +103,7 @@ test("mail api /send accepts payment-style payload, stays idempotent, and persis
 
   const detailResponse = await dispatchToHandler(handler, {
     headers: {
+      authorization: "Bearer mail-api-token",
       "x-request-id": "req_mail_api_payment_detail",
       "x-workspace-id": "ws_pay_tranhatam"
     },
@@ -123,6 +124,7 @@ test("mail api /send accepts payment-style payload, stays idempotent, and persis
 
   const eventsResponse = await dispatchToHandler(handler, {
     headers: {
+      authorization: "Bearer mail-api-token",
       "x-request-id": "req_mail_api_payment_events",
       "x-workspace-id": "ws_pay_tranhatam"
     },

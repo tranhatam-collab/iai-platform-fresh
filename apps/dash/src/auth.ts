@@ -105,7 +105,11 @@ function parseCookies(header: string | undefined): Record<string, string> {
       continue;
     }
 
-    cookies[key] = decodeURIComponent(value);
+    try {
+      cookies[key] = decodeURIComponent(value);
+    } catch {
+      // A cookie with a malformed escape is ignored, as if it was never sent.
+    }
   }
 
   return cookies;

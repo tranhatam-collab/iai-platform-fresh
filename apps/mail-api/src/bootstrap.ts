@@ -17,6 +17,22 @@
  *   MAIL_API_INBOUND_REPLAY_WINDOW_S (optional; default 300)
  *   MAIL_API_INBOUND_MAX_BODY_BYTES  (optional; default 262144)
  *   API_FLOW_BIND_ADDRESS            (legacy alias for MAIL_API_BIND_ADDRESS)
+ *   MAIL_SMTP_REMOTE_TOKEN           (service token for /v1/internal/smtp/*;
+ *                                     REQUIRED when NODE_ENV=production —
+ *                                     startup is refused without it. Outside
+ *                                     production, without it those routes
+ *                                     answer 503 and a startup error is logged)
+ *   MAIL_SMTP_ALLOW_UNAUTHENTICATED_INTERNAL
+ *                                    (dev/test only; "1" serves the internal
+ *                                     routes with no token. Ignored in
+ *                                     production)
+ *   MAIL_API_KEY                     (bearer key for POST /v1/send and the
+ *                                     persisted GET /v1/messages/:id[/events])
+ *   MAIL_API_MAX_BODY_BYTES          (optional; request-body cap for /v1/send
+ *                                     and /v1/internal/smtp/*; default 64 MiB)
+ *   MAIL_DB_URL                      (sqlite:<path>; default sqlite:/tmp/iai-mail.db)
+ *   NODE_ENV                         (production disables the dev seed
+ *                                     smtp-dev/dev-secret/ws_dev)
  */
 
 import type { Server } from "node:http";
@@ -25,6 +41,7 @@ import process from "node:process";
 
 import { resolveInboundWebhookOptionsFromEnv } from "./inbound-webhook.js";
 import { createFlowApiServer, type FlowApiServerOptions } from "./server.js";
+import { resolveSmtpInternalAuth, type SmtpInternalAuthMode } from "./smtp-internal.js";
 
 export interface BootstrapResolution {
   port: number;
@@ -36,6 +53,7 @@ export interface BootstrapResolution {
     maxBodyBytes: number;
     secretConfigured: boolean;
   };
+  smtpInternalAuthMode: SmtpInternalAuthMode;
 }
 
 export interface BootstrapResult {
@@ -81,7 +99,8 @@ export function buildServerOptionsFromEnv(
         replayWindowSeconds: inboundResolved.resolution.replayWindowSeconds,
         maxBodyBytes: inboundResolved.resolution.maxBodyBytes,
         secretConfigured: Boolean((env.MAIL_API_WEBHOOK_SECRET ?? "").trim())
-      }
+      },
+      smtpInternalAuthMode: resolveSmtpInternalAuth({}, env).mode
     }
   };
 }
@@ -94,6 +113,26 @@ export function bootstrapFromEnv(
   env: NodeJS.ProcessEnv = process.env
 ): Promise<BootstrapResult> {
   const { options, resolution } = buildServerOptionsFromEnv(env);
+
+  // A production server whose internal SMTP routes can only answer 503 is a
+  // misconfiguration, not a degraded mode: refuse to start instead of limping.
+  if (env.NODE_ENV === "production" && resolution.smtpInternalAuthMode === "unconfigured") {
+    return Promise.reject(
+      new Error(
+        "MAIL_SMTP_REMOTE_TOKEN is required when NODE_ENV=production: without it /v1/internal/smtp/* rejects every request. Set it to a long random value (openssl rand -hex 32) shared with mail-smtp."
+      )
+    );
+  }
+
+  // The shipped env example carries a REPLACE_WITH_* placeholder; running with it would mean a guessable token.
+  if (env.NODE_ENV === "production" && env.MAIL_SMTP_REMOTE_TOKEN?.trim().startsWith("REPLACE_WITH")) {
+    return Promise.reject(
+      new Error(
+        "MAIL_SMTP_REMOTE_TOKEN is still the REPLACE_WITH_* placeholder from the env example. Set it to a long random value (openssl rand -hex 32) shared with mail-smtp."
+      )
+    );
+  }
+
   const server = createFlowApiServer(options);
 
   return new Promise((resolve, reject) => {
@@ -204,6 +243,7 @@ if (isDirectInvocation) {
           inbound_replay_window_s: resolution.inbound.replayWindowSeconds,
           inbound_max_body_bytes: resolution.inbound.maxBodyBytes,
           inbound_secret_configured: resolution.inbound.secretConfigured,
+          smtp_internal_auth: resolution.smtpInternalAuthMode,
           ts: new Date().toISOString()
         })
       );

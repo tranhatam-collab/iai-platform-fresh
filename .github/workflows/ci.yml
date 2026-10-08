@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Quality gate + unit/integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Dependency audit (high and above)
+        run: pnpm audit --audit-level=high
+
+      - name: Universal Quality Gate
+        run: pnpm quality:gate
+
+      # Suites that need the private, gitignored docs pack report a visible skip here.
+      - name: Test
+        run: pnpm test
+
+  e2e:
+    name: End-to-end (all *.iai.one surfaces)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: E2E
+        run: pnpm test:e2e
+
+  e2e-workers:
+    name: End-to-end (Cloudflare Workers, local workerd)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The Workers E2E tools live outside the pnpm workspace, so the root audit does not see them.
+      - name: Dependency audit (Workers E2E tools, high and above)
+        run: npm audit --audit-level=high --prefix tests/e2e/workers
+
+      # Local emulation only (wrangler dev --local); the suite never uses --remote or Cloudflare credentials.
+      - name: Workers E2E
+        run: pnpm test:e2e:workers

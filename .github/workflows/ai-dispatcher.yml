@@ -13,6 +13,7 @@ permissions:
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,24 +21,37 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
+      # docs/** is intentionally not tracked on GitHub, so the config may be absent.
       - name: Load AI system config
         run: |
-          node -e "const fs=require('fs'); const cfg=JSON.parse(fs.readFileSync('docs/AI_AUTONOMOUS_CONFIG.json','utf8')); console.log('system='+cfg.system_name); console.log('first_activation='+cfg.first_activation);"
+          if [ -f docs/AI_AUTONOMOUS_CONFIG.json ]; then
+            node -e "const fs=require('fs'); const cfg=JSON.parse(fs.readFileSync('docs/AI_AUTONOMOUS_CONFIG.json','utf8')); console.log('system='+cfg.system_name); console.log('first_activation='+cfg.first_activation);"
+          else
+            echo "docs/AI_AUTONOMOUS_CONFIG.json is not tracked on GitHub; dispatcher scaffold stays inactive."
+          fi
 
       - name: Guard autonomous dispatcher
+        id: guard
+        env:
+          AI_AUTONOMOUS_ENABLED: ${{ vars.AI_AUTONOMOUS_ENABLED }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          if [ "${{ vars.AI_AUTONOMOUS_ENABLED }}" != "true" ]; then
+          if [ "${AI_AUTONOMOUS_ENABLED}" != "true" ]; then
             echo "AI_AUTONOMOUS_ENABLED is not true. Dispatcher scaffold is present but inactive."
+            echo "active=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+          if [ -z "${OPENAI_API_KEY}" ]; then
             echo "OPENAI_API_KEY is missing. Dispatcher scaffold is present but inactive."
+            echo "active=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "active=true" >> "$GITHUB_OUTPUT"
 
       - name: Call AI planner
+        if: steps.guard.outputs.active == 'true'
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
@@ -46,4 +60,3 @@ jobs:
           echo "Issue number: ${ISSUE_NUMBER}"
           echo "Issue title: ${ISSUE_TITLE}"
           echo "Use docs/AI_TEAM_EXECUTION_SYSTEM.md + docs/PROJECT_CONTEXT_ENGINE.md + docs/AI_MODEL_ROUTING_POLICY.md here."
-

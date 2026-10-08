@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { fallbackLocale, resolveLocale, supportedLocales, t, type Locale } from "./i18n.js";
+import { defaultLocale, fallbackLocale, resolveLocale, supportedLocales, t, type Locale } from "./i18n.js";
 import {
   createDemoPayReadModelSource,
   createResolvedPayReadModel,
@@ -125,7 +125,15 @@ export function createPayRequestHandler(options: PayServerOptions = {}) {
   const config = resolveConfig(options, fetchImpl);
 
   return (request: IncomingMessage, response: ServerResponse) => {
-    void handleRequest(request, response, config);
+    handleRequest(request, response, config).catch((error) => {
+      // A rejected handler must never take the process down (unhandled rejection exits Node).
+      process.stderr.write(`[iai-pay] unhandled request error: ${error instanceof Error ? error.stack ?? error.message : String(error)}\n`);
+      if (!response.headersSent) {
+        respondJson(response, 500, { ok: false, error: { code: "INTERNAL_ERROR" } }, defaultLocale);
+      } else {
+        response.destroy();
+      }
+    });
   };
 }
 
@@ -350,7 +358,13 @@ async function handleRequest(
   config: ResolvedPayConfig
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  let url: URL;
+  try {
+    url = new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    respondJson(response, 400, { ok: false, error: { code: "BAD_REQUEST" } }, defaultLocale);
+    return;
+  }
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
   const pathname = normalizePathname(url.pathname);
   const requestId = `req_${randomUUID()}`;
@@ -1690,6 +1704,9 @@ function respondHtml(response: ServerResponse, statusCode: number, html: string,
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "text/html; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("x-frame-options", "DENY");
   response.setHeader("x-robots-tag", "noindex, nofollow");
   response.end(html);
 }
@@ -1699,6 +1716,8 @@ function respondJson(response: ServerResponse, statusCode: number, payload: unkn
   response.setHeader("cache-control", "no-store");
   response.setHeader("content-language", locale);
   response.setHeader("content-type", "application/json; charset=utf-8");
+  response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
+  response.setHeader("x-content-type-options", "nosniff");
   response.setHeader("x-robots-tag", "noindex, nofollow");
   response.end(JSON.stringify(payload));
 }

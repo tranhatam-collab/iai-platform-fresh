@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -560,6 +561,137 @@ test("dedup: missing provider_event_id always records new evidence (no dedup pos
   const records = sink.list();
   assert.equal(records.length, 2);
   assert.notEqual(records[0].evidenceId, records[1].evidenceId);
+});
+
+test("verifyInboundWebhook treats a 64-char non-hex signature as invalid instead of throwing", () => {
+  const ts = 1_777_777_777;
+  for (const signatureHeader of ["z".repeat(64), `${"a".repeat(63)}g`, `${"0".repeat(62)}éé`]) {
+    const result = verifyInboundWebhook({
+      rawBody: "{}",
+      timestampHeader: String(ts),
+      signatureHeader,
+      secret: SECRET,
+      nowSeconds: ts,
+      replayWindowSeconds: 300
+    });
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.code, "MAIL_WEBHOOK_SIGNATURE_INVALID");
+    }
+  }
+});
+
+test("inbound webhook handler answers 401 (not a thrown 500) for a 64-char non-hex signature", async () => {
+  const sink = createInMemoryInboundWebhookEvidenceSink();
+  const ts = 1_700_000_000;
+  const handler = createInboundWebhookHandler({
+    resolveSecret: () => SECRET,
+    nowSeconds: () => ts,
+    evidenceSink: sink
+  });
+
+  const fakeRes = makeFakeResponse();
+  const result = await handler(
+    makeFakeRequest({
+      method: "POST",
+      url: "/v1/webhooks/inbound",
+      headers: {
+        [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
+        [INBOUND_WEBHOOK_SIGNATURE_HEADER]: "z".repeat(64),
+        "content-type": "application/json"
+      },
+      body: "{}"
+    }),
+    fakeRes,
+    "req_non_hex_sig"
+  );
+
+  assert.equal(result.handled, true);
+  assert.equal(fakeRes.statusCode, 401);
+  assert.equal(JSON.parse(fakeRes.body).error.code, "MAIL_WEBHOOK_SIGNATURE_INVALID");
+  assert.equal(sink.list().length, 1);
+  assert.equal(sink.list()[0].rejectionCode, "MAIL_WEBHOOK_SIGNATURE_INVALID");
+});
+
+async function withRealInboundServer(handlerOptions, run) {
+  const handler = createInboundWebhookHandler(handlerOptions);
+  const server = createServer((request, response) => {
+    handler(request, response, "req_real_server")
+      .then((result) => {
+        if (!result.handled) {
+          response.statusCode = 404;
+          response.end();
+        }
+      })
+      .catch(() => {
+        response.statusCode = 500;
+        response.end();
+      });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  try {
+    await run(`http://127.0.0.1:${port}/v1/webhooks/inbound`);
+  } finally {
+    server.closeAllConnections?.();
+    await new Promise((resolve) => server.close(resolve));
+  }
+}
+
+test("oversize inbound body reaches the client as 413 and leaves an evidence row", async () => {
+  const sink = createInMemoryInboundWebhookEvidenceSink();
+  const maxBodyBytes = 1024;
+
+  await withRealInboundServer(
+    { resolveSecret: () => SECRET, evidenceSink: sink, maxBodyBytes },
+    async (url) => {
+      // 4 MiB is far above both maxBodyBytes and the socket buffers, so the
+      // server has to answer while the upload is still in flight.
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ filler: "x".repeat(4 * 1024 * 1024) }),
+        signal: AbortSignal.timeout(10_000)
+      });
+      assert.equal(response.status, 413);
+      const payload = await response.json();
+      assert.equal(payload.ok, false);
+      assert.equal(payload.error.code, "MAIL_WEBHOOK_BODY_INVALID");
+      assert.match(payload.error.message, /1024/u);
+    }
+  );
+
+  const records = sink.list();
+  assert.equal(records.length, 1);
+  assert.equal(records[0].signatureValid, false);
+  assert.equal(records[0].rejectionCode, "MAIL_WEBHOOK_BODY_INVALID");
+});
+
+test("inbound body exactly at the limit is still verified normally", async () => {
+  const sink = createInMemoryInboundWebhookEvidenceSink();
+  const body = JSON.stringify({ provider_event_id: "evt_at_limit" });
+  const ts = Math.floor(Date.now() / 1000);
+
+  await withRealInboundServer(
+    {
+      resolveSecret: () => SECRET,
+      evidenceSink: sink,
+      maxBodyBytes: Buffer.byteLength(body, "utf8")
+    },
+    async (url) => {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          [INBOUND_WEBHOOK_TIMESTAMP_HEADER]: String(ts),
+          [INBOUND_WEBHOOK_SIGNATURE_HEADER]: sign(SECRET, ts, body)
+        },
+        body,
+        signal: AbortSignal.timeout(10_000)
+      });
+      assert.equal(response.status, 202);
+    }
+  );
 });
 
 // --- helpers --------------------------------------------------------------
