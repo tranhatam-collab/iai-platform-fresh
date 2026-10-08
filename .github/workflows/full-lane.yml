@@ -3,18 +3,21 @@ name: Full lane (pinned private fixtures)
 # Runs the whole suite of a given commit with the private docs pack and the CIOS sibling checkout present and
 # REQUIRE_DOCS_FIXTURES=1, so a missing fixture is a failure instead of a skip.
 #
-# Manual only: Actions -> Full lane -> Run workflow, with the full 40-character commit SHA to test in "ref".
-# It is not triggered by pull_request, push or schedule. The workflow file runs from the default branch, so a
-# commit from any branch can be tested without that branch's own workflow files being trusted. Only run commits
-# you have read: the tested code runs next to the private fixtures.
+# Manual only: Actions -> Full lane -> Run workflow, with "Use workflow from" set to main and the full
+# 40-character commit SHA to test in "ref". It is not triggered by pull_request, push or schedule.
+# A manual run uses the workflow file of the branch chosen in "Use workflow from", so the job only runs when that
+# branch is main, and the secret is only reachable through the "full-lane" environment restricted to main.
+# The tested commit's code runs next to the private fixtures and this repository's logs are public: only run
+# commits you have read, and keep a required reviewer on the environment who checks the SHA before approving.
 #
 # Configuration (repository settings, nothing is stored in the repo):
 #   variables: DOCS_PACK_REPO, DOCS_PACK_SHA, CIOS_REPO, CIOS_SHA   (the SHAs must be full 40-hex commit ids)
 #   optional variable: DOCS_PACK_SUBDIR (folder inside the docs pack repo that holds the docs tree, default ".")
-#   secret: DOCS_PACK_TOKEN (read-only token for the two private repositories), stored as a secret of the
-#   "full-lane" environment, not as a repository secret. Restrict that environment to the main branch (and
-#   optionally require a reviewer) so a workflow edited on another branch cannot read the token.
-# A missing variable, secret or fixture makes this workflow fail on purpose.
+#   secret: DOCS_PACK_TOKEN (read-only token for the two private repositories, with an expiry), stored as a secret
+#   of the "full-lane" environment, not as a repository secret. Restrict that environment to the main branch and
+#   require a reviewer.
+# A missing variable, secret or fixture makes this workflow fail on purpose. The run summary records the tested
+# commit and the two fixture commit SHAs (repository names stay masked).
 
 on:
   workflow_dispatch:
@@ -34,6 +37,8 @@ concurrency:
 jobs:
   full-lane:
     name: Full suite with pinned private fixtures
+    # Defense in depth next to the environment's branch restriction: never run a workflow file from another branch.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: full-lane
     timeout-minutes: 45
