@@ -76,7 +76,14 @@ export const KNOWN_IAI_HOSTS = new Set([
   "flow-preview.iai.one"
 ]);
 
+/**
+ * True when the private docs/noos pack is present, or when REQUIRE_DOCS_FIXTURES=1:
+ * in that lane a missing pack must fail the suite loudly instead of skipping it.
+ */
 export function docsFixturesAvailable() {
+  if (process.env.REQUIRE_DOCS_FIXTURES === "1") {
+    return true;
+  }
   return existsSync(path.join(repoRoot, "docs", "noos"));
 }
 

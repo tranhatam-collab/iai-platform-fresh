@@ -99,6 +99,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, port: nu
 
   if (url.pathname === "/health") {
     res.writeHead(200, {
+      "cache-control": "no-store",
       "content-type": "application/json; charset=utf-8",
       "referrer-policy": "strict-origin-when-cross-origin",
       "x-content-type-options": "nosniff"
