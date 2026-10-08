@@ -239,7 +239,7 @@ test("api.flow requires workspace identity for contract routes", async () => {
 });
 
 test("api.flow exposes message detail and normalized event timeline", async () => {
-  const handler = createFlowApiRequestHandler();
+  const handler = createFlowApiRequestHandler({ demoData: true });
   const headers = {
     "x-request-id": "req_mail_message_detail",
     "x-workspace-id": "ws_mail_main"
@@ -269,7 +269,7 @@ test("api.flow exposes message detail and normalized event timeline", async () =
 });
 
 test("api.flow exposes paginated message list and still enforces workspace contract", async () => {
-  const handler = createFlowApiRequestHandler();
+  const handler = createFlowApiRequestHandler({ demoData: true });
   const listResponse = await dispatchToHandler(handler, {
     headers: {
       "x-workspace-id": "ws_mail_main"
@@ -310,7 +310,7 @@ test("api.flow exposes provider route list with workspace-bound filters", async 
 });
 
 test("api.flow exposes domain dns-health detail and suppression list contracts", async () => {
-  const handler = createFlowApiRequestHandler();
+  const handler = createFlowApiRequestHandler({ demoData: true });
   const headers = {
     "x-workspace-id": "ws_mail_main"
   };

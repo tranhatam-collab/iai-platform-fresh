@@ -6,11 +6,22 @@ import { URL } from "node:url";
 
 import {
   buildMailMessageDetail,
+  buildMailMessageListItem,
+  isSuppressionActive,
+  matchesMessageListFilter,
   type MailDeliveryAttemptRecord,
   type MailMessageDetail,
   type MailMessageEventRecord,
+  type MailMessageListFilter,
   type MailMessageProjection,
-  type MailQueueSubmitPayload
+  type MailMessageReadSource,
+  type MailMessageSourceSnapshot,
+  type MailQueueSubmitPayload,
+  type MailSuppressionFilter,
+  type MailSuppressionReadSource,
+  type MailSuppressionReason,
+  type MailSuppressionRecord,
+  type MailSuppressionSourceSnapshot
 } from "@iai/mail-core";
 
 const SUPPORTED_STREAMS = new Set(["transactional", "system", "marketing", "alerts"]);
@@ -212,8 +223,26 @@ export interface SmtpInternalBackendOptions {
   };
 }
 
+/** Why a read of persisted data was refused (maps to an error envelope). */
+export interface PersistedReadRefusal {
+  errorCode: string;
+  message: string;
+  statusCode: number;
+}
+
 export interface SmtpInternalBackend {
   close(): void;
+  /**
+   * Read-only views over the SQLite data that /v1/send writes and that send-time
+   * suppression checks read. Callers must check `checkPersistedReadAuthorization`
+   * first: the workspace comes from the client, so these reads need the same API
+   * key as POST /v1/send.
+   */
+  persistedSources?: {
+    messages: MailMessageReadSource;
+    suppressions: MailSuppressionReadSource;
+  };
+  checkPersistedReadAuthorization?(request: IncomingMessage): PersistedReadRefusal | undefined;
   handleRequest(
     request: IncomingMessage,
     response: ServerResponse,
@@ -521,6 +550,160 @@ class MailPersistenceStore {
         traceId: row.traceId,
         workspaceId: row.workspaceId
       }));
+  }
+
+  /**
+   * Messages of a workspace as list/detail read models, newest first, with the
+   * same filter semantics as the in-memory source. Candidate rows are narrowed in
+   * SQL (workspace, stream, submit window) and the rest is applied by the shared
+   * filter, so the list and the send path cannot drift apart.
+   */
+  listPersistedMessages(filter: MailMessageListFilter = {}) {
+    const page = positiveInteger(filter.page, 1);
+    const pageSize = positiveInteger(filter.pageSize, 20);
+    const ids = this.listPersistedMessageIds(filter.workspaceId, filter.stream);
+
+    const items = ids
+      .map((id) => this.getPersistedMessageDetail(id, filter.workspaceId))
+      .filter((detail): detail is MailMessageDetail => Boolean(detail))
+      .filter((detail) => matchesMessageListFilter(detail, filter))
+      .sort((left, right) => Date.parse(right.message.submittedAt) - Date.parse(left.message.submittedAt))
+      .map((detail) => buildMailMessageListItem(detail));
+
+    const offset = (page - 1) * pageSize;
+    return {
+      items: items.slice(offset, offset + pageSize),
+      page,
+      pageSize,
+      total: items.length
+    };
+  }
+
+  snapshotPersistedMessages(workspaceId?: string): MailMessageSourceSnapshot {
+    const projections: MailMessageProjection[] = [];
+    const events: MailMessageEventRecord[] = [];
+    const deliveryAttempts: MailDeliveryAttemptRecord[] = [];
+
+    for (const id of this.listPersistedMessageIds(workspaceId)) {
+      const projection = this.getPersistedMessageProjection(id, workspaceId);
+      if (!projection) {
+        continue;
+      }
+      projections.push(projection);
+      events.push(...this.listPersistedMessageEvents(id, workspaceId));
+      deliveryAttempts.push(...this.listPersistedDeliveryAttempts(id, workspaceId));
+    }
+
+    return {
+      deliveryAttempts,
+      events,
+      generatedAt: new Date().toISOString(),
+      projections,
+      version: "mail_message_sot_v1"
+    };
+  }
+
+  private listPersistedMessageIds(workspaceId?: string, stream?: string): string[] {
+    const clauses: string[] = [];
+    const params: string[] = [];
+    if (workspaceId) {
+      clauses.push("workspace_id = ?");
+      params.push(workspaceId);
+    }
+    if (stream) {
+      clauses.push("stream = ?");
+      params.push(stream);
+    }
+    const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+    const rows = this.db
+      .prepare(`SELECT id FROM messages ${where} ORDER BY created_at DESC, id ASC;`)
+      .all(...params) as Array<{ id?: string }>;
+
+    return rows.map((row) => row.id).filter((id): id is string => Boolean(id));
+  }
+
+  /**
+   * Suppressions as stored in the table that send-time checks read
+   * (isRecipientSuppressed): a row with a stream applies to that stream, a row
+   * without one applies to the whole workspace. The table does not record the
+   * origin, an expiry or when a row was deactivated, so those are reported as
+   * "operator", none, and the creation time respectively.
+   */
+  listPersistedSuppressions(filter: MailSuppressionFilter = {}): MailSuppressionRecord[] {
+    const clauses: string[] = [];
+    const params: string[] = [];
+    if (filter.workspaceId) {
+      clauses.push("workspace_id = ?");
+      params.push(filter.workspaceId);
+    }
+    if (filter.email) {
+      clauses.push("lower(email) = ?");
+      params.push(filter.email.toLowerCase());
+    }
+    if (filter.stream) {
+      clauses.push("stream = ?");
+      params.push(filter.stream);
+    }
+    const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+    const rows = this.db
+      .prepare(
+        `
+          SELECT
+            id AS suppressionId,
+            workspace_id AS workspaceId,
+            email,
+            stream,
+            reason,
+            active,
+            created_at AS createdAt
+          FROM suppressions
+          ${where}
+          ORDER BY created_at DESC, id ASC;
+        `
+      )
+      .all(...params) as Array<{
+      active?: number;
+      createdAt?: string;
+      email?: string;
+      reason?: string | null;
+      stream?: string | null;
+      suppressionId?: string;
+      workspaceId?: string;
+    }>;
+
+    const now = filter.now ?? new Date().toISOString();
+
+    return rows
+      .filter((row) => row.suppressionId && row.workspaceId && row.email && row.createdAt)
+      .map((row): MailSuppressionRecord => {
+        const active = row.active === 1;
+        return {
+          createdAt: row.createdAt as string,
+          email: row.email as string,
+          ...(active ? {} : { notes: "Deactivated; removal time is not recorded.", removedAt: row.createdAt as string }),
+          reason: toSuppressionReason(row.reason),
+          scope: row.stream ? "stream" : "workspace",
+          source: "operator",
+          ...(row.stream ? { stream: row.stream } : {}),
+          suppressionId: row.suppressionId as string,
+          workspaceId: row.workspaceId as string
+        };
+      })
+      .filter((item) => {
+        if (filter.reasons && filter.reasons.length > 0 && !filter.reasons.includes(item.reason)) {
+          return false;
+        }
+        if (filter.scopes && filter.scopes.length > 0 && !filter.scopes.includes(item.scope)) {
+          return false;
+        }
+        if (filter.sources && filter.sources.length > 0 && !filter.sources.includes(item.source)) {
+          return false;
+        }
+        if (filter.activeOnly && !isSuppressionActive(item, now)) {
+          return false;
+        }
+        return true;
+      });
   }
 
   findMessageByIdempotencyKey(workspaceId: string, messageIdempotencyKey: string) {
@@ -1544,9 +1727,38 @@ export function createSmtpInternalBackend(
     );
   }
 
+  const persistedSources: NonNullable<SmtpInternalBackend["persistedSources"]> = {
+    messages: {
+      getMessageDetail: (messageId, workspaceId) => store.getPersistedMessageDetail(messageId, workspaceId),
+      listMessageEvents: (messageId, workspaceId) => store.listPersistedMessageEvents(messageId, workspaceId),
+      listMessages: (filter) => store.listPersistedMessages(filter),
+      snapshot: (workspaceId) => store.snapshotPersistedMessages(workspaceId)
+    },
+    suppressions: {
+      listSuppressions: (filter) => store.listPersistedSuppressions(filter),
+      snapshot: (workspaceId): MailSuppressionSourceSnapshot => ({
+        generatedAt: new Date().toISOString(),
+        items: store.listPersistedSuppressions({ workspaceId }),
+        version: "mail_suppressions_sot_v1"
+      })
+    }
+  };
+
   return {
     close() {
       store.close();
+    },
+    persistedSources,
+    checkPersistedReadAuthorization(request) {
+      try {
+        assertApiAuthorization(request, expectedApiKey);
+        return undefined;
+      } catch (error) {
+        if (error instanceof SmtpBackendError) {
+          return { errorCode: error.errorCode, message: error.message, statusCode: error.statusCode };
+        }
+        throw error;
+      }
     },
     async handleRequest(request, response, requestId, url, method) {
       if (method === "GET" && url.pathname === "/v1/health/dependencies") {
@@ -2784,6 +2996,22 @@ function parseQueuePayload(value: string | undefined) {
   } catch {
     return undefined;
   }
+}
+
+const SUPPRESSION_REASONS: readonly MailSuppressionReason[] = ["hard_bounce", "complaint", "unsubscribe", "manual"];
+
+function toSuppressionReason(value: string | null | undefined): MailSuppressionReason {
+  return (SUPPRESSION_REASONS as readonly string[]).includes(value ?? "")
+    ? (value as MailSuppressionReason)
+    : "manual";
+}
+
+function positiveInteger(value: number | undefined, fallback: number) {
+  if (value === undefined || Number.isNaN(value) || value < 1) {
+    return fallback;
+  }
+
+  return Math.floor(value);
 }
 
 function parseJsonRecord(value: string | null | undefined) {

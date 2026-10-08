@@ -112,6 +112,13 @@ export interface FlowApiServerOptions {
   providerRouteSource?: MailProviderRouteSource;
   smtpInternalBackend?: SmtpInternalBackend;
   suppressionSource?: MailSuppressionReadSource;
+  /**
+   * Serve the built-in sample messages and suppressions (and nothing from SQLite)
+   * for /v1/messages and /v1/suppressions. Off by default: without it those routes
+   * read the data /v1/send writes. Explicit `messageSource` / `suppressionSource`
+   * options still win.
+   */
+  demoData?: boolean;
   source?: FlowSourceOfTruth;
   webContractConfig?: Partial<WebOnboardingContractConfig>;
   webContractWording?: Partial<WebOnboardingWordingContract>;
@@ -202,10 +209,12 @@ export function createFlowApiServer(options: FlowApiServerOptions = {}): Server 
 
 export function createFlowApiRequestHandler(options: FlowApiServerOptions = {}) {
   const domainDnsHealthSource = options.domainDnsHealthSource ?? createMailDomainDnsHealthSource();
-  const messageSource = options.messageSource ?? createMailMessageSource();
+  const demoData = options.demoData === true;
+  const messageSource = options.messageSource ?? (demoData ? createMailMessageSource() : undefined);
   const providerRouteSource = options.providerRouteSource ?? createMailProviderRouteSource();
   const smtpInternalBackend = options.smtpInternalBackend ?? createSmtpInternalBackend();
-  const suppressionSource = options.suppressionSource ?? createMailSuppressionSource();
+  const suppressionSource =
+    options.suppressionSource ?? (demoData ? createMailSuppressionSource() : undefined);
   const source = options.source ?? createFlowSourceOfTruth();
   const webContractConfig = resolveWebOnboardingContractConfig(options.webContractConfig);
   const webContractWording = resolveWebOnboardingWordingContract(options.webContractWording);
@@ -233,10 +242,10 @@ async function handleRequest(
   response: ServerResponse,
   source: FlowSourceOfTruth,
   domainDnsHealthSource: MailDomainDnsHealthSource,
-  messageSource: MailMessageReadSource,
+  configuredMessageSource: MailMessageReadSource | undefined,
   providerRouteSource: MailProviderRouteSource,
   smtpInternalBackend: SmtpInternalBackend,
-  suppressionSource: MailSuppressionReadSource,
+  configuredSuppressionSource: MailSuppressionReadSource | undefined,
   webContractConfig: WebOnboardingContractConfig,
   webContractWording: WebOnboardingWordingContract,
   inboundWebhookHandler: ReturnType<typeof createInboundWebhookHandler>
@@ -279,6 +288,11 @@ async function handleRequest(
     }
 
     const workspaceId = resolveWorkspaceId(request, url);
+    // Resolved lazily: persisted reads need the API key, and only these routes read messages.
+    const getMessageSource = () =>
+      resolveMessageSource(configuredMessageSource, smtpInternalBackend, request);
+    const getSuppressionSource = () =>
+      resolveSuppressionSource(configuredSuppressionSource, smtpInternalBackend, request);
     const domainDnsHealthRoute = matchDomainDnsHealthRoute(url.pathname);
     const flowCommandRoute = matchFlowCommandRoute(url.pathname);
     const flowChildRoute = matchFlowChildRoute(url.pathname);
@@ -315,7 +329,7 @@ async function handleRequest(
 
     if (url.pathname === "/v1/messages") {
       const filter = parseMessageListFilter(url, workspaceId);
-      const page = messageSource.listMessages(filter);
+      const page = getMessageSource().listMessages(filter);
 
       respondSuccess(response, 200, requestId, {
         items: page.items,
@@ -347,7 +361,7 @@ async function handleRequest(
     }
 
     if (url.pathname === "/v1/suppressions") {
-      const items = suppressionSource.listSuppressions({
+      const items = getSuppressionSource().listSuppressions({
         activeOnly: parseBoolean(url.searchParams.get("active_only"), "active_only"),
         email: normalizeString(url.searchParams.get("email")),
         now,
@@ -378,7 +392,7 @@ async function handleRequest(
     }
 
     if (messageRoute?.resource === "detail") {
-      const detail = messageSource.getMessageDetail(messageRoute.messageId, workspaceId);
+      const detail = getMessageSource().getMessageDetail(messageRoute.messageId, workspaceId);
       if (!detail) {
         throw new HttpError(404, "MESSAGE_NOT_FOUND", "Message not found.", {
           messageId: messageRoute.messageId
@@ -390,14 +404,14 @@ async function handleRequest(
     }
 
     if (messageRoute?.resource === "events") {
-      const detail = messageSource.getMessageDetail(messageRoute.messageId, workspaceId);
+      const detail = getMessageSource().getMessageDetail(messageRoute.messageId, workspaceId);
       if (!detail) {
         throw new HttpError(404, "MESSAGE_NOT_FOUND", "Message not found.", {
           messageId: messageRoute.messageId
         });
       }
 
-      const items = messageSource.listMessageEvents(messageRoute.messageId, workspaceId);
+      const items = getMessageSource().listMessageEvents(messageRoute.messageId, workspaceId);
       respondSuccess(response, 200, requestId, {
         items,
         total: items.length
@@ -707,6 +721,50 @@ function writeJson(response: ServerResponse, statusCode: number, payload: Record
   response.statusCode = statusCode;
   response.setHeader("content-type", "application/json; charset=utf-8");
   response.end(JSON.stringify(payload));
+}
+
+const EMPTY_MESSAGE_SOURCE = createMailMessageSource({
+  deliveryAttempts: [],
+  events: [],
+  projections: []
+});
+const EMPTY_SUPPRESSION_SOURCE = createMailSuppressionSource({ items: [] });
+
+function assertPersistedReadAllowed(backend: SmtpInternalBackend, request: IncomingMessage) {
+  const refusal = backend.checkPersistedReadAuthorization?.(request);
+  if (refusal) {
+    throw new HttpError(refusal.statusCode, refusal.errorCode, refusal.message);
+  }
+}
+
+function resolveMessageSource(
+  configured: MailMessageReadSource | undefined,
+  backend: SmtpInternalBackend,
+  request: IncomingMessage
+): MailMessageReadSource {
+  if (configured) {
+    return configured;
+  }
+  if (backend.persistedSources) {
+    assertPersistedReadAllowed(backend, request);
+    return backend.persistedSources.messages;
+  }
+  return EMPTY_MESSAGE_SOURCE;
+}
+
+function resolveSuppressionSource(
+  configured: MailSuppressionReadSource | undefined,
+  backend: SmtpInternalBackend,
+  request: IncomingMessage
+): MailSuppressionReadSource {
+  if (configured) {
+    return configured;
+  }
+  if (backend.persistedSources) {
+    assertPersistedReadAllowed(backend, request);
+    return backend.persistedSources.suppressions;
+  }
+  return EMPTY_SUPPRESSION_SOURCE;
 }
 
 function resolveWorkspaceId(request: IncomingMessage, url: URL): string {

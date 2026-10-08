@@ -75,7 +75,8 @@ ssh root@mail.iai.one '
 | `PATH_B_EVIDENCE_DIR` | no | `/var/lib/iai-mail-api` | NDJSON evidence persistence dir |
 | `NODE_ENV` | no | `production` (set by the Dockerfile) | In production the dev SMTP login (`smtp-dev` / `dev-secret` / `ws_dev`) is never seeded |
 | `MAIL_SMTP_REMOTE_TOKEN` | no | — | Service token for `/v1/internal/smtp/*`. Path B does not need those routes: while unset they answer 503 (fail closed) and a startup error is logged. Set it only if this container should serve them |
-| `MAIL_API_KEY` | no | — | Bearer key for `POST /v1/send` and persisted `GET /v1/messages/:id[/events]`; while unset they answer 503 |
+| `MAIL_API_KEY` | no | — | Bearer key for `POST /v1/send` and persisted `GET /v1/messages`, `GET /v1/messages/:id[/events]` and `GET /v1/suppressions`; while unset they answer 503 |
+| `MAIL_API_DEMO_DATA` | no | — | Set to `1` to serve built-in sample messages and suppressions instead of the SQLite data; ignored when `NODE_ENV=production` |
 
 ## Volume contract
 
