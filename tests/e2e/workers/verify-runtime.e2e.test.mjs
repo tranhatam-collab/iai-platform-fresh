@@ -23,8 +23,15 @@ import { startWorker, workerRuntimeSkipReason } from "./support/wrangler.mjs";
 const skip = workerRuntimeSkipReason();
 const KNOWN_TENANTS = ["iai", "dsts", "nhachung", "muonnoi", "aal"];
 
-const boot = (name, transform, { migrate = true, persistDir } = {}) =>
-  startWorker({ name, dir: "apps/verify-runtime", config: "wrangler.toml", transform, persistDir, migrations: migrate ? { database: "USAGE_LEDGER_DB" } : undefined, readyPath: "/health" });
+// Quota plans are server-side configuration (the QUOTA_PLANS var); requests never carry a limit.
+const PLAN_LIMIT = 5;
+const planVar = (plan = {}) => JSON.stringify({ default: { limit: PLAN_LIMIT, windowMs: 3_600_000, ...plan } });
+const boot = (name, transform, { migrate = true, persistDir, plan } = {}) =>
+  startWorker({ name, dir: "apps/verify-runtime", config: "wrangler.toml", persistDir,
+    transform: (cfg) => {
+      cfg.vars = { ...cfg.vars, QUOTA_PLANS: planVar(plan) };
+      return transform?.(cfg);
+    }, migrations: migrate ? { database: "USAGE_LEDGER_DB" } : undefined, readyPath: "/health" });
 
 let sequence = 0;
 const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${(sequence += 1)}`;
@@ -107,7 +114,7 @@ describe("verify-runtime Worker", { skip }, () => {
       assert.equal(unknownHost.status, 200);
       assert.equal(unknownHost.json.tenant, undefined);
 
-      const body = { tenant: "stranger", workspaceId: "ws-x", limit: 5 };
+      const body = { tenant: "stranger", workspaceId: "ws-x" };
       const viaHeader = await quota("check", body, { "x-iai-tenant": "stranger" });
       assert.equal(viaHeader.status, 403);
       assert.match(viaHeader.json.error, /Tenant resolution failed/);
@@ -120,17 +127,17 @@ describe("verify-runtime Worker", { skip }, () => {
     test("a request whose body.tenant differs from the resolved tenant is refused with tenant_mismatch (403)", async () => {
       for (const route of ["check", "increment"]) {
         for (const bodyTenant of ["dsts", "stranger"]) {
-          const response = await quota(route, { tenant: bodyTenant, workspaceId: "ws-mismatch", limit: 5 }, { "x-iai-tenant": "iai" });
+          const response = await quota(route, { tenant: bodyTenant, workspaceId: "ws-mismatch" }, { "x-iai-tenant": "iai" });
           assert.equal(response.status, 403, `${route} body.tenant=${bodyTenant}`);
           assert.equal(response.json.error, "tenant_mismatch");
           assert.equal(response.json.resolved, "iai");
         }
         // a body without a tenant is invalid input (400), not a mismatch
-        const missing = await quota(route, { workspaceId: "ws-mismatch", limit: 5 }, { "x-iai-tenant": "iai" });
+        const missing = await quota(route, { workspaceId: "ws-mismatch" }, { "x-iai-tenant": "iai" });
         assert.equal(missing.status, 400, `${route} without body.tenant`);
       }
       // nothing was counted for the refused requests
-      const check = await quota("check", { tenant: "iai", workspaceId: "ws-mismatch", limit: 5 });
+      const check = await quota("check", { tenant: "iai", workspaceId: "ws-mismatch" });
       assert.deepEqual(check.json, { allowed: true, remaining: 5 });
     });
 
@@ -138,7 +145,7 @@ describe("verify-runtime Worker", { skip }, () => {
       const response = await requestWithHost(full.baseUrl, "aal.verify-runtime.iai.one", "/quota/check", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tenant: "iai", workspaceId: "ws-host", limit: 5 })
+        body: JSON.stringify({ tenant: "iai", workspaceId: "ws-host" })
       });
       assert.equal(response.status, 403);
       assert.equal(response.json.error, "tenant_mismatch");
@@ -149,80 +156,111 @@ describe("verify-runtime Worker", { skip }, () => {
   describe("quota (Durable Object)", () => {
     test("check reports remaining quota and never consumes it", async () => {
       const workspaceId = uid("ws-check");
-      const first = await quota("check", { tenant: "iai", workspaceId, amount: 1, limit: 5 });
+      const first = await quota("check", { tenant: "iai", workspaceId, amount: 1 });
       assert.equal(first.status, 200);
       assert.deepEqual(first.json, { allowed: true, remaining: 5 });
-      const again = await quota("check", { tenant: "iai", workspaceId, amount: 1, limit: 5 });
+      const again = await quota("check", { tenant: "iai", workspaceId, amount: 1 });
       assert.deepEqual(again.json, { allowed: true, remaining: 5 });
-      const tooMuch = await quota("check", { tenant: "iai", workspaceId, amount: 6, limit: 5 });
+      const tooMuch = await quota("check", { tenant: "iai", workspaceId, amount: 6 });
       assert.deepEqual(tooMuch.json, { allowed: false, remaining: 5 });
     });
 
     test("increment counts up to the limit, then answers 429 quota_exceeded without changing the count", async () => {
       const workspaceId = uid("ws-inc");
       const state = (response) => ({ used: response.json.used, limit: response.json.limit });
-      assert.deepEqual(state(await quota("increment", { tenant: "iai", workspaceId, amount: 1, limit: 3 })), { used: 1, limit: 3 });
-      const second = await quota("increment", { tenant: "iai", workspaceId, amount: 2, limit: 3 });
+      assert.deepEqual(state(await quota("increment", { tenant: "iai", workspaceId, amount: 1 })), { used: 1, limit: PLAN_LIMIT });
+      const second = await quota("increment", { tenant: "iai", workspaceId, amount: 4 });
       assert.equal(second.status, 200);
-      assert.deepEqual(state(second), { used: 3, limit: 3 });
+      assert.deepEqual(state(second), { used: PLAN_LIMIT, limit: PLAN_LIMIT });
       assert.equal(second.json.tenant, "iai");
       assert.equal(second.json.workspaceId, workspaceId);
 
-      const over = await quota("increment", { tenant: "iai", workspaceId, amount: 1, limit: 3 });
+      const over = await quota("increment", { tenant: "iai", workspaceId, amount: 1 });
       assert.equal(over.status, 429);
-      assert.deepEqual(over.json, { error: "quota_exceeded", used: 3, limit: 3 });
-      assert.deepEqual((await quota("check", { tenant: "iai", workspaceId, amount: 1, limit: 3 })).json, { allowed: false, remaining: 0 });
+      assert.deepEqual(over.json, { error: "quota_exceeded", used: PLAN_LIMIT, limit: PLAN_LIMIT });
+      assert.deepEqual((await quota("check", { tenant: "iai", workspaceId, amount: 1 })).json, { allowed: false, remaining: 0 });
+    });
+
+    test("the limit comes from the server-side plan: a limit sent by the caller is ignored", async () => {
+      const workspaceId = uid("ws-ignored-limit");
+      for (const limit of [1_000_000, 1, 0, -1, "abc", null]) {
+        const response = await quota("check", { tenant: "iai", workspaceId, amount: 1, limit });
+        assert.equal(response.status, 200, `limit ${JSON.stringify(limit)}: ${response.text}`);
+        assert.deepEqual(response.json, { allowed: true, remaining: PLAN_LIMIT });
+      }
+      const tooMuch = await quota("increment", { tenant: "iai", workspaceId, amount: PLAN_LIMIT + 1, limit: 1_000_000 });
+      assert.equal(tooMuch.status, 429);
+      assert.equal(tooMuch.json.limit, PLAN_LIMIT);
     });
 
     test("amount defaults to 1 and the boundary is inclusive (exactly the remaining quota is allowed)", async () => {
       const workspaceId = uid("ws-boundary");
-      assert.equal((await quota("increment", { tenant: "iai", workspaceId, limit: 4 })).json.used, 1);
-      assert.equal((await quota("increment", { tenant: "iai", workspaceId, amount: 3, limit: 4 })).status, 200);
-      assert.equal((await quota("increment", { tenant: "iai", workspaceId, amount: 1, limit: 4 })).status, 429);
+      assert.equal((await quota("increment", { tenant: "iai", workspaceId })).json.used, 1);
+      assert.equal((await quota("increment", { tenant: "iai", workspaceId, amount: PLAN_LIMIT - 1 })).status, 200);
+      assert.equal((await quota("increment", { tenant: "iai", workspaceId, amount: 1 })).status, 429);
     });
 
     test("quota is kept per tenant and per workspace", async () => {
       const workspaceId = uid("ws-shared-name");
-      await quota("increment", { tenant: "iai", workspaceId, amount: 2, limit: 2 }, { "x-iai-tenant": "iai" });
-      const otherTenant = await quota("increment", { tenant: "dsts", workspaceId, amount: 2, limit: 2 }, { "x-iai-tenant": "dsts" });
+      await quota("increment", { tenant: "iai", workspaceId, amount: PLAN_LIMIT }, { "x-iai-tenant": "iai" });
+      const otherTenant = await quota("increment", { tenant: "dsts", workspaceId, amount: PLAN_LIMIT }, { "x-iai-tenant": "dsts" });
       assert.equal(otherTenant.status, 200, "same workspace id under another tenant has its own counter");
-      const otherWorkspace = await quota("increment", { tenant: "iai", workspaceId: `${workspaceId}-b`, amount: 2, limit: 2 });
+      const otherWorkspace = await quota("increment", { tenant: "iai", workspaceId: `${workspaceId}-b`, amount: PLAN_LIMIT });
       assert.equal(otherWorkspace.status, 200);
-      assert.equal((await quota("increment", { tenant: "iai", workspaceId, amount: 1, limit: 2 })).status, 429, "the original counter is still exhausted");
+      assert.equal((await quota("increment", { tenant: "iai", workspaceId, amount: 1 })).status, 429, "the original counter is still exhausted");
     });
 
-    test("stress: 20 parallel increments against a limit of N succeed exactly N times, the rest get 429", async () => {
-      for (const limit of [7, 1, 20]) {
-        const workspaceId = uid(`ws-stress-${limit}`);
-        const responses = await Promise.all(Array.from({ length: 20 }, () => quota("increment", { tenant: "iai", workspaceId, amount: 1, limit })));
-        const tally = responses.reduce((acc, response) => ({ ...acc, [response.status]: (acc[response.status] ?? 0) + 1 }), {});
-        assert.deepEqual(tally, limit === 20 ? { 200: 20 } : { 200: limit, 429: 20 - limit }, `limit ${limit}`);
-        const usedValues = responses.filter((response) => response.status === 200).map((response) => response.json.used).sort((a, b) => a - b);
-        assert.deepEqual(usedValues, Array.from({ length: limit }, (_, index) => index + 1), "each success saw a distinct counter value");
-        assert.equal((await quota("check", { tenant: "iai", workspaceId, limit })).json.remaining, 0, "quota fully consumed");
-      }
+    test("stress: 20 parallel increments against the plan limit succeed exactly that many times, the rest get 429", async () => {
+      const workspaceId = uid("ws-stress");
+      const responses = await Promise.all(Array.from({ length: 20 }, () => quota("increment", { tenant: "iai", workspaceId, amount: 1 })));
+      const tally = responses.reduce((acc, response) => ({ ...acc, [response.status]: (acc[response.status] ?? 0) + 1 }), {});
+      assert.deepEqual(tally, { 200: PLAN_LIMIT, 429: 20 - PLAN_LIMIT });
+      const usedValues = responses.filter((response) => response.status === 200).map((response) => response.json.used).sort((a, b) => a - b);
+      assert.deepEqual(usedValues, Array.from({ length: PLAN_LIMIT }, (_, index) => index + 1), "each success saw a distinct counter value");
+      assert.equal((await quota("check", { tenant: "iai", workspaceId })).json.remaining, 0, "quota fully consumed");
     });
 
     test("stress with mixed amounts never overshoots the limit", async () => {
       const workspaceId = uid("ws-mixed");
-      const responses = await Promise.all(Array.from({ length: 10 }, () => quota("increment", { tenant: "iai", workspaceId, amount: 3, limit: 10 })));
-      assert.equal(responses.filter((response) => response.status === 200).length, 3, "3 x 3 = 9 fits, a fourth would overshoot");
-      assert.deepEqual((await quota("check", { tenant: "iai", workspaceId, amount: 1, limit: 10 })).json, { allowed: true, remaining: 1 });
+      const responses = await Promise.all(Array.from({ length: 10 }, () => quota("increment", { tenant: "iai", workspaceId, amount: 2 })));
+      assert.equal(responses.filter((response) => response.status === 200).length, 2, "2 x 2 = 4 fits, a third would overshoot");
+      assert.deepEqual((await quota("check", { tenant: "iai", workspaceId, amount: 1 })).json, { allowed: true, remaining: 1 });
+    });
+
+    test("the counter resets when the usage window elapses (short server-side window)", { timeout: 60_000 }, async () => {
+      const windowMs = 4000;
+      const worker = await boot("verify-window", undefined, { migrate: false, plan: { limit: 2, windowMs } });
+      try {
+        const workspaceId = uid("ws-window");
+        const inc = () => post(worker, "/quota/increment", { tenant: "iai", workspaceId });
+        const first = await inc();
+        assert.equal(first.status, 200);
+        assert.equal((await inc()).status, 200);
+        assert.equal((await inc()).status, 429, "exhausted inside the window");
+
+        await new Promise((resolve) => setTimeout(resolve, windowMs - (Date.now() - first.json.windowStart) + 500));
+        const next = await inc();
+        assert.equal(next.status, 200, next.text);
+        assert.equal(next.json.used, 1, "used restarted from zero");
+        assert.ok(next.json.windowStart > first.json.windowStart, "a new window started");
+      } finally {
+        await worker.stop();
+      }
     });
 
     test("quota state survives a runtime restart (Durable Object storage is persisted)", async () => {
       const workspaceId = uid("ws-restart");
       const first = await boot("verify-restart-1", undefined, { persistDir: restartPersist });
       try {
-        const response = await post(first, "/quota/increment", { tenant: "iai", workspaceId, amount: 4, limit: 5 });
+        const response = await post(first, "/quota/increment", { tenant: "iai", workspaceId, amount: 4 });
         assert.equal(response.json.used, 4);
       } finally {
         await first.stop();
       }
       const second = await boot("verify-restart-2", undefined, { persistDir: restartPersist, migrate: false });
       try {
-        assert.deepEqual((await post(second, "/quota/check", { tenant: "iai", workspaceId, amount: 1, limit: 5 })).json, { allowed: true, remaining: 1 });
-        assert.equal((await post(second, "/quota/increment", { tenant: "iai", workspaceId, amount: 2, limit: 5 })).status, 429);
+        assert.deepEqual((await post(second, "/quota/check", { tenant: "iai", workspaceId, amount: 1 })).json, { allowed: true, remaining: 1 });
+        assert.equal((await post(second, "/quota/increment", { tenant: "iai", workspaceId, amount: 2 })).status, 429);
       } finally {
         await second.stop();
       }
@@ -236,7 +274,7 @@ describe("verify-runtime Worker", { skip }, () => {
     });
 
     test("a request without workspaceId is rejected instead of sharing one default counter", async () => {
-      const response = await quota("increment", { tenant: "iai", limit: 3 });
+      const response = await quota("increment", { tenant: "iai" });
       assert.equal(response.status, 400, `${response.status} ${response.text}`);
     });
   });
@@ -323,13 +361,23 @@ describe("verify-runtime Worker", { skip }, () => {
       const event = usageEvent({ usage_amount: 2.5, subject_id: "system" });
       const response = await post(d1Only, "/usage/emit", event);
       assert.deepEqual(response.json, { ok: true, channel: "d1" });
-      const [row] = await ledgerRows(d1Only, `id = '${event.event_id}'`);
+      const [row] = await ledgerRows(d1Only, `id = 'iai:${event.event_id}'`);
       assert.ok(row, "row inserted before the response returned");
       assert.deepEqual(
         { id: row.id, tenant: row.tenant, workspace_id: row.workspace_id, actor_id: row.actor_id, domain_surface: row.domain_surface, event_type: row.event_type, usage_amount: row.usage_amount, usage_unit: row.usage_unit, source_object_id: row.source_object_id, environment: row.environment, occurred_at: row.occurred_at },
-        { id: event.event_id, tenant: "iai", workspace_id: "ws-usage", actor_id: "system", domain_surface: "chat", event_type: "chat_run", usage_amount: 2.5, usage_unit: "run_count", source_object_id: "obj-1", environment: "development", occurred_at: event.occurred_at }
+        { id: `iai:${event.event_id}`, tenant: "iai", workspace_id: "ws-usage", actor_id: "system", domain_surface: "chat", event_type: "chat_run", usage_amount: 2.5, usage_unit: "run_count", source_object_id: "obj-1", environment: "development", occurred_at: event.occurred_at }
       );
       assert.ok(Math.abs(row.received_at - Date.now()) < 60_000, "received_at is server time in ms");
+    });
+
+    test("two tenants reusing one event_id are both stored, under tenant-scoped row ids", async () => {
+      const eventId = uid("evt-shared");
+      for (const tenant of ["iai", "dsts"]) {
+        const response = await post(d1Only, "/usage/emit", usageEvent({ event_id: eventId, tenant }), { "x-iai-tenant": tenant });
+        assert.equal(response.status, 200, response.text);
+      }
+      const rows = await ledgerRows(d1Only, `id IN ('iai:${eventId}', 'dsts:${eventId}')`);
+      assert.deepEqual(rows.map((row) => [row.id, row.tenant]).sort(), [[`dsts:${eventId}`, "dsts"], [`iai:${eventId}`, "iai"]]);
     });
 
     test("invalid events never reach D1", async () => {
@@ -344,7 +392,7 @@ describe("verify-runtime Worker", { skip }, () => {
       assert.equal((await post(d1Only, "/usage/emit", event)).status, 200);
       const second = await post(d1Only, "/usage/emit", event);
       assert.ok(second.status < 400 || second.status === 409, `${second.status} ${second.text}`);
-      assert.equal((await ledgerRows(d1Only, `id = '${event.event_id}'`)).length, 1);
+      assert.equal((await ledgerRows(d1Only, `id = 'iai:${event.event_id}'`)).length, 1);
     });
 
     test("with the queue bound, /usage/emit enqueues and the consumer writes each event to D1 exactly once", { timeout: 60_000 }, async () => {
@@ -354,10 +402,11 @@ describe("verify-runtime Worker", { skip }, () => {
         assert.equal(response.status, 200, response.text);
         assert.deepEqual(response.json, { ok: true, channel: "queue" });
       }
-      const ids = events.map((event) => `'${event.event_id}'`).join(",");
+      const rowId = (event) => `${event.tenant}:${event.event_id}`;
+      const ids = events.map((event) => `'${rowId(event)}'`).join(",");
       const rows = await full.d1.waitFor(`SELECT id, tenant, usage_amount FROM usage_events WHERE id IN (${ids}) ORDER BY id`, (found) => found.length >= events.length, { timeoutMs: 30_000 });
       assert.equal(rows.length, events.length, "all queued events were consumed (batch window is 5s)");
-      assert.deepEqual(rows.map((row) => row.id).sort(), events.map((event) => event.event_id).sort());
+      assert.deepEqual(rows.map((row) => row.id).sort(), events.map(rowId).sort());
       assert.equal(new Set(rows.map((row) => row.id)).size, rows.length, "no duplicates");
     });
 
@@ -365,9 +414,9 @@ describe("verify-runtime Worker", { skip }, () => {
       const duplicate = usageEvent();
       const later = usageEvent({ usage_amount: 5 });
       for (const event of [duplicate, duplicate, later]) assert.equal((await post(full, "/usage/emit", event)).status, 200);
-      const ids = `'${duplicate.event_id}','${later.event_id}'`;
+      const ids = `'iai:${duplicate.event_id}','iai:${later.event_id}'`;
       const rows = await full.d1.waitFor(`SELECT id FROM usage_events WHERE id IN (${ids})`, (found) => found.length >= 2, { timeoutMs: 20_000 });
-      assert.deepEqual(rows.map((row) => row.id).sort(), [duplicate.event_id, later.event_id].sort());
+      assert.deepEqual(rows.map((row) => row.id).sort(), [`iai:${duplicate.event_id}`, `iai:${later.event_id}`].sort());
     });
   });
 

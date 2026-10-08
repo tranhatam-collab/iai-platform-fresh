@@ -1,6 +1,6 @@
 import { describe, it, mock } from "node:test";
 import assert from "node:assert";
-import worker, { type Env } from "../src/worker.js";
+import worker, { USAGE_QUEUE_MAX_RETRIES, type Env } from "../src/worker.js";
 import { handleQuotaRequest } from "../src/quota-handler.js";
 import { MAX_QUOTA_AMOUNT } from "../src/request-validation.js";
 import { createMockD1 } from "./mock-d1.js";
@@ -18,7 +18,7 @@ interface MockQuotaNamespace extends DurableObjectNamespace {
  * exercise the same request validation and counter logic as QuotaDurableObject
  * instead of a hand-written copy of its contract.
  */
-function mockNamespace(): MockQuotaNamespace {
+function mockNamespace(plans?: string): MockQuotaNamespace {
   const storages = new Map<string, Map<string, unknown>>();
   const addressed: string[] = [];
   const ns: any = {
@@ -41,7 +41,7 @@ function mockNamespace(): MockQuotaNamespace {
         },
       };
       return {
-        fetch: (request: Request): Promise<Response> => handleQuotaRequest(storage, request),
+        fetch: (request: Request): Promise<Response> => handleQuotaRequest(storage, request, { plans }),
       };
     },
     getByName(name: string): any {
@@ -60,9 +60,10 @@ function mockNamespace(): MockQuotaNamespace {
   return ns as MockQuotaNamespace;
 }
 
-function makeEnv(overrides: Partial<Env> = {}): Env & { QUOTA_DO: MockQuotaNamespace } {
+/** `limit` is the server-side plan limit (the QUOTA_PLANS variable), not a request field. */
+function makeEnv(overrides: Partial<Env> = {}, limit = 10): Env & { QUOTA_DO: MockQuotaNamespace } {
   return {
-    QUOTA_DO: mockNamespace(),
+    QUOTA_DO: mockNamespace(JSON.stringify({ default: { limit } })),
     USAGE_LEDGER_DB: undefined,
     USAGE_EVENTS_QUEUE: undefined,
     ...overrides,
@@ -95,7 +96,7 @@ describe("worker routes", () => {
     const req = makeRequest("/quota/check", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-iai-tenant": "iai" },
-      body: JSON.stringify({ tenant: "iai", workspaceId: "ws_a", limit: 10 }),
+      body: JSON.stringify({ tenant: "iai", workspaceId: "ws_a" }),
     });
     const resp = await (worker as any).fetch(req, makeEnv(), {} as any);
     assert.strictEqual(resp.status, 200);
@@ -120,7 +121,7 @@ describe("worker routes", () => {
     const req = makeRequest("/quota/increment", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-iai-tenant": "iai" },
-      body: JSON.stringify({ tenant: "iai", workspaceId: "ws_b", limit: 3 }),
+      body: JSON.stringify({ tenant: "iai", workspaceId: "ws_b" }),
     });
     const env = makeEnv();
     const resp = await (worker as any).fetch(req, env, {} as any);
@@ -233,7 +234,6 @@ describe("worker routes: quota input validation", () => {
       tenant: "iai",
       workspaceId: "ws_v",
       amount: 2,
-      limit: 10,
     });
     assert.strictEqual(seeded.json.used, 2);
     const addressedBefore = env.QUOTA_DO.addressed.length;
@@ -265,23 +265,24 @@ describe("worker routes: quota input validation", () => {
     assert.strictEqual(stored.used, 2);
   });
 
-  it("rejects invalid limits with 400", async () => {
-    const env = makeEnv();
+  it("ignores a caller-supplied limit: the server-side plan decides", async () => {
+    const env = makeEnv({}, 2);
+    const body = { tenant: "iai", workspaceId: "ws_l", limit: 1_000_000 };
+    assert.strictEqual((await post(env, "/quota/increment", body)).status, 200);
+    assert.strictEqual((await post(env, "/quota/increment", body)).status, 200);
+    const over = await post(env, "/quota/increment", body);
+    assert.strictEqual(over.status, 429);
+    assert.strictEqual(over.json.limit, 2);
+
     for (const limit of ["0", "-1", '"abc"', "1.5", "1e999", "null"]) {
-      const { status, json } = await post(
-        env,
-        "/quota/increment",
-        `{"tenant":"iai","workspaceId":"ws_l","limit":${limit}}`
-      );
-      assert.strictEqual(status, 400, `limit ${limit}`);
-      assert.strictEqual(json.error, "invalid_limit", `limit ${limit}`);
+      const { status } = await post(env, "/quota/check", `{"tenant":"iai","workspaceId":"ws_l2","limit":${limit}}`);
+      assert.strictEqual(status, 200, `limit ${limit}`);
     }
-    assert.strictEqual(env.QUOTA_DO.addressed.length, 0);
   });
 
   it("increments up to the limit then returns 429", async () => {
-    const env = makeEnv();
-    const body = { tenant: "iai", workspaceId: "ws_cap", limit: 3 };
+    const env = makeEnv({}, 3);
+    const body = { tenant: "iai", workspaceId: "ws_cap" };
     for (let used = 1; used <= 3; used++) {
       const res = await post(env, "/quota/increment", body);
       assert.strictEqual(res.status, 200);
@@ -435,7 +436,7 @@ describe("worker routes: /usage/emit validation", () => {
       assert.deepStrictEqual(json, { ok: true, channel: "d1" });
     }
     assert.strictEqual(d1.rows.size, 1);
-    assert.ok(d1.rows.has("evt_replay"));
+    assert.ok(d1.rows.has("iai:evt_replay"));
   });
 
   it("sends validated events to the queue when bound", async () => {
@@ -454,19 +455,25 @@ describe("worker routes: /usage/emit validation", () => {
 });
 
 describe("worker queue consumer", () => {
-  function makeBatch(bodies: unknown[]) {
+  function makeBatch(bodies: unknown[], attempts = 1) {
     const acked: number[] = [];
     const retried: number[] = [];
+    const retryDelays: Array<number | undefined> = [];
     const messages = bodies.map((body, i) => ({
       id: `m${i}`,
       body,
+      attempts,
       ack: () => void acked.push(i),
-      retry: () => void retried.push(i),
+      retry: (options?: { delaySeconds?: number }) => {
+        retried.push(i);
+        retryDelays.push(options?.delaySeconds);
+      },
     }));
     return {
       batch: { queue: "verify-usage-events", messages } as unknown as MessageBatch,
       acked,
       retried,
+      retryDelays,
     };
   }
 
@@ -518,7 +525,7 @@ describe("worker queue consumer", () => {
 
     await consume(batch, env);
 
-    assert.deepStrictEqual([...d1.rows.keys()].sort(), ["evt_a", "evt_c"]);
+    assert.deepStrictEqual([...d1.rows.keys()].sort(), ["iai:evt_a", "iai:evt_c"]);
     assert.deepStrictEqual(acked, [0, 1, 2, 3, 4]);
     assert.deepStrictEqual(retried, []);
   });
@@ -536,6 +543,51 @@ describe("worker queue consumer", () => {
 
     assert.deepStrictEqual(retried, [0]);
     assert.deepStrictEqual(acked, [1]);
-    assert.deepStrictEqual([...d1.rows.keys()], ["evt_y"]);
+    assert.deepStrictEqual([...d1.rows.keys()], ["iai:evt_y"]);
+  });
+
+  it("never acks a message that keeps failing, so the platform can move it to the dead letter queue", async () => {
+    for (let attempts = 1; attempts <= USAGE_QUEUE_MAX_RETRIES + 1; attempts++) {
+      const d1 = createMockD1();
+      d1.failNext = new Error("D1 down");
+      const { batch, acked, retried, retryDelays } = makeBatch([makeUsageEvent({ event_id: "evt_poison_d1" })], attempts);
+      await consume(batch, makeEnv({ USAGE_LEDGER_DB: d1.db }));
+      assert.deepStrictEqual(acked, [], `attempt ${attempts}`);
+      assert.deepStrictEqual(retried, [0], `attempt ${attempts}`);
+      assert.ok((retryDelays[0] ?? 0) > 0, "retries back off instead of hammering D1");
+    }
+  });
+
+  it("retries (never acks) an event when the ledger database is not bound, and logs an error", async () => {
+    const env = makeEnv({ USAGE_LEDGER_DB: undefined });
+    const { batch, acked, retried, retryDelays } = makeBatch([makeUsageEvent({ event_id: "evt_no_db" })], 2);
+
+    const error = mock.method(console, "error", () => {});
+    const warn = mock.method(console, "warn", () => {});
+    try {
+      await (worker as any).queue(batch, env, {} as any);
+      assert.ok(error.mock.calls.length >= 1, "an error is logged");
+      assert.match(String(error.mock.calls[0]!.arguments[0]), /USAGE_LEDGER_DB is not bound/);
+    } finally {
+      error.mock.restore();
+      warn.mock.restore();
+    }
+
+    assert.deepStrictEqual(acked, []);
+    assert.deepStrictEqual(retried, [0]);
+    assert.ok((retryDelays[0] ?? 0) > 0, "retries back off");
+  });
+
+  it("keeps the same event_id of two tenants as two separate ledger rows", async () => {
+    const d1 = createMockD1();
+    const env = makeEnv({ USAGE_LEDGER_DB: d1.db });
+    const { batch, acked } = makeBatch([
+      makeUsageEvent({ event_id: "evt_shared", tenant: "iai" }),
+      makeUsageEvent({ event_id: "evt_shared", tenant: "dsts" }),
+      makeUsageEvent({ event_id: "evt_shared", tenant: "iai" }),
+    ]);
+    await consume(batch, env);
+    assert.deepStrictEqual([...d1.rows.keys()].sort(), ["dsts:evt_shared", "iai:evt_shared"]);
+    assert.deepStrictEqual(acked, [0, 1, 2]);
   });
 });
