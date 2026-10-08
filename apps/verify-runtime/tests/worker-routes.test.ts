@@ -558,6 +558,26 @@ describe("worker queue consumer", () => {
     }
   });
 
+  it("retries (never acks) an event when the ledger database is not bound, and logs an error", async () => {
+    const env = makeEnv({ USAGE_LEDGER_DB: undefined });
+    const { batch, acked, retried, retryDelays } = makeBatch([makeUsageEvent({ event_id: "evt_no_db" })], 2);
+
+    const error = mock.method(console, "error", () => {});
+    const warn = mock.method(console, "warn", () => {});
+    try {
+      await (worker as any).queue(batch, env, {} as any);
+      assert.ok(error.mock.calls.length >= 1, "an error is logged");
+      assert.match(String(error.mock.calls[0]!.arguments[0]), /USAGE_LEDGER_DB is not bound/);
+    } finally {
+      error.mock.restore();
+      warn.mock.restore();
+    }
+
+    assert.deepStrictEqual(acked, []);
+    assert.deepStrictEqual(retried, [0]);
+    assert.ok((retryDelays[0] ?? 0) > 0, "retries back off");
+  });
+
   it("keeps the same event_id of two tenants as two separate ledger rows", async () => {
     const d1 = createMockD1();
     const env = makeEnv({ USAGE_LEDGER_DB: d1.db });

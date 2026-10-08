@@ -139,7 +139,7 @@ export const worker = {
 
   /**
    * Queue delivery is at-least-once, so every message is handled on its own:
-   * D1 inserts are idempotent on event_id (a redelivered event is a no-op), an
+   * D1 inserts are idempotent on the tenant-scoped event id (a redelivered event is a no-op), an
    * invalid message can never succeed and is acknowledged and dropped (it must
    * not block or fail the rest of the batch), and a transient D1 failure
    * retries only that message. After USAGE_QUEUE_MAX_RETRIES retries the platform
@@ -152,16 +152,19 @@ export const worker = {
         const event: unknown = message.body;
         validateUsageEvent(event);
 
-        if (env.USAGE_LEDGER_DB) {
-          const inserted = await emitUsageEventToD1(event, env.USAGE_LEDGER_DB);
-          if (!inserted) {
-            // eslint-disable-next-line no-console
-            console.warn(`[verify-runtime] Ignored duplicate usage event ${event.event_id}`);
-          }
-        } else {
-          // D1 not bound — drop silently during pre-staging phase
+        if (!env.USAGE_LEDGER_DB) {
+          // No ledger to write to: retry so the event ends up in the dead letter queue
+          // after the retry limit, instead of being acknowledged and lost.
           // eslint-disable-next-line no-console
-          console.warn(`[verify-runtime] Dropped usage event ${event.event_id}: D1 not bound`);
+          console.error(`[verify-runtime] Usage event ${event.event_id} not stored: USAGE_LEDGER_DB is not bound; will retry`);
+          message.retry({ delaySeconds: Math.min(60 * message.attempts, 900) });
+          continue;
+        }
+
+        const inserted = await emitUsageEventToD1(event, env.USAGE_LEDGER_DB);
+        if (!inserted) {
+          // eslint-disable-next-line no-console
+          console.warn(`[verify-runtime] Ignored duplicate usage event ${event.event_id}`);
         }
         message.ack();
       } catch (err) {
