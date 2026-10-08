@@ -87,6 +87,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The Workers E2E tools live outside the pnpm workspace, so the root audit does not see them.
+      - name: Dependency audit (Workers E2E tools, high and above)
+        run: npm audit --audit-level=high --prefix tests/e2e/workers
+
       # Local emulation only (wrangler dev --local); the suite never uses --remote or Cloudflare credentials.
       - name: Workers E2E
         run: pnpm test:e2e:workers
