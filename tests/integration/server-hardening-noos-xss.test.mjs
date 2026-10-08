@@ -94,8 +94,8 @@ test("the checkout form handler resolves hostile buyer ids to the default buyer"
       "en"
     );
   } catch (error) {
-    if (error?.code === "ENOENT") {
-      t.skip("needs the gitignored docs/noos catalog fixtures");
+    if (error?.code === "ENOENT" && process.env.REQUIRE_DOCS_FIXTURES !== "1") {
+      t.skip("needs the gitignored docs/noos catalog fixtures (set REQUIRE_DOCS_FIXTURES=1 to enforce)");
       return;
     }
     throw error;

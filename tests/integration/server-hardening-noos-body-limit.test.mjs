@@ -53,10 +53,12 @@ test("an oversized checkout body gets a real 413 and the server keeps serving", 
     const health = await new Promise((resolve, reject) => {
       http.get({ host: "127.0.0.1", port, path: "/health" }, (response) => {
         response.resume();
-        response.on("end", () => resolve(response.statusCode));
+        response.on("end", () => resolve({ status: response.statusCode, cacheControl: response.headers["cache-control"] }));
       }).on("error", reject);
     });
-    assert.equal(health, 200);
+    assert.equal(health.status, 200);
+    // The shared e2e contract requires health to be uncacheable; this runs without the docs fixtures.
+    assert.match(health.cacheControl ?? "", /no-store|no-cache/);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
