@@ -1,0 +1,13 @@
+{
+  "name": "iai-browser-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Real-browser (Chromium) E2E for the *.iai.one surfaces: render, console errors, external requests and basic accessibility. Deliberately NOT a pnpm workspace member so the monorepo lockfile is untouched.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 ./surfaces.browser.e2e.test.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1"
+  }
+}
