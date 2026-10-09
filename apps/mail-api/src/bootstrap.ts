@@ -76,6 +76,8 @@ export function buildServerOptionsFromEnv(
     "0.0.0.0";
 
   const options: FlowApiServerOptions = {
+    // Sample messages/suppressions are an explicit dev/demo opt-in, ignored in production.
+    demoData: env.MAIL_API_DEMO_DATA === "1" && env.NODE_ENV !== "production",
     inboundWebhook: {
       // Bind the secret resolver to the *passed-in* env object so tests (and
       // any other caller that supplies a synthetic env) get a deterministic

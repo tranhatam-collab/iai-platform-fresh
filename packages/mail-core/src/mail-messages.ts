@@ -400,7 +400,7 @@ function filterByWorkspaceAndMessage<
   });
 }
 
-function matchesMessageListFilter(detail: MailMessageDetail, filter: MailMessageListFilter) {
+export function matchesMessageListFilter(detail: MailMessageDetail, filter: MailMessageListFilter) {
   if (filter.statuses && filter.statuses.length > 0 && !filter.statuses.includes(detail.status)) {
     return false;
   }

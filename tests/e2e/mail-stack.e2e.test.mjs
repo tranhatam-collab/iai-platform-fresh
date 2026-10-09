@@ -310,16 +310,21 @@ describe("mail-api: /v1/send", { skip: apiBuilt ? false : "apps/mail-api not bui
     assert.doesNotMatch(response.text, STACK_TRACE);
   });
 
-  test("the message list read model reflects what was just sent", { todo: "known gap, tracked on the team board" }, async () => {
+  test("the message list read model reflects what was just sent", async () => {
     const send = await sendMail(api, { subject: "Listed message" });
-    const list = await request(api.baseUrl, `/v1/messages?workspace_id=${DEV_WORKSPACE}&page_size=100`);
+    // Persisted reads use the same bearer API key as POST /v1/send.
+    const list = await request(api.baseUrl, `/v1/messages?workspace_id=${DEV_WORKSPACE}&page_size=100`, {
+      headers: { authorization: `Bearer ${api.credentials.apiKey}` }
+    });
     assert.equal(list.status, 200);
     const ids = list.json.data.items.map((item) => item.messageId);
     assert.ok(ids.includes(send.json.data.message_id), "sent message missing from the list endpoint");
   });
 
-  test("the suppression read model lists the recipient that /v1/send enforces", { todo: "known gap, tracked on the team board" }, async () => {
-    const list = await request(api.baseUrl, `/v1/suppressions?workspace_id=${DEV_WORKSPACE}&email=${SEEDED_SUPPRESSED_RECIPIENT}`);
+  test("the suppression read model lists the recipient that /v1/send enforces", async () => {
+    const list = await request(api.baseUrl, `/v1/suppressions?workspace_id=${DEV_WORKSPACE}&email=${SEEDED_SUPPRESSED_RECIPIENT}`, {
+      headers: { authorization: `Bearer ${api.credentials.apiKey}` }
+    });
     assert.equal(list.status, 200);
     assert.ok(list.json.data.total >= 1, "seeded suppression is not visible through the API");
   });
