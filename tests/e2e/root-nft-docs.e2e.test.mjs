@@ -13,7 +13,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
-import { builtEntryAvailable, request, startService } from "./support/harness.mjs";
+import { builtEntryAvailable, request, skipUnlessBuilt, startService } from "./support/harness.mjs";
 import { crawlSurface } from "./support/crawl.mjs";
 
 const STACK_TRACE = /(\/home\/|\/Users\/|node_modules|at [\w.<>]+ \(.*:\d+:\d+\)|ENOENT)/;
@@ -26,7 +26,7 @@ function start(name, entry, portEnv, hostEnv, env = {}) {
 
 const skipUnless = (...entries) => {
   const missing = entries.filter((entry) => !builtEntryAvailable(entry));
-  return missing.length > 0 ? `${missing.join(", ")} not built` : false;
+  return skipUnlessBuilt(missing.length === 0, `${missing.join(", ")} not built`);
 };
 
 function stateCookie(response, name) {

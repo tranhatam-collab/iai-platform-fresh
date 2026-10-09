@@ -21,14 +21,14 @@ import { pathToFileURL } from "node:url";
 import { after, before, describe, test } from "node:test";
 
 import { sendJson, startFakeServer } from "./support/fake-http.mjs";
-import { builtEntryAvailable, docsFixturesAvailable, repoRoot, request, startService } from "./support/harness.mjs";
+import { builtEntryAvailable, docsFixturesAvailable, repoRoot, request, skipUnlessBuilt, startService } from "./support/harness.mjs";
 import { networkGuardEnv } from "./support/network-guard.mjs";
 
 const ENTRY = "apps/noos-web/dist/server.js";
 const fixturesRoot = path.join(repoRoot, "docs", "noos", "NOOS_COMMERCE_FIXTURES_v0.1");
 
 const skipReason = !builtEntryAvailable(ENTRY)
-  ? `${ENTRY} not built (pnpm --filter @iai/noos-web build)`
+  ? skipUnlessBuilt(false, `${ENTRY} not built (pnpm --filter @iai/noos-web build)`)
   : !docsFixturesAvailable()
     ? "skipped: needs the gitignored docs/noos commerce fixtures (set up the private docs pack to run these tests)"
     : false;

@@ -13,7 +13,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
-import { builtEntryAvailable, getFreePort, request, startMailApi, startService } from "./support/harness.mjs";
+import { builtEntryAvailable, getFreePort, request, skipUnlessBuilt, startAll, startMailApi, startService } from "./support/harness.mjs";
 
 const WORKSPACE = "ws_flow_main";
 const SESSION = { "x-dash-session": "e2e-session" };
@@ -27,7 +27,7 @@ function flowApi(api, pathname) {
   return request(api.baseUrl, `${pathname}${pathname.includes("?") ? "&" : "?"}workspace_id=${WORKSPACE}`);
 }
 
-describe("flow, dash and web against a real mail-api", { skip: built ? false : "mail-api, dash, web or flow not built" }, () => {
+describe("flow, dash and web against a real mail-api", { skip: skipUnlessBuilt(built, "mail-api, dash, web or flow not built") }, () => {
   let api;
   let dash;
   let web;
@@ -35,28 +35,31 @@ describe("flow, dash and web against a real mail-api", { skip: built ? false : "
 
   before(async () => {
     api = await startMailApi();
-    [dash, web, flow] = await Promise.all([
-      startService({
-        name: "dash",
-        entry: "apps/dash/dist/index.js",
-        portEnv: "DASH_PORT",
-        hostEnv: "DASH_HOST",
-        env: { DASH_FLOW_API_BASE: api.baseUrl }
-      }),
-      startService({
-        name: "web",
-        entry: "apps/web/dist/index.js",
-        portEnv: "WEB_PORT",
-        hostEnv: "WEB_BIND_ADDRESS",
-        env: { WEB_SHARED_FLOW_API_BASE: api.baseUrl }
-      }),
-      startService({
-        name: "flow",
-        entry: "apps/flow/dist/index.js",
-        portEnv: "FLOW_PORT",
-        hostEnv: "FLOW_HOST",
-        env: { FLOW_API_FLOW_URL: api.baseUrl }
-      })
+    [dash, web, flow] = await startAll([
+      () =>
+        startService({
+          name: "dash",
+          entry: "apps/dash/dist/index.js",
+          portEnv: "DASH_PORT",
+          hostEnv: "DASH_HOST",
+          env: { DASH_FLOW_API_BASE: api.baseUrl }
+        }),
+      () =>
+        startService({
+          name: "web",
+          entry: "apps/web/dist/index.js",
+          portEnv: "WEB_PORT",
+          hostEnv: "WEB_BIND_ADDRESS",
+          env: { WEB_SHARED_FLOW_API_BASE: api.baseUrl }
+        }),
+      () =>
+        startService({
+          name: "flow",
+          entry: "apps/flow/dist/index.js",
+          portEnv: "FLOW_PORT",
+          hostEnv: "FLOW_HOST",
+          env: { FLOW_API_FLOW_URL: api.baseUrl }
+        })
     ]);
   });
 

@@ -185,6 +185,21 @@ export async function startService({ name, entry, env = {}, portEnv, hostEnv, re
   };
 }
 
+/**
+ * Starts several services at once. If any of them fails to start, the ones that did start are stopped
+ * before the error is thrown, so a failed beforeAll cannot leave child processes behind (which would
+ * keep the test run alive until it times out). Resolves to the services in the order of the starters.
+ */
+export async function startAll(starters) {
+  const results = await Promise.allSettled(starters.map((start) => start()));
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure) {
+    await Promise.all(results.filter((result) => result.status === "fulfilled").map((result) => result.value.stop().catch(() => undefined)));
+    throw failure.reason;
+  }
+  return results.map((result) => result.value);
+}
+
 /** Start the real mail-api (bootstrap entry) on a throwaway SQLite database. */
 export async function startMailApi({ env = {} } = {}) {
   const dir = mkdtempSync(path.join(tmpdir(), "iai-e2e-mail-"));

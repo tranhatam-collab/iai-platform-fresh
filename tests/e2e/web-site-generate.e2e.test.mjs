@@ -13,7 +13,7 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
 
-import { builtEntryAvailable, request, startService } from "./support/harness.mjs";
+import { builtEntryAvailable, request, skipUnlessBuilt, startService } from "./support/harness.mjs";
 import { sendJson, startFakeServer } from "./support/fake-http.mjs";
 
 const built = builtEntryAvailable("apps/web/dist/index.js");
@@ -44,7 +44,7 @@ function startWeb(extraEnv, name = "web") {
 }
 
 
-describe("web AI site generation against a fake AI upstream", { skip: built ? false : "apps/web not built" }, () => {
+describe("web AI site generation against a fake AI upstream", { skip: skipUnlessBuilt(built, "apps/web not built") }, () => {
   let upstream;
   let behavior;
   let web;
