@@ -8,6 +8,7 @@ export interface PaymentEventEvidenceAuditEntry {
   event:
     | "outbound_webhook_sent"
     | "payment_email_accepted"
+    | "payment_email_handoff"
     | "payment_event_callback_received"
     | "payment_event_proof_attached";
 }
@@ -154,7 +155,13 @@ export class PaymentEventEvidenceStore {
     this.load();
   }
 
-  recordPaymentEmailAccepted(input: PaymentEventEvidenceSendInput): PaymentEventEvidenceRecord {
+  /**
+   * Records an email handed to mail-api. Only a `provider_accepted` delivery status counts as an
+   * acceptance: it sets `accepted_at` and writes the `payment_email_accepted` audit entry. For
+   * `queued`, `deferred` and `failed` the handoff is recorded as `payment_email_handoff` with the
+   * delivery status, and `accepted_at` stays as it was.
+   */
+  recordPaymentEmailHandoff(input: PaymentEventEvidenceSendInput): PaymentEventEvidenceRecord {
     const now = input.accepted_at?.trim() || new Date().toISOString();
     const domain = normalizeDomain(input.domain);
     const record = this.resolveRecord({
@@ -165,7 +172,10 @@ export class PaymentEventEvidenceStore {
       provider_reference: input.provider_reference
     });
 
-    record.accepted_at = now;
+    const accepted = normalizeOptionalString(input.mail_delivery_status) === "provider_accepted";
+    if (accepted) {
+      record.accepted_at = now;
+    }
     record.callback_status = normalizeOptionalString(input.callback_status) || record.callback_status;
     record.domain = domain;
     record.mail_delivery_status =
@@ -192,8 +202,9 @@ export class PaymentEventEvidenceStore {
     record.updated_at = now;
     record.x_site_key = normalizeOptionalString(input.x_site_key) || record.x_site_key;
 
-    this.appendAuditEntry(record, now, "payment_email_accepted", {
+    this.appendAuditEntry(record, now, accepted ? "payment_email_accepted" : "payment_email_handoff", {
       callback_status: record.callback_status,
+      ...(accepted ? {} : { delivery_status: record.mail_delivery_status }),
       mail_message_id: record.mail_message_id,
       order_id: record.order_id,
       payment_session_id: record.payment_session_id,

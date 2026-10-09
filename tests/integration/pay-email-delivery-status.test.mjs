@@ -4,6 +4,9 @@
  */
 
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -58,7 +61,7 @@ test("a missing or unknown delivery status is never treated as accepted", async 
   assert.equal(normalizePaymentEmailDeliveryStatus(undefined), "queued");
 });
 
-test("the internal send route reports the delivery status and only provider_accepted is an acceptance", async () => {
+test("the internal send route and the stored evidence treat only provider_accepted as an acceptance", async () => {
   const previous = {};
   const set = (key, value) => {
     previous[key] = process.env[key];
@@ -68,11 +71,16 @@ test("the internal send route reports the delivery status and only provider_acce
   set("MAIL_API_KEY", "mail_test_key");
   set("MAIL_API_WORKSPACE_ID", "ws_pay_test");
   set("PAY_EMAIL_ADAPTER_INTERNAL_KEY", "adapter-secret");
+  const dir = mkdtempSync(join(tmpdir(), "pay-status-evidence-"));
 
   try {
     const seen = [];
     for (const status of ["queued", "deferred", "failed", "provider_accepted"]) {
-      const response = await dispatchToHandler(createPayRequestHandler({ fetchImpl: mailApi({ delivery_status: status }) }), {
+      const handler = createPayRequestHandler({
+        fetchImpl: mailApi({ delivery_status: status }),
+        paymentEventEvidenceStoreFilePath: join(dir, `${status}.json`)
+      });
+      const response = await dispatchToHandler(handler, {
         body: JSON.stringify({ ...INPUT, messageIdempotencyKey: `pay-status-${status}`, orderId: `order_${status}`, paymentSessionId: `ps_${status}` }),
         headers: { "content-type": "application/json", "x-pay-email-adapter-key": "adapter-secret" },
         method: "POST",
@@ -80,15 +88,50 @@ test("the internal send route reports the delivery status and only provider_acce
       });
       assert.equal(response.status, 202);
       const { data } = await response.json();
-      seen.push([data.delivery_status, data.mail_status]);
+      const evidenceResponse = await dispatchToHandler(handler, {
+        headers: { "x-pay-email-adapter-key": "adapter-secret" },
+        url: `/internal/payment-event/evidence?canonical_row_ref=${data.canonical_row_ref}`
+      });
+      const evidence = (await evidenceResponse.json()).data;
+      seen.push({
+        auditEvents: evidence.audit_log.map((entry) => entry.event),
+        auditStatus: evidence.audit_log[0].details.delivery_status ?? null,
+        bodyAcceptedAt: data.accepted_at !== null,
+        deliveryStatus: data.delivery_status,
+        handedOver: typeof data.handed_over_at === "string",
+        mailStatus: data.mail_status,
+        recordAcceptedAt: evidence.accepted_at !== "",
+        recordDeliveryStatus: evidence.mail_delivery_status
+      });
     }
+
+    const handedOver = (status) => ({
+      auditEvents: ["payment_email_handoff"],
+      auditStatus: status,
+      bodyAcceptedAt: false,
+      deliveryStatus: status,
+      handedOver: true,
+      mailStatus: "queued",
+      recordAcceptedAt: false,
+      recordDeliveryStatus: status
+    });
     assert.deepEqual(seen, [
-      ["queued", "queued"],
-      ["deferred", "queued"],
-      ["failed", "queued"],
-      ["provider_accepted", "queued"]
+      handedOver("queued"),
+      handedOver("deferred"),
+      handedOver("failed"),
+      {
+        auditEvents: ["payment_email_accepted"],
+        auditStatus: null,
+        bodyAcceptedAt: true,
+        deliveryStatus: "provider_accepted",
+        handedOver: true,
+        mailStatus: "queued",
+        recordAcceptedAt: true,
+        recordDeliveryStatus: "provider_accepted"
+      }
     ]);
   } finally {
+    rmSync(dir, { force: true, recursive: true });
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) {
         delete process.env[key];

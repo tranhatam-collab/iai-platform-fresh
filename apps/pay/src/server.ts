@@ -916,7 +916,7 @@ async function handleInternalPaymentEmailSend(
     const result = await sendPaymentEmailOutbound(body as unknown as PaymentEmailOutboundInput, {
       fetchImpl: config.fetchImpl
     });
-    const evidenceRecord = config.paymentEventEvidenceStore.recordPaymentEmailAccepted({
+    const evidenceRecord = config.paymentEventEvidenceStore.recordPaymentEmailHandoff({
       callback_status: readOptionalRecordString(body, "callback_status"),
       domain,
       mail_delivery_status: result.deliveryStatus,
@@ -944,10 +944,12 @@ async function handleInternalPaymentEmailSend(
       {
         ok: true,
         data: {
-          accepted_at: result.acceptedAt,
+          // Set only when a provider took the message; handed_over_at is when mail-api took the request.
+          accepted_at: result.deliveryStatus === "provider_accepted" ? result.acceptedAt : null,
           canonical_row_ref: evidenceRecord.canonical_row_ref,
           callback_status: evidenceRecord.callback_status,
           delivery_status: result.deliveryStatus,
+          handed_over_at: result.acceptedAt,
           mail_status: result.status,
           message_id: result.messageId,
           order_id: result.payload.metadata.order_id,
