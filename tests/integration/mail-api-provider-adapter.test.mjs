@@ -142,15 +142,22 @@ test("the adapter name is validated and the stand-in is refused in production", 
   assert.doesNotThrow(() => resolveQueueSettings({}, { MAIL_PROVIDER_ADAPTER: "none", NODE_ENV: "production" }));
   assert.doesNotThrow(() => resolveQueueSettings({}, { NODE_ENV: "production" }));
 
-  await assert.rejects(
-    () =>
-      bootstrapFromEnv({
-        MAIL_API_BIND_ADDRESS: "127.0.0.1",
-        MAIL_PROVIDER_ADAPTER: "fake",
-        MAIL_SMTP_REMOTE_TOKEN: "a-long-random-service-token-for-this-test-0123456789",
-        NODE_ENV: "production",
-        PORT: "0"
-      }),
-    /MAIL_PROVIDER_ADAPTER=fake is not allowed when NODE_ENV=production/u
-  );
+  let started;
+  try {
+    await assert.rejects(
+      async () => {
+        started = await bootstrapFromEnv({
+          MAIL_API_BIND_ADDRESS: "127.0.0.1",
+          MAIL_PROVIDER_ADAPTER: "fake",
+          MAIL_SMTP_REMOTE_TOKEN: "a-long-random-service-token-for-this-test-0123456789",
+          NODE_ENV: "production",
+          PORT: "0"
+        });
+      },
+      /MAIL_PROVIDER_ADAPTER=fake is not allowed when NODE_ENV=production/u
+    );
+  } finally {
+    // If the refusal regresses a real server is running; close it so the failure is clean, not a hang.
+    started?.server.close();
+  }
 });
