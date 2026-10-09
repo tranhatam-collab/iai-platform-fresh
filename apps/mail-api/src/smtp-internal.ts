@@ -1871,7 +1871,11 @@ export function createSmtpInternalBackend(
           return true;
         }
 
-        writeErrorEnvelope(response, requestId, 500, "INTERNAL_ERROR", "Unhandled SMTP backend error.");
+        // Not an error the caller caused: tell the SMTP gateway to retry later (451)
+        // instead of reporting a permanent failure.
+        writeErrorEnvelope(response, requestId, 503, "INTERNAL_ERROR", "Unhandled SMTP backend error.", {
+          smtpCode: 451
+        });
         return true;
       }
     }

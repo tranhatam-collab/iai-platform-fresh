@@ -872,6 +872,30 @@ describe("mail-smtp (remote mode) against a real mail-api", { skip: smtpSkip }, 
     }
   });
 
+  test("when mail-api cannot be reached, AUTH is a temporary failure (454), not a permanent one, and the reply hides the upstream address", async () => {
+    const downApi = await startMailApi();
+    const relay = await startMailSmtp({ mailApi: downApi });
+    try {
+      const upstream = downApi.baseUrl;
+      await downApi.stop(); // the relay now points at a closed port
+
+      const client = await relay.connect();
+      try {
+        await client.startTls();
+        const auth = await client.authPlain(SMTP_DEV_USERNAME, SMTP_DEV_PASSWORD);
+        assert.equal(auth.code, 454, auth.text);
+        assert.ok(!auth.text.includes(upstream) && !auth.text.includes(new URL(upstream).host), auth.text);
+        const mailFrom = await client.command(`MAIL FROM:<${DEV_SENDER}>`);
+        assert.equal(mailFrom.code, 530, "a temporarily failed AUTH must not leave the session authenticated");
+      } finally {
+        client.close();
+      }
+    } finally {
+      await relay.stop();
+      await downApi.stop().catch(() => {});
+    }
+  });
+
   test("the SMTP server exits cleanly on SIGTERM once connections are closed", async () => {
     for (const client of clients) {
       client.close();
