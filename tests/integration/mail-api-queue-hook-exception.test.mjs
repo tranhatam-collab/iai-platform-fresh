@@ -284,3 +284,64 @@ test("inline delivery awaits an asynchronous hook: a resolved result is recorded
     }
   }
 });
+
+test("the synchronous processNext records a Promise-returning hook when it settles, without an unhandled rejection", async () => {
+  const unhandled = [];
+  const listener = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", listener);
+  try {
+    const cases = [
+      ["resolves accepted", () => Promise.resolve(ACCEPTED), "completed", "accepted", "provider_accepted"],
+      ["rejects with a timeout", () => Promise.reject(withCode("connect ETIMEDOUT", "ETIMEDOUT")), "queued", "deferred", "deferred"]
+    ];
+    for (const [name, deliver, jobStatus, attemptStatus, messageStatus] of cases) {
+      const { cleanup, dbPath, url } = tempDb();
+      const backend = createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { inline: false, providerAdapter: "fake" }, seed: SEED });
+      const handle = openMailQueue({ databaseUrl: url, queue: { deliver } });
+      try {
+        await send(backend, `idem-sync-promise-${attemptStatus}`);
+        handle.queue.processNext(); // returns at once; the result is recorded when the Promise settles
+        const deadline = Date.now() + 5000;
+        while (Date.now() < deadline && query(dbPath, "SELECT status FROM smtp_queue_jobs;")[0].status === "processing") {
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        assert.deepEqual(query(dbPath, "SELECT status FROM smtp_queue_jobs;"), [{ status: jobStatus }], name);
+        assert.deepEqual(query(dbPath, "SELECT status FROM delivery_attempts;"), [{ status: attemptStatus }], name);
+        assert.deepEqual(query(dbPath, "SELECT status FROM messages;"), [{ status: messageStatus }], name);
+      } finally {
+        handle.close();
+        backend.close();
+        cleanup();
+      }
+    }
+
+    // The store may be closed by the time the Promise settles: that is logged by class only, not thrown.
+    const { cleanup, dbPath, url } = tempDb();
+    const backend = createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { inline: false, providerAdapter: "fake" }, seed: SEED });
+    let settle;
+    const gate = new Promise((resolve) => (settle = resolve));
+    const handle = openMailQueue({ databaseUrl: url, queue: { deliver: () => gate.then(() => ACCEPTED) } });
+    const logged = [];
+    const originalError = console.error;
+    console.error = (line) => logged.push(String(line));
+    try {
+      await send(backend, "idem-sync-promise-closed");
+      handle.queue.processNext();
+      handle.close(); // closed before the Promise settles
+      settle();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      assert.ok(logged.some((line) => line.includes("mail_queue_late_result_not_recorded")), "the late result is reported by class");
+      assert.ok(logged.every((line) => !line.includes("database is not open") && !line.includes("customer@example.com")), "no error text is logged");
+      assert.deepEqual(query(dbPath, "SELECT status FROM smtp_queue_jobs;"), [{ status: "processing" }], "the job is left to its lease");
+    } finally {
+      console.error = originalError;
+      backend.close();
+      cleanup();
+    }
+
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(unhandled, [], "no unhandled rejection");
+  } finally {
+    process.off("unhandledRejection", listener);
+  }
+});

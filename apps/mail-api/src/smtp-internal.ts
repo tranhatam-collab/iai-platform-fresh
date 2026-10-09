@@ -1254,11 +1254,14 @@ class MailPersistenceStore {
     }
 
     if (result instanceof Promise) {
-      // Only the synchronous public processNext() gets here, with a custom hook that returns a Promise: it cannot
-      // wait for it, so that job stays claimed and returns to the queue when its lease runs out. Inline delivery
-      // and workers use processNextAsync(), which awaits the hook.
-      void result.catch(() => undefined);
-      throw new Error("processNext needs a synchronous delivery hook; use processNextAsync.");
+      // A custom hook returned a Promise to the synchronous caller, which cannot wait for it. The job is not left
+      // claimed: the result is recorded whenever the Promise settles (a rejection is a temporary failure). Inline
+      // delivery and workers use processNextAsync(), which awaits the hook instead.
+      void result.then(
+        (settled) => this.recordDeliverySafely(started, settled),
+        (error: unknown) => this.recordDeliverySafely(started, deliveryExceptionResult(error))
+      );
+      return true;
     }
 
     this.recordDelivery(started, result);
@@ -1316,6 +1319,24 @@ class MailPersistenceStore {
       workspaceId: payload.workspaceId
     };
     return { claimedJob, input, payload, route, startedAt };
+  }
+
+  /**
+   * recordDelivery for a result that arrives after the caller has moved on. The database may be closed or busy by
+   * then; that must not become an unhandled rejection. Only the error class is logged, never its text, and the
+   * job is left to its lease.
+   */
+  private recordDeliverySafely(
+    started: Exclude<ReturnType<MailPersistenceStore["beginQueuedJob"]>, "unreadable" | undefined>,
+    result: QueueDeliveryResult
+  ) {
+    try {
+      this.recordDelivery(started, result);
+    } catch (error) {
+      const errorClass = isDatabaseBusyError(error) ? "database_busy" : "record_failed";
+      // eslint-disable-next-line no-console
+      console.error(JSON.stringify({ errorClass, jobId: started.claimedJob.id, level: "error", msg: "mail_queue_late_result_not_recorded", ts: new Date().toISOString() }));
+    }
   }
 
   /** Writes the attempt, event, message and job rows for one finished delivery (all or nothing). */
