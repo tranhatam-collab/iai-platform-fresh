@@ -252,6 +252,19 @@ export interface SmtpInternalBackend {
   ): Promise<boolean>;
 }
 
+/** Largest page the persisted message list serves (callers asking for more are refused earlier). */
+export const MAX_PERSISTED_PAGE_SIZE = 100;
+/** Most candidate rows a detail-derived filter may scan before the request is refused. */
+export const MAX_PERSISTED_SCAN_ROWS = 1000;
+
+/** A list filter that needs stored payloads would have to scan more rows than the ceiling allows. */
+export class PersistedListScanLimitError extends Error {
+  constructor(public readonly limit: number) {
+    super(`The filter would scan more than ${limit} messages.`);
+    this.name = "PersistedListScanLimitError";
+  }
+}
+
 class SmtpBackendError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -554,28 +567,60 @@ class MailPersistenceStore {
 
   /**
    * Messages of a workspace as list/detail read models, newest first, with the
-   * same filter semantics as the in-memory source. Candidate rows are narrowed in
-   * SQL (workspace, stream, submit window) and the rest is applied by the shared
-   * filter, so the list and the send path cannot drift apart.
+   * same filter semantics as the in-memory source.
+   *
+   * Without a detail-derived filter (`status`, `to`, `from`, created window), the
+   * total is a SQL COUNT, the page is a SQL LIMIT/OFFSET ordered by creation time,
+   * and detail is loaded only for the ids on the page. Those filters depend on the
+   * stored payload and events, so they are applied by the shared filter over the
+   * candidates of the workspace/stream; that scan is capped at
+   * MAX_PERSISTED_SCAN_ROWS and a larger candidate set is refused with
+   * PersistedListScanLimitError instead of being loaded.
    */
   listPersistedMessages(filter: MailMessageListFilter = {}) {
     const page = positiveInteger(filter.page, 1);
-    const pageSize = positiveInteger(filter.pageSize, 20);
-    const ids = this.listPersistedMessageIds(filter.workspaceId, filter.stream);
+    const pageSize = Math.min(positiveInteger(filter.pageSize, 20), MAX_PERSISTED_PAGE_SIZE);
+    const offset = (page - 1) * pageSize;
+    const candidates = this.countPersistedMessages(filter.workspaceId, filter.stream);
 
-    const items = ids
+    const needsDetailFilter = Boolean(
+      (filter.statuses && filter.statuses.length > 0) ||
+        filter.to ||
+        filter.from ||
+        filter.createdFrom ||
+        filter.createdTo
+    );
+
+    if (!needsDetailFilter) {
+      if (!Number.isSafeInteger(offset) || offset >= candidates) {
+        return { items: [], page, pageSize, total: candidates };
+      }
+
+      const items = this.listPersistedMessageIds(filter.workspaceId, filter.stream, { limit: pageSize, offset })
+        .map((id) => this.getPersistedMessageDetail(id, filter.workspaceId))
+        .filter((detail): detail is MailMessageDetail => Boolean(detail))
+        .sort((left, right) => Date.parse(right.message.submittedAt) - Date.parse(left.message.submittedAt))
+        .map((detail) => buildMailMessageListItem(detail));
+
+      return { items, page, pageSize, total: candidates };
+    }
+
+    if (candidates > MAX_PERSISTED_SCAN_ROWS) {
+      throw new PersistedListScanLimitError(MAX_PERSISTED_SCAN_ROWS);
+    }
+
+    const matching = this.listPersistedMessageIds(filter.workspaceId, filter.stream)
       .map((id) => this.getPersistedMessageDetail(id, filter.workspaceId))
       .filter((detail): detail is MailMessageDetail => Boolean(detail))
       .filter((detail) => matchesMessageListFilter(detail, filter))
       .sort((left, right) => Date.parse(right.message.submittedAt) - Date.parse(left.message.submittedAt))
       .map((detail) => buildMailMessageListItem(detail));
 
-    const offset = (page - 1) * pageSize;
     return {
-      items: items.slice(offset, offset + pageSize),
+      items: Number.isSafeInteger(offset) ? matching.slice(offset, offset + pageSize) : [],
       page,
       pageSize,
-      total: items.length
+      total: matching.length
     };
   }
 
@@ -603,8 +648,9 @@ class MailPersistenceStore {
     };
   }
 
-  private listPersistedMessageIds(workspaceId?: string, stream?: string): string[] {
-    const clauses: string[] = [];
+  /** WHERE clause shared by the count and the id queries: only messages whose queue payload exists can be projected. */
+  private persistedMessageWhere(workspaceId?: string, stream?: string) {
+    const clauses = ["EXISTS (SELECT 1 FROM smtp_queue_jobs j WHERE j.message_id = messages.id)"];
     const params: string[] = [];
     if (workspaceId) {
       clauses.push("workspace_id = ?");
@@ -614,10 +660,27 @@ class MailPersistenceStore {
       clauses.push("stream = ?");
       params.push(stream);
     }
-    const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+    return { params, where: `WHERE ${clauses.join(" AND ")}` };
+  }
+
+  private countPersistedMessages(workspaceId?: string, stream?: string): number {
+    const { params, where } = this.persistedMessageWhere(workspaceId, stream);
+    const row = this.db.prepare(`SELECT COUNT(*) AS count FROM messages ${where};`).get(...params) as
+      | { count?: number }
+      | undefined;
+    return Number(row?.count ?? 0);
+  }
+
+  private listPersistedMessageIds(
+    workspaceId?: string,
+    stream?: string,
+    paging?: { limit: number; offset: number }
+  ): string[] {
+    const { params, where } = this.persistedMessageWhere(workspaceId, stream);
+    const sql = `SELECT id FROM messages ${where} ORDER BY created_at DESC, id ASC${paging ? " LIMIT ? OFFSET ?" : ""};`;
     const rows = this.db
-      .prepare(`SELECT id FROM messages ${where} ORDER BY created_at DESC, id ASC;`)
-      .all(...params) as Array<{ id?: string }>;
+      .prepare(sql)
+      .all(...params, ...(paging ? [paging.limit, paging.offset] : [])) as Array<{ id?: string }>;
 
     return rows.map((row) => row.id).filter((id): id is string => Boolean(id));
   }

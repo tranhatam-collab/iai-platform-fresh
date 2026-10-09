@@ -14,6 +14,7 @@ import { rmSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+import { createMailMessageSource } from "../../packages/mail-core/dist/index.js";
 import { buildServerOptionsFromEnv } from "../../apps/mail-api/dist/bootstrap.js";
 import { createFlowApiRequestHandler } from "../../apps/mail-api/dist/server.js";
 import { createSmtpInternalBackend } from "../../apps/mail-api/dist/smtp-internal.js";
@@ -242,4 +243,150 @@ test("MAIL_API_DEMO_DATA=1 enables the demo flag outside production only", () =>
   assert.equal(buildServerOptionsFromEnv({ MAIL_API_DEMO_DATA: "1" }).options.demoData, true);
   assert.equal(buildServerOptionsFromEnv({ MAIL_API_DEMO_DATA: "true" }).options.demoData, false);
   assert.equal(buildServerOptionsFromEnv({ MAIL_API_DEMO_DATA: "1", NODE_ENV: "production" }).options.demoData, false);
+});
+
+// --- paging in SQL, page_size cap, scan ceiling -------------------------------
+
+/** Copy the first stored message (and its queue payload) `count` times under new ids. */
+function inflate(dbPath, count, { stream } = {}) {
+  const db = new DatabaseSync(dbPath);
+  try {
+    const message = db.prepare("SELECT * FROM messages ORDER BY created_at ASC LIMIT 1;").get();
+    const job = db.prepare("SELECT * FROM smtp_queue_jobs WHERE message_id = ?;").get(message.id);
+    const insertMessage = db.prepare(
+      `INSERT INTO messages (${Object.keys(message).join(", ")}) VALUES (${Object.keys(message).map(() => "?").join(", ")});`
+    );
+    const insertJob = db.prepare(
+      `INSERT INTO smtp_queue_jobs (${Object.keys(job).join(", ")}) VALUES (${Object.keys(job).map(() => "?").join(", ")});`
+    );
+    db.exec("BEGIN;");
+    for (let index = 0; index < count; index += 1) {
+      const id = `msg_bulk_${index}_${randomUUID()}`;
+      const copy = {
+        ...message,
+        created_at: new Date(Date.now() - (index + 1) * 1000).toISOString(),
+        id,
+        message_idempotency_key: `bulk-${id}`,
+        ...(stream ? { stream } : {})
+      };
+      insertMessage.run(...Object.values(copy));
+      insertJob.run(...Object.values({ ...job, id: `job_${id}`, message_id: id }));
+    }
+    db.exec("COMMIT;");
+  } finally {
+    db.close();
+  }
+}
+
+test("page_size above 100 is refused with 400 for persisted and demo sources; 100 is accepted", async () => {
+  const { backend, cleanup, handler } = setup();
+  try {
+    await send(handler);
+    const tooBig = await get(handler, "/v1/messages?page_size=101");
+    assert.equal(tooBig.status, 400);
+    assert.equal(tooBig.json.error.code, "VALIDATION_ERROR");
+    assert.equal(tooBig.json.error.details.maximum, 100);
+
+    const atCap = await get(handler, "/v1/messages?page_size=100");
+    assert.equal(atCap.status, 200);
+    assert.equal(atCap.json.data.page_size, 100);
+
+    const demo = createFlowApiRequestHandler({ demoData: true, smtpInternalBackend: backend });
+    const demoTooBig = await dispatchToHandler(demo, {
+      headers: { "x-workspace-id": "ws_mail_main" },
+      method: "GET",
+      url: "/v1/messages?page_size=101"
+    });
+    assert.equal(demoTooBig.status, 400);
+  } finally {
+    cleanup();
+  }
+});
+
+test("SQL paging returns the same pages, totals and filtered results as the in-memory read model", async () => {
+  const { backend, cleanup, handler } = setup();
+  try {
+    const recipients = ["a", "b", "c", "a", "b", "a", "c"];
+    for (const [index, name] of recipients.entries()) {
+      await send(handler, { subject: `m${index}`, to: [{ email: `${name}@example.com` }] });
+    }
+
+    const reference = createMailMessageSource(backend.persistedSources.messages.snapshot(WORKSPACE));
+    const ids = (items) => items.map((item) => item.messageId);
+
+    // Paging through every page yields each message exactly once and the same set as the reference.
+    const seen = [];
+    for (let page = 1; page <= 4; page += 1) {
+      const result = await get(handler, `/v1/messages?page=${page}&page_size=3`);
+      assert.equal(result.status, 200);
+      assert.equal(result.json.data.total, 7);
+      assert.equal(result.json.data.items.length, page <= 2 ? 3 : page === 3 ? 1 : 0, `page ${page}`);
+      seen.push(...ids(result.json.data.items));
+    }
+    assert.equal(new Set(seen).size, 7, "no duplicates across pages");
+    assert.deepEqual([...seen].sort(), ids(reference.listMessages({ pageSize: 100, workspaceId: WORKSPACE }).items).sort());
+
+    // A page number far past the end is an empty page, not an error.
+    const far = await get(handler, "/v1/messages?page=999999999999999999999&page_size=3");
+    assert.equal(far.status, 200);
+    assert.deepEqual(far.json.data.items, []);
+
+    // Detail-derived filters give the same set and total as the reference.
+    for (const query of ["to=a@example.com", "to=b@", "from=ops@lists.example", "status=queued", "status=delivered"]) {
+      const result = await get(handler, `/v1/messages?page_size=100&${query}`);
+      const params = Object.fromEntries(new URLSearchParams(query));
+      const expected = reference.listMessages({
+        from: params.from,
+        pageSize: 100,
+        statuses: params.status ? [params.status] : undefined,
+        to: params.to,
+        workspaceId: WORKSPACE
+      });
+      assert.equal(result.json.data.total, expected.total, query);
+      assert.deepEqual(ids(result.json.data.items).sort(), ids(expected.items).sort(), query);
+    }
+  } finally {
+    cleanup();
+  }
+});
+
+test("the scan ceiling refuses detail-derived filters over too many messages (422) but plain paging still works", async () => {
+  const { cleanup, dbPath, handler } = setup();
+  try {
+    assert.equal((await send(handler)).status, 202);
+    inflate(dbPath, 1000); // 1001 messages in the workspace, all in the transactional stream
+
+    const plain = await get(handler, "/v1/messages?page=2&page_size=100");
+    assert.equal(plain.status, 200);
+    assert.equal(plain.json.data.total, 1001);
+    assert.equal(plain.json.data.items.length, 100);
+
+    for (const query of ["to=customer@example.com", "from=ops@lists.example", "status=queued", "created_from=2000-01-01T00:00:00Z"]) {
+      const refused = await get(handler, `/v1/messages?${query}`);
+      assert.equal(refused.status, 422, query);
+      assert.equal(refused.json.error.code, "VALIDATION_ERROR");
+      assert.equal(refused.json.error.details.limit, 1000);
+    }
+
+    // Narrowing the candidates with the stream (an exact SQL filter) brings the scan under the ceiling.
+    const narrowed = await get(handler, "/v1/messages?stream=marketing&to=customer@example.com");
+    assert.equal(narrowed.status, 200);
+    assert.equal(narrowed.json.data.total, 0);
+  } finally {
+    cleanup();
+  }
+});
+
+test("a detail-derived filter over exactly the ceiling is served", async () => {
+  const { cleanup, dbPath, handler } = setup();
+  try {
+    assert.equal((await send(handler)).status, 202);
+    inflate(dbPath, 999); // 1000 messages
+    const served = await get(handler, "/v1/messages?to=customer@example.com&page_size=100");
+    assert.equal(served.status, 200);
+    assert.equal(served.json.data.total, 1000);
+    assert.equal(served.json.data.items.length, 100);
+  } finally {
+    cleanup();
+  }
 });

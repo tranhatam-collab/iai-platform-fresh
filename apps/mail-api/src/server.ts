@@ -40,6 +40,7 @@ import {
 } from "@iai/mail-core";
 import {
   createSmtpInternalBackend,
+  PersistedListScanLimitError,
   type SmtpInternalBackend
 } from "./smtp-internal.js";
 import {
@@ -329,7 +330,20 @@ async function handleRequest(
 
     if (url.pathname === "/v1/messages") {
       const filter = parseMessageListFilter(url, workspaceId);
-      const page = getMessageSource().listMessages(filter);
+      let page;
+      try {
+        page = getMessageSource().listMessages(filter);
+      } catch (error) {
+        if (error instanceof PersistedListScanLimitError) {
+          throw new HttpError(
+            422,
+            "VALIDATION_ERROR",
+            "The filters match too many messages to scan; narrow the request (for example with stream).",
+            { limit: error.limit }
+          );
+        }
+        throw error;
+      }
 
       respondSuccess(response, 200, requestId, {
         items: page.items,
@@ -888,13 +902,24 @@ function matchRuntimeExecutionRoute(pathname: string): { executionId: string } |
   };
 }
 
+/** Largest `page_size` accepted by GET /v1/messages, for every message source. */
+const MAX_MESSAGE_PAGE_SIZE = 100;
+
 function parseMessageListFilter(url: URL, workspaceId: string): MailMessageListFilter {
+  const pageSize = parsePositiveInteger(url.searchParams.get("page_size"), "page_size");
+  if (pageSize !== undefined && pageSize > MAX_MESSAGE_PAGE_SIZE) {
+    throw new HttpError(400, "VALIDATION_ERROR", `page_size must be at most ${MAX_MESSAGE_PAGE_SIZE}.`, {
+      maximum: MAX_MESSAGE_PAGE_SIZE,
+      received: url.searchParams.get("page_size")
+    });
+  }
+
   return {
     createdFrom: parseDateTime(url.searchParams.get("created_from"), "created_from"),
     createdTo: parseDateTime(url.searchParams.get("created_to"), "created_to"),
     from: normalizeString(url.searchParams.get("from")),
     page: parsePositiveInteger(url.searchParams.get("page"), "page"),
-    pageSize: parsePositiveInteger(url.searchParams.get("page_size"), "page_size"),
+    pageSize,
     statuses: parseEnumList(url.searchParams.get("status"), MESSAGE_STATUSES, "status"),
     stream: normalizeString(url.searchParams.get("stream")),
     to: normalizeString(url.searchParams.get("to")),
