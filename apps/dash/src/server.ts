@@ -341,6 +341,11 @@ function resolveFlowStatus(result: { ok: boolean; statusCode?: number }): number
   return !result.ok && result.statusCode === 404 ? 404 : 200;
 }
 
+// Pages are rendered from string templates with no executable scripts. `style-src 'unsafe-inline'`
+// stays because the templates inline their stylesheet and style attributes.
+const CONTENT_SECURITY_POLICY =
+  "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'none'";
+
 function respondHtml(response: ServerResponse, statusCode: number, html: string, locale: Locale): void {
   response.statusCode = statusCode;
   response.setHeader("cache-control", "no-store");
@@ -348,6 +353,7 @@ function respondHtml(response: ServerResponse, statusCode: number, html: string,
   response.setHeader("content-type", "text/html; charset=utf-8");
   response.setHeader("referrer-policy", "strict-origin-when-cross-origin");
   response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("content-security-policy", CONTENT_SECURITY_POLICY);
   response.setHeader("x-frame-options", "DENY");
   response.setHeader("x-robots-tag", "noindex, nofollow");
   response.end(html);

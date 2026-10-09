@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   buildLocalizedPath,
   getPageMetadata,
@@ -50,7 +51,7 @@ export function renderRootHome(config: RootRenderConfig, locale: Locale): string
           <p class="eyebrow">${escapeHtml(t(locale, "surface.root.domain"))}</p>
           <strong>${escapeHtml(t(locale, "surface.root.title"))}</strong>
         </div>
-        <button class="menu-toggle" type="button" aria-label="${escapeHtml(t(locale, "footer.menu_label"))}" aria-expanded="false" onclick="const n=this.parentElement.querySelector('.topnav');const o=n.classList.toggle('is-open');this.setAttribute('aria-expanded',o)">
+        <button class="menu-toggle" type="button" aria-label="${escapeHtml(t(locale, "footer.menu_label"))}" aria-expanded="false">
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="19" y2="6"/><line x1="3" y1="11" x2="19" y2="11"/><line x1="3" y1="16" x2="19" y2="16"/></svg>
         </button>
         <nav class="topnav" aria-label="Primary">
@@ -447,6 +448,27 @@ function renderSurfaceCard(
     </article>
   `;
 }
+
+// The one executable script of the shell: reveal-on-scroll and the menu toggle. Pages are served with
+// a policy that allows exactly this text, by hash, so it must not be edited without its hash changing.
+const ROOT_INLINE_SCRIPT = `
+      if(!window.matchMedia('(prefers-reduced-motion:reduce)').matches){
+        var o=new IntersectionObserver(function(e){e.forEach(function(i){if(i.isIntersecting){i.target.classList.add('is-visible');o.unobserve(i.target)}})},{threshold:0.15});
+        document.querySelectorAll('.reveal').forEach(function(el){o.observe(el)});
+      }else{
+        document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('is-visible')});
+      }
+      document.querySelectorAll('.menu-toggle').forEach(function(button){
+        button.addEventListener('click',function(){
+          var nav=button.parentElement.querySelector('.topnav');
+          var open=nav.classList.toggle('is-open');
+          button.setAttribute('aria-expanded',String(open));
+        });
+      });
+    `;
+
+/** CSP source expression (`'sha256-…'`) that allows the shell's inline script and nothing else. */
+export const rootInlineScriptCspSource = `'sha256-${createHash("sha256").update(ROOT_INLINE_SCRIPT, "utf8").digest("base64")}'`;
 
 function page(path: string, locale: Locale, pageTitle: string | undefined, body: string): string {
   const metadata = getPageMetadata(path, locale, pageTitle);
@@ -916,14 +938,7 @@ function page(path: string, locale: Locale, pageTitle: string | undefined, body:
   <body>
     <a class="skip-link" href="#main-content">${escapeHtml(t(locale, "root.skip_to_main"))}</a>
     ${body}
-    <script>
-      if(!window.matchMedia('(prefers-reduced-motion:reduce)').matches){
-        var o=new IntersectionObserver(function(e){e.forEach(function(i){if(i.isIntersecting){i.target.classList.add('is-visible');o.unobserve(i.target)}})},{threshold:0.15});
-        document.querySelectorAll('.reveal').forEach(function(el){o.observe(el)});
-      }else{
-        document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('is-visible')});
-      }
-    </script>
+    <script>${ROOT_INLINE_SCRIPT}</script>
   </body>
 </html>`;
 }
