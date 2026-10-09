@@ -21,13 +21,16 @@
 #   printed by a check script; or a required suite (unit, node e2e, workers e2e) ran 0 tests.
 # - The allowlist is a JSON file kept OUTSIDE the repository: {"skip":["exact test title",...],"todo":[...]}.
 #   This script and the repository contain no test names.
+# - The tested commit (including dependency install scripts) runs under env -i with only PATH, TMPDIR, LANG,
+#   LC_ALL, REQUIRE_DOCS_FIXTURES and a throw-away HOME inside the work directory, so tokens and dotfiles of
+#   your shell are not passed on. This is NOT a sandbox: network and filesystem access are unchanged.
 # - No Cloudflare, PayOS or mail credentials are used (the Workers suite runs wrangler dev --local).
 # - Test output can quote fixture content. Full logs stay in the throw-away directory (deleted on exit); only
 #   counts and the names of failing or violating tests are printed.
 # - The receipt is JSON on stdout (and --receipt FILE). It is evidence, not source: do not commit it.
 set -euo pipefail
 
-usage() { sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 die() { echo "full-lane-local: $*" >&2; exit 1; }
 
 ref="" docs="" docs_sha="" cios="" cios_sha="" subdir="." receipt="" allowlist="" diagnostic=0
@@ -59,13 +62,16 @@ else
   case "$subdir" in /* | *..*) die "--docs-pack-subdir must be a relative path without '..'" ;; esac
 fi
 
-repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-outside_repo() { # label path
-  case "$(cd "$(dirname "$2")" 2>/dev/null && pwd)/" in
+repo_root="$(cd "$(dirname "$0")/.." && pwd -P)"
+outside_repo() { # label path: the parent directory must exist and, with symlinks resolved, be outside the repo
+  local parent
+  parent="$(cd "$(dirname "$2")" 2>/dev/null && pwd -P)" || die "$1: the directory of $2 does not exist"
+  case "$parent/" in
     "$repo_root"/*) die "$1 must be outside this repository" ;;
   esac
 }
 [ -z "$receipt" ] || outside_repo "--receipt (receipts are evidence, not source)" "$receipt"
+[ -z "$receipt" ] || [ -w "$(dirname "$receipt")" ] || die "--receipt: the directory of $receipt is not writable"
 if [ -n "$allowlist" ]; then
   [ -f "$allowlist" ] || die "--allowlist file not found"
   outside_repo "--allowlist (the repository must not contain test names)" "$allowlist"
@@ -143,7 +149,12 @@ console.log(JSON.stringify({ counts, skipTitles: names.SKIP.length, todoTitles: 
 NODE
 
 cd "$clone"
-pnpm install --frozen-lockfile >"$work/install.log" 2>&1 || die "pnpm install failed (logs stay on this machine and are deleted on exit)"
+mkdir -p "$work/home" "$work/tmp"
+run_scrubbed() { # command words run with a minimal environment
+  env -i PATH="$PATH" HOME="$work/home" TMPDIR="$work/tmp" LANG="${LANG:-C.UTF-8}" LC_ALL="${LC_ALL:-C.UTF-8}" \
+    ${REQUIRE_DOCS_FIXTURES:+REQUIRE_DOCS_FIXTURES="$REQUIRE_DOCS_FIXTURES"} "$@"
+}
+run_scrubbed pnpm install --frozen-lockfile >"$work/install.log" 2>&1 || die "pnpm install failed (logs stay on this machine and are deleted on exit)"
 
 # Known totals per commit for --diagnostic (counts only, no names): "<suite> tests pass fail skipped todo plainSkip".
 baseline_for() {
@@ -168,7 +179,7 @@ for i in "${!names[@]}"; do
   name="${names[$i]}"
   log="$work/$name.log"
   status=0
-  bash -c "${cmds[$i]}" >"$log" 2>&1 || status=$?
+  run_scrubbed bash -c "${cmds[$i]}" >"$log" 2>&1 || status=$?
   summary="$(node "$work/analyze.mjs" "$log" "$allowlist" "$mode" "${required[$i]}" "$status")"
   line="$(node -e '
     const s=JSON.parse(process.argv[1]);const c=s.counts;
