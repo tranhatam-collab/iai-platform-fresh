@@ -165,7 +165,7 @@ async function postJson<TRequest, TResponse>(
   operation: RemoteOperation,
   body: TRequest
 ): Promise<TResponse> {
-  const response = await fetch(resolveOperationUrl(config, operation), {
+  const response = await fetchRemote(operation, resolveOperationUrl(config, operation), {
     body: JSON.stringify(body),
     headers: buildHeaders(config),
     method: "POST",
@@ -179,13 +179,33 @@ async function getJson<TResponse>(
   url: string,
   config: MailSmtpConfig
 ): Promise<TResponse> {
-  const response = await fetch(url, {
+  const response = await fetchRemote("health", url, {
     headers: buildHeaders(config),
     method: "GET",
     signal: AbortSignal.timeout(config.backend.remote.timeoutMs)
   });
 
   return parseResponse<TResponse>(config, "health", response);
+}
+
+/**
+ * A request that cannot complete (network error, reset connection, timeout) is a
+ * temporary condition: the SMTP client should retry later, so it gets a 4xx reply
+ * (454 for authentication, 451 otherwise). The message is generic on purpose: it
+ * carries neither the upstream address nor the underlying error text.
+ */
+const REMOTE_UNAVAILABLE_MESSAGE = "Remote backend is temporarily unavailable";
+
+async function fetchRemote(
+  operation: RemoteOperation,
+  url: string,
+  init: RequestInit
+): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw createSmtpError(REMOTE_UNAVAILABLE_MESSAGE, getTemporaryFailureSmtpCode(operation));
+  }
 }
 
 async function parseResponse<TResponse>(
@@ -196,11 +216,17 @@ async function parseResponse<TResponse>(
   let payload: unknown;
 
   if (response.status !== 204) {
-    const contentType = response.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
-      payload = await response.json();
-    } else {
-      payload = await response.text();
+    try {
+      const contentType = response.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        payload = await response.json();
+      } else {
+        payload = await response.text();
+      }
+    } catch {
+      // A body that cannot be read or parsed (connection dropped mid-response,
+      // truncated or invalid JSON) is treated like an unavailable backend.
+      throw createSmtpError(REMOTE_UNAVAILABLE_MESSAGE, getTemporaryFailureSmtpCode(operation));
     }
   }
 
@@ -208,7 +234,7 @@ async function parseResponse<TResponse>(
     return unwrapSuccess<TResponse>(payload);
   }
 
-  throw toSmtpError(config, operation, response.status, payload);
+  throw toSmtpError(operation, response.status, payload);
 }
 
 function unwrapSuccess<TResponse>(payload: unknown): TResponse {
@@ -236,32 +262,29 @@ function unwrapSuccess<TResponse>(payload: unknown): TResponse {
 }
 
 function toSmtpError(
-  config: MailSmtpConfig,
   operation: RemoteOperation,
   statusCode: number,
   payload: unknown
 ) {
+  // A backend that is failing or shedding load (5xx, 429) is temporary, whatever
+  // the operation's default; other 4xx keep the per-operation default.
+  const fallbackCode =
+    statusCode === 429 || statusCode >= 500
+      ? getTemporaryFailureSmtpCode(operation)
+      : getDefaultSmtpCode(operation);
+
   if (isEnvelope(payload)) {
     return createSmtpError(
       payload.error?.message ??
         payload.reason ??
         payload.message ??
         `Remote backend returned ${statusCode}`,
-      getEnvelopeSmtpCode(payload, getDefaultSmtpCode(operation))
+      getEnvelopeSmtpCode(payload, fallbackCode)
     );
   }
 
-  if (typeof payload === "string" && payload.trim()) {
-    return createSmtpError(
-      `${payload.trim()} (${config.backend.remote.baseUrl})`,
-      getDefaultSmtpCode(operation)
-    );
-  }
-
-  return createSmtpError(
-    `Remote backend returned ${statusCode} for ${operation}`,
-    getDefaultSmtpCode(operation)
-  );
+  // A raw (non-envelope) body is never echoed: it is upstream-controlled text.
+  return createSmtpError(`Remote backend returned ${statusCode} for ${operation}`, fallbackCode);
 }
 
 function buildHeaders(config: MailSmtpConfig) {
@@ -308,6 +331,10 @@ function resolveOperationUrl(
     : `${config.backend.remote.baseUrl}/`;
 
   return new URL(path.replace(/^\/+/u, ""), normalizedBaseUrl).toString();
+}
+
+function getTemporaryFailureSmtpCode(operation: RemoteOperation) {
+  return operation === "auth" ? 454 : 451;
 }
 
 function getDefaultSmtpCode(operation: RemoteOperation) {
