@@ -1355,9 +1355,12 @@ class MailPersistenceStore {
           payload.messageId
         );
 
+      // Every branch is guarded by the job still being claimed (processing): a worker that finishes
+      // after its lease expired and the job was claimed again must not overwrite the newer claim.
+      let jobUpdate: { changes: number | bigint };
       if (outcome.eventType === "deferred") {
         // Back to the queue, not claimable before the retry time.
-        this.db
+        jobUpdate = this.db
           .prepare(
             `
               UPDATE smtp_queue_jobs
@@ -1367,7 +1370,9 @@ class MailPersistenceStore {
                 last_error = ?,
                 last_error_class = ?,
                 updated_at = ?
-              WHERE id = ?;
+              WHERE id = ?
+                AND status = 'processing'
+                AND attempts = ?;
             `
           )
           .run(
@@ -1375,10 +1380,11 @@ class MailPersistenceStore {
             outcome.providerResponseMessage.slice(0, 500),
             outcome.errorClass ?? "deferred",
             finishedAt,
-            claimedJob.id
+            claimedJob.id,
+            claimedJob.attempts
           );
       } else if (outcome.eventType === "failed" && outcome.errorClass !== "routing_failed") {
-        this.db
+        jobUpdate = this.db
           .prepare(
             `
               UPDATE smtp_queue_jobs
@@ -1387,27 +1393,38 @@ class MailPersistenceStore {
                 last_error = ?,
                 last_error_class = ?,
                 updated_at = ?
-              WHERE id = ?;
+              WHERE id = ?
+                AND status = 'processing'
+                AND attempts = ?;
             `
           )
           .run(
             (outcome.maxAttemptsExceeded ? "max_attempts_exceeded" : outcome.providerResponseMessage).slice(0, 500),
             outcome.errorClass ?? "delivery_failed",
             finishedAt,
-            claimedJob.id
+            claimedJob.id,
+            claimedJob.attempts
           );
       } else {
-        this.db
+        jobUpdate = this.db
           .prepare(
             `
               UPDATE smtp_queue_jobs
               SET
                 status = 'completed',
                 updated_at = ?
-              WHERE id = ?;
+              WHERE id = ?
+                AND status = 'processing'
+                AND attempts = ?;
             `
           )
-          .run(finishedAt, claimedJob.id);
+          .run(finishedAt, claimedJob.id, claimedJob.attempts);
+      }
+
+      if (Number(jobUpdate.changes) !== 1) {
+        // The claim was lost (lease expired and the job went to someone else): record nothing.
+        this.db.exec("ROLLBACK;");
+        return;
       }
 
       this.db.exec("COMMIT;");

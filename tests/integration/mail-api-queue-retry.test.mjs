@@ -295,3 +295,39 @@ test("a job queued with a lower maximum uses its own limit", async () => {
     cleanup();
   }
 });
+
+test("a worker that finishes after its lease expired and the job was claimed again records nothing", async () => {
+  const { cleanup, dbPath, url } = tempDb();
+  const time = clock();
+  let second;
+  let slowCalls = 0;
+  let armed = false;
+  const slow = () => {
+    if (!armed) {
+      return ACCEPTED; // the inline delivery of the send used to create the job
+    }
+    slowCalls += 1;
+    // While this delivery runs, the lease runs out and another worker takes the job.
+    time.advanceSeconds(61);
+    assert.deepEqual(second.queue.claimNextJob(), { attempts: 2, id: stolenId });
+    return ACCEPTED;
+  };
+  const first = openBackend(url, { deliver: slow, leaseSeconds: 60, now: time.now });
+  second = openBackend(url, { leaseSeconds: 60, now: time.now });
+  let stolenId;
+  try {
+    stolenId = await queuedJob(first, dbPath, "idem-late");
+    armed = true;
+    const attemptsBefore = attempts(dbPath).length;
+    first.queue.processNext();
+    assert.equal(slowCalls, 1);
+    const row = jobRow(dbPath, stolenId);
+    assert.equal(row.status, "processing", "the newer claim is untouched");
+    assert.equal(row.attempts, 2);
+    assert.equal(attempts(dbPath).length, attemptsBefore, "the late worker wrote no attempt");
+  } finally {
+    first.close();
+    second.close();
+    cleanup();
+  }
+});
