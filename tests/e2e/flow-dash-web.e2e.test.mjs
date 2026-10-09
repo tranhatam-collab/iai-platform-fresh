@@ -13,7 +13,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
-import { builtEntryAvailable, getFreePort, request, skipUnlessBuilt, startMailApi, startService } from "./support/harness.mjs";
+import { builtEntryAvailable, getFreePort, request, skipUnlessBuilt, startAll, startMailApi, startService } from "./support/harness.mjs";
 
 const WORKSPACE = "ws_flow_main";
 const SESSION = { "x-dash-session": "e2e-session" };
@@ -35,35 +35,32 @@ describe("flow, dash and web against a real mail-api", { skip: skipUnlessBuilt(b
 
   before(async () => {
     api = await startMailApi();
-    // allSettled, not all: when one service fails to start the others must still be recorded so after() stops them
-    const results = await Promise.allSettled([
-      startService({
-        name: "dash",
-        entry: "apps/dash/dist/index.js",
-        portEnv: "DASH_PORT",
-        hostEnv: "DASH_HOST",
-        env: { DASH_FLOW_API_BASE: api.baseUrl }
-      }),
-      startService({
-        name: "web",
-        entry: "apps/web/dist/index.js",
-        portEnv: "WEB_PORT",
-        hostEnv: "WEB_BIND_ADDRESS",
-        env: { WEB_SHARED_FLOW_API_BASE: api.baseUrl }
-      }),
-      startService({
-        name: "flow",
-        entry: "apps/flow/dist/index.js",
-        portEnv: "FLOW_PORT",
-        hostEnv: "FLOW_HOST",
-        env: { FLOW_API_FLOW_URL: api.baseUrl }
-      })
+    [dash, web, flow] = await startAll([
+      () =>
+        startService({
+          name: "dash",
+          entry: "apps/dash/dist/index.js",
+          portEnv: "DASH_PORT",
+          hostEnv: "DASH_HOST",
+          env: { DASH_FLOW_API_BASE: api.baseUrl }
+        }),
+      () =>
+        startService({
+          name: "web",
+          entry: "apps/web/dist/index.js",
+          portEnv: "WEB_PORT",
+          hostEnv: "WEB_BIND_ADDRESS",
+          env: { WEB_SHARED_FLOW_API_BASE: api.baseUrl }
+        }),
+      () =>
+        startService({
+          name: "flow",
+          entry: "apps/flow/dist/index.js",
+          portEnv: "FLOW_PORT",
+          hostEnv: "FLOW_HOST",
+          env: { FLOW_API_FLOW_URL: api.baseUrl }
+        })
     ]);
-    [dash, web, flow] = results.map((result) => (result.status === "fulfilled" ? result.value : undefined));
-    const failure = results.find((result) => result.status === "rejected");
-    if (failure) {
-      throw failure.reason;
-    }
   });
 
   after(async () => {
