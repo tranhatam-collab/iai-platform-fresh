@@ -198,9 +198,27 @@ CREATE INDEX IF NOT EXISTS idx_provider_routes_stream_active
 ON provider_routes (stream, active, priority, route_id);
 `;
 
+/**
+ * Queue retry bookkeeping. Columns are added only (nothing is rewritten or dropped), so a database
+ * written by an older build stays readable by it: the old statements ignore the new columns and
+ * the defaults cover the rows it inserts.
+ * - next_attempt_at: the job is not claimable before this time (NULL: claimable now);
+ * - max_attempts: how many times the job may be claimed before it is failed;
+ * - last_error_class: short class of the last failure (for example lease_expired).
+ */
+const QUEUE_RETRY_SQL = `
+ALTER TABLE smtp_queue_jobs ADD COLUMN next_attempt_at TEXT;
+ALTER TABLE smtp_queue_jobs ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 5;
+ALTER TABLE smtp_queue_jobs ADD COLUMN last_error_class TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_smtp_queue_jobs_status_next_attempt
+ON smtp_queue_jobs (status, next_attempt_at);
+`;
+
 export const MIGRATIONS: readonly Migration[] = [
   { name: "baseline", sql: BASELINE_SQL, version: 1 },
-  { name: "indexes", sql: INDEXES_SQL, version: 2 }
+  { name: "indexes", sql: INDEXES_SQL, version: 2 },
+  { name: "queue_retry", sql: QUEUE_RETRY_SQL, version: 3 }
 ];
 
 export class MigrationChecksumError extends Error {
