@@ -150,12 +150,9 @@ function checked(value: string, selected: string): string {
 }
 
 export function renderLanding(config: SharedContractConfig, locale: Locale = defaultLocale): string {
-  return page(
-    "/",
-    locale,
-    `
-      ${header(locale, "home")}
-      ${hero(locale, "web.hero.eyebrow", t(locale, "web.landing.title"), t(locale, "web.landing.body"), buildLocalizedPath("/onboarding", locale), `${buildLocalizedPath("/onboarding", locale)}#contracts`)}
+  const onboardingPath = buildLocalizedPath("/onboarding", locale);
+  const content = `
+      ${hero(locale, "web.hero.eyebrow", t(locale, "web.landing.title"), t(locale, "web.landing.body"), onboardingPath, `${onboardingPath}#contracts`)}
       <section class="content-band"><div>
         <div class="eyebrow">${escapeHtml(t(locale, "web.landing.route_eyebrow"))}</div>
         <div class="split"><div><h2>${escapeHtml(t(locale, "web.landing.heading"))}</h2></div><div class="plain-list">
@@ -172,6 +169,14 @@ export function renderLanding(config: SharedContractConfig, locale: Locale = def
           <div class="step"><h3>${escapeHtml(t(locale, "web.landing.boundary.execution.title"))}</h3><p>${escapeHtml(t(locale, "web.landing.boundary.execution.body", { flowApiBase: config.flowApiBase }))}</p></div>
         </div>
       </div></section>
+    `;
+
+  return page(
+    "/",
+    locale,
+    `
+      ${header(locale, "home")}
+      <main>${content}</main>
       <footer><div class="footer-inner"><p>${escapeHtml(t(locale, "web.landing.footer"))}</p><p>${escapeHtml(t(locale, "footer.statement"))}</p><p>${escapeHtml(t(locale, "footer.trust"))}</p></div></footer>
     `
   );
