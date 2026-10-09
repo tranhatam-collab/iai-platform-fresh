@@ -77,7 +77,8 @@ test("shipped migrations are immutable: their checksums are pinned", () => {
     MIGRATIONS.map((migration) => [migration.version, migration.name, migrationChecksum(migration.sql)]),
     [
       [1, "baseline", "9093cc4ad281ade360380076c9ec053586681b5404783178c318415bb8937523"],
-      [2, "indexes", "01f965e4000eccfaf23224d1ed68dd405d4de4e3c5f2d2b68207e1a920936949"]
+      [2, "indexes", "01f965e4000eccfaf23224d1ed68dd405d4de4e3c5f2d2b68207e1a920936949"],
+      [3, "queue_retry", "820fa0fb24b9d97438059594fa7cad59a5835840e131722b26a26dbecf2b8b87"]
     ]
   );
 });

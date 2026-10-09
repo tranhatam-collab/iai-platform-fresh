@@ -156,12 +156,40 @@ interface SenderIdentityRecord {
 }
 
 interface QueueJobRecord {
+  /** Number of times the job has been claimed, this claim included. */
+  attempts: number;
   id: string;
   payloadJson: string;
 }
 
+export interface QueueSettingsInput {
+  /** How many times a job may be claimed before it is failed (1..10; default MAIL_QUEUE_MAX_ATTEMPTS, then 5). */
+  maxAttempts?: number;
+  /** Seconds after which a claimed job that was never finished returns to the queue (10..3600; default MAIL_QUEUE_LEASE_SECONDS, then 300). */
+  leaseSeconds?: number;
+  /** Clock used for claims and leases (tests). */
+  now?: () => Date;
+}
+
+interface QueueSettings {
+  leaseSeconds: number;
+  maxAttempts: number;
+  now: () => Date;
+}
+
+export const DEFAULT_QUEUE_MAX_ATTEMPTS = 5;
+export const DEFAULT_QUEUE_LEASE_SECONDS = 300;
+
+/** A claim on a queued job, as handed to whoever processes it. */
+export interface ClaimedQueueJob {
+  attempts: number;
+  id: string;
+}
+
 interface QueueProcessingResult {
   eventType: DeliveryOutcome;
+  /** When a deferred delivery may be tried again (recorded on the attempt). */
+  nextRetryAt?: string;
   providerMessageId?: string;
   providerResponseCode: string;
   providerResponseMessage: string;
@@ -203,6 +231,8 @@ export interface SmtpInternalBackendOptions {
   databaseUrl?: string;
   /** Request-body cap in bytes (default: MAIL_API_MAX_BODY_BYTES, then 64 MiB). */
   maxBodyBytes?: number;
+  /** Queue retry limits and clock (see QueueSettingsInput). */
+  queue?: QueueSettingsInput;
   remoteToken?: string;
   /**
    * Provisions the first workspace/credential. Outside production a missing
@@ -233,6 +263,15 @@ export interface PersistedReadRefusal {
 
 export interface SmtpInternalBackend {
   close(): void;
+  /**
+   * The delivery queue behind /v1/internal/smtp/queue. `claimNextJob` takes the oldest job that is
+   * due (queued and past any next_attempt_at); the claim is atomic, so when several callers race for
+   * one job exactly one gets it. A job that stays claimed past the lease returns to the queue first.
+   */
+  queue?: {
+    claimNextJob(): ClaimedQueueJob | undefined;
+    processNext(): void;
+  };
   /**
    * Read-only views over the SQLite data that /v1/send writes and that send-time
    * suppression checks read. Callers must check `checkPersistedReadAuthorization`
@@ -284,7 +323,8 @@ class MailPersistenceStore {
 
   constructor(
     databaseUrl: string,
-    seed: ResolvedSeedConfig | undefined
+    seed: ResolvedSeedConfig | undefined,
+    private readonly queueSettings: QueueSettings = resolveQueueSettings()
   ) {
     this.db = new DatabaseSync(resolveSqliteDatabasePath(databaseUrl));
     this.db.exec("PRAGMA journal_mode = WAL;");
@@ -1087,9 +1127,10 @@ class MailPersistenceStore {
               payload_json,
               status,
               attempts,
+              max_attempts,
               created_at,
               updated_at
-            ) VALUES (?, ?, ?, ?, 'queued', 0, ?, ?);
+            ) VALUES (?, ?, ?, ?, 'queued', 0, ?, ?, ?);
           `
         )
         .run(
@@ -1097,6 +1138,7 @@ class MailPersistenceStore {
           payload.messageId,
           payload.workspaceId,
           queuePayloadJson,
+          this.queueSettings.maxAttempts,
           now,
           now
         );
@@ -1154,13 +1196,14 @@ class MailPersistenceStore {
               trace_id,
               workspace_id,
               created_at
-            ) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO NOTHING;
           `
         )
         .run(
           attemptId,
           payload.messageId,
+          claimedJob.attempts,
           outcome.eventType === "provider_accepted" ? "accepted" : "failed",
           providerRouteId,
           providerType,
@@ -1173,7 +1216,7 @@ class MailPersistenceStore {
           }),
           startedAt,
           finishedAt,
-          null,
+          outcome.nextRetryAt ?? null,
           payload.traceId,
           payload.workspaceId,
           finishedAt
@@ -1293,25 +1336,35 @@ class MailPersistenceStore {
       );
   }
 
-  private claimNextJob(): QueueJobRecord | undefined {
-    const now = new Date().toISOString();
+  /**
+   * Takes the oldest job that is due. First, jobs claimed longer ago than the lease go back to the
+   * queue (or are failed when they have used up their attempts), so a worker that died mid-job does
+   * not strand it. The claim itself is one UPDATE guarded by the job still being queued and due, so
+   * of several callers racing for a job exactly one changes a row.
+   */
+  claimNextJob(): QueueJobRecord | undefined {
+    const nowDate = this.queueSettings.now();
+    const now = nowDate.toISOString();
+    this.releaseExpiredLeases(nowDate);
+
     const next = this.db
       .prepare(
         `
-          SELECT id, payload_json AS payloadJson
+          SELECT id
           FROM smtp_queue_jobs
           WHERE status = 'queued'
-          ORDER BY created_at ASC
+            AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+          ORDER BY created_at ASC, id ASC
           LIMIT 1;
         `
       )
-      .get() as QueueJobRecord | undefined;
+      .get(now) as { id: string } | undefined;
 
     if (!next?.id) {
       return undefined;
     }
 
-    const claim = this.db
+    return this.db
       .prepare(
         `
           UPDATE smtp_queue_jobs
@@ -1320,16 +1373,47 @@ class MailPersistenceStore {
             attempts = attempts + 1,
             updated_at = ?
           WHERE id = ?
-            AND status = 'queued';
+            AND status = 'queued'
+            AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+          RETURNING id, payload_json AS payloadJson, attempts;
         `
       )
-      .run(now, next.id);
+      .get(now, next.id, now) as QueueJobRecord | undefined;
+  }
 
-    if (claim.changes !== 1) {
-      return undefined;
-    }
+  private releaseExpiredLeases(nowDate: Date) {
+    const now = nowDate.toISOString();
+    const expiredBefore = new Date(nowDate.getTime() - this.queueSettings.leaseSeconds * 1000).toISOString();
 
-    return next;
+    this.db
+      .prepare(
+        `
+          UPDATE smtp_queue_jobs
+          SET
+            status = 'failed',
+            last_error = 'max_attempts_exceeded',
+            last_error_class = 'lease_expired',
+            updated_at = ?
+          WHERE status = 'processing'
+            AND updated_at <= ?
+            AND attempts >= max_attempts;
+        `
+      )
+      .run(now, expiredBefore);
+
+    this.db
+      .prepare(
+        `
+          UPDATE smtp_queue_jobs
+          SET
+            status = 'queued',
+            last_error_class = 'lease_expired',
+            updated_at = ?
+          WHERE status = 'processing'
+            AND updated_at <= ?;
+        `
+      )
+      .run(now, expiredBefore);
   }
 
   private markJobFailed(jobId: string, message: string) {
@@ -1633,7 +1717,7 @@ export function createSmtpInternalBackend(
   const maxBodyBytes = resolveMaxBodyBytes(options.maxBodyBytes);
   const seed = resolveSeed(options.seed, process.env.NODE_ENV);
   const databaseUrl = options.databaseUrl ?? process.env.MAIL_DB_URL ?? "sqlite:/tmp/iai-mail.db";
-  const store = new MailPersistenceStore(databaseUrl, seed);
+  const store = new MailPersistenceStore(databaseUrl, seed, resolveQueueSettings(options.queue));
 
   reportInternalAuthPosture(internalAuth);
   if (process.env.NODE_ENV === "production" && store.hasDefaultDevCredential()) {
@@ -1668,6 +1752,13 @@ export function createSmtpInternalBackend(
   return {
     close() {
       store.close();
+    },
+    queue: {
+      claimNextJob: () => {
+        const job = store.claimNextJob();
+        return job ? { attempts: job.attempts, id: job.id } : undefined;
+      },
+      processNext: () => store.processNextQueuedJob()
     },
     persistedSources,
     checkPersistedReadAuthorization(request) {
@@ -2808,6 +2899,39 @@ function resolveMaxBodyBytes(option: number | undefined) {
   }
 
   return parsed;
+}
+
+/** Reads an integer setting from the option or the environment and refuses values outside its range. */
+function resolveBoundedInteger(
+  option: number | undefined,
+  envName: string,
+  fallback: number,
+  min: number,
+  max: number,
+  env: NodeJS.ProcessEnv
+): number {
+  const raw = option !== undefined ? String(option) : env[envName]?.trim();
+  if (raw === undefined || raw === "") {
+    return fallback;
+  }
+
+  const parsed = Number(raw);
+  if (!/^\d+$/u.test(raw) || !Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw new Error(`${option !== undefined ? "queue option" : envName} must be an integer from ${min} to ${max}, got: ${JSON.stringify(raw)}`);
+  }
+
+  return parsed;
+}
+
+export function resolveQueueSettings(
+  input: QueueSettingsInput = {},
+  env: NodeJS.ProcessEnv = process.env
+): QueueSettings {
+  return {
+    leaseSeconds: resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env),
+    maxAttempts: resolveBoundedInteger(input.maxAttempts, "MAIL_QUEUE_MAX_ATTEMPTS", DEFAULT_QUEUE_MAX_ATTEMPTS, 1, 10, env),
+    now: input.now ?? (() => new Date())
+  };
 }
 
 function reportInternalAuthPosture(internalAuth: SmtpInternalAuth) {
