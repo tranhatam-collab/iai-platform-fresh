@@ -27,9 +27,13 @@ import {
 const STACK_TRACE = /(\/home\/|\/Users\/|node_modules|at [\w.<>]+ \(.*:\d+:\d+\)|ENOENT)/;
 
 let mailApi = null;
+const mailApiBuilt = builtEntryAvailable("apps/mail-api/dist/bootstrap.js");
+const needsMailApi = (surface) => Boolean(surface.requiresMailApi || surface.mailApiEnv);
 
 before(async () => {
-  if (SURFACES.some((surface) => surface.requiresMailApi || surface.mailApiEnv)) {
+  // Only start mail-api when it is built: the surfaces that need it are skipped (or fail on their
+  // own, with E2E_REQUIRE_BUILT=1) instead of one failing hook cancelling every surface.
+  if (mailApiBuilt && SURFACES.some(needsMailApi)) {
     mailApi = await startMailApi();
   }
 });
@@ -41,9 +45,11 @@ after(async () => {
 for (const surface of SURFACES) {
   const skipReason = !builtEntryAvailable(surface.entry)
     ? skipUnlessBuilt(false, `${surface.entry} not built`)
-    : surface.requiresDocsFixtures && !docsFixturesAvailable()
-      ? "needs gitignored docs/noos fixtures (set up the private docs pack to run)"
-      : false;
+    : needsMailApi(surface) && !mailApiBuilt
+      ? skipUnlessBuilt(false, "apps/mail-api not built")
+      : surface.requiresDocsFixtures && !docsFixturesAvailable()
+        ? "needs gitignored docs/noos fixtures (set up the private docs pack to run)"
+        : false;
 
   describe(`${surface.name} (${surface.domain})`, { skip: skipReason }, () => {
     let service;
@@ -51,6 +57,9 @@ for (const surface of SURFACES) {
     const htmlPath = surface.htmlPath ?? "/";
 
     before(async () => {
+      if (needsMailApi(surface) && !mailApi) {
+        throw new Error("apps/mail-api is not built, and this surface needs it");
+      }
       const env = {};
       if (surface.mailApiEnv && mailApi) {
         env[surface.mailApiEnv] = mailApi.baseUrl;
