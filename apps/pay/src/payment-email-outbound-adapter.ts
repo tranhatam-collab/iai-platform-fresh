@@ -6,6 +6,8 @@ import {
 } from "./payment-email-templates.js";
 
 export type PaymentEmailOutboundErrorCode =
+  | "MAIL_API_BASE_URL_INVALID"
+  | "MAIL_API_BASE_URL_MISSING"
   | "MAIL_API_KEY_MISSING"
   | "MAIL_API_REQUEST_FAILED"
   | "MAIL_API_WORKSPACE_ID_MISSING"
@@ -209,10 +211,19 @@ export async function sendPaymentEmailOutbound(
     );
   }
 
+  // No default host: the mail API location must be configured explicitly, and it is checked
+  // before any request is made.
+  const configuredBaseUrl = (config.mailApiBaseUrl ?? process.env.MAIL_API_BASE_URL)?.trim();
+
+  if (!configuredBaseUrl) {
+    throw new PaymentEmailOutboundAdapterError(
+      "MAIL_API_BASE_URL_MISSING",
+      "MAIL_API_BASE_URL is required before pay can hand off payment email to the mail lane."
+    );
+  }
+
+  const baseUrl = assertMailApiBaseUrl(configuredBaseUrl).replace(/\/+$/u, "");
   const fetchImpl = config.fetchImpl ?? globalThis.fetch;
-  const baseUrl = (config.mailApiBaseUrl ?? process.env.MAIL_API_BASE_URL ?? "https://api.mail.iai.one/v1")
-    .trim()
-    .replace(/\/+$/u, "");
   const requestId = input.requestId?.trim() || payload.message_idempotency_key;
   const response = await fetchImpl(`${baseUrl}/send`, {
     body: JSON.stringify(payload),
@@ -249,6 +260,31 @@ export async function sendPaymentEmailOutbound(
     requestId,
     status: typeof data.status === "string" ? data.status : "accepted"
   };
+}
+
+/** The base URL must be https; plain http is accepted only for a loopback host (local tests). */
+function assertMailApiBaseUrl(value: string): string {
+  let url: URL;
+
+  try {
+    url = new URL(value);
+  } catch {
+    throw new PaymentEmailOutboundAdapterError(
+      "MAIL_API_BASE_URL_INVALID",
+      "MAIL_API_BASE_URL must be an absolute https URL."
+    );
+  }
+
+  const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new PaymentEmailOutboundAdapterError(
+      "MAIL_API_BASE_URL_INVALID",
+      "MAIL_API_BASE_URL must be an absolute https URL."
+    );
+  }
+
+  return value;
 }
 
 function normalizeDomain(domain: string) {
