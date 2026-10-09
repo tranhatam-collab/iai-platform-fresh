@@ -12,6 +12,7 @@ function createPaymentBackend(dbPath) {
   return createSmtpInternalBackend({
     apiKey: "mail-api-token",
     databaseUrl: `sqlite:${dbPath}`,
+    queue: { providerAdapter: "fake" },
     seed: {
       defaultSender: "pay@tranhatam.com",
       password: "smtp-secret",

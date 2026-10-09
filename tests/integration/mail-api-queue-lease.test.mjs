@@ -50,7 +50,7 @@ function clock(startIso = "2026-10-09T10:00:00.000Z") {
 }
 
 function openBackend(url, queue = {}) {
-  return createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue, seed: SEED });
+  return createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { providerAdapter: "fake", ...queue }, seed: SEED });
 }
 
 function withDb(dbPath, fn) {

@@ -899,6 +899,7 @@ test("pay persists a canonical payment evidence row when internal payment email 
         new Response(
           JSON.stringify({
             data: {
+              delivery_status: "provider_accepted",
               message_id: "msg_pay_email_canon_123",
               provider_route: "transactional_primary",
               status: "queued"
@@ -979,6 +980,7 @@ test("pay updates callback and proof evidence on the same canonical payment row"
         new Response(
           JSON.stringify({
             data: {
+              delivery_status: "provider_accepted",
               message_id: "msg_pay_email_canon_456",
               provider_route: "transactional_primary",
               status: "accepted"

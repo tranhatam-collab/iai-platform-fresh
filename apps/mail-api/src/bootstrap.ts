@@ -135,6 +135,16 @@ export function bootstrapFromEnv(
     );
   }
 
+  // The stand-in provider accepts mail without sending any: never let a production server run on it.
+  const providerAdapter = env.MAIL_PROVIDER_ADAPTER?.trim().toLowerCase();
+  if (env.NODE_ENV === "production" && providerAdapter === "fake") {
+    return Promise.reject(
+      new Error(
+        'MAIL_PROVIDER_ADAPTER=fake is not allowed when NODE_ENV=production: it accepts every message without sending it. Leave the variable unset until a real provider adapter is configured.'
+      )
+    );
+  }
+
   const server = createFlowApiServer(options);
 
   return new Promise((resolve, reject) => {
