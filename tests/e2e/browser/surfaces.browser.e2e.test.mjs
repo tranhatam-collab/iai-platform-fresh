@@ -67,6 +67,9 @@ for (const surface of SURFACES) {
     let skip = false;
 
     before(async () => {
+      if (REQUIRE && !builtEntryAvailable(surface.entry)) {
+        throw new Error(`${surface.name}: built output is missing; run pnpm build first (E2E_BROWSER_REQUIRE=1)`);
+      }
       if (!browser || !builtEntryAvailable(surface.entry) || (surface.requiresDocsFixtures && !docsFixturesAvailable())) {
         skip = true;
         return;

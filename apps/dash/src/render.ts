@@ -33,6 +33,7 @@ export function renderLoginPage(nextPath: string, config: DashRenderConfig, loca
     locale,
     t(locale, "dash.page.login"),
     `
+      <main>
       <section class="hero">
         <div class="hero-copy">
           <div class="hero-head">
@@ -60,6 +61,7 @@ export function renderLoginPage(nextPath: string, config: DashRenderConfig, loca
           </ul>
         </aside>
       </section>
+      </main>
     `
   );
 }
