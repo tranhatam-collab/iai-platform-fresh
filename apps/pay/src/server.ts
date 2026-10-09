@@ -919,6 +919,7 @@ async function handleInternalPaymentEmailSend(
     const evidenceRecord = config.paymentEventEvidenceStore.recordPaymentEmailAccepted({
       callback_status: readOptionalRecordString(body, "callback_status"),
       domain,
+      mail_delivery_status: result.deliveryStatus,
       mail_message_id: result.messageId,
       mail_provider_route: result.providerRoute,
       mail_request_id: result.requestId,
@@ -946,6 +947,7 @@ async function handleInternalPaymentEmailSend(
           accepted_at: result.acceptedAt,
           canonical_row_ref: evidenceRecord.canonical_row_ref,
           callback_status: evidenceRecord.callback_status,
+          delivery_status: result.deliveryStatus,
           mail_status: result.status,
           message_id: result.messageId,
           order_id: result.payload.metadata.order_id,

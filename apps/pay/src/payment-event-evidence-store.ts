@@ -24,6 +24,8 @@ export interface PaymentEventEvidenceRecord {
   inbox_proof_ref: string;
   internal_inbox_proof_ref: string;
   log_evidence_ref: string;
+  /** mail-api's delivery status for the email (queued, deferred, failed, provider_accepted); "" before a handoff. */
+  mail_delivery_status: string;
   mail_message_id: string;
   mail_provider_route: string;
   mail_request_id: string;
@@ -62,6 +64,7 @@ export interface PaymentEventEvidenceSendInput {
   accepted_at?: string;
   callback_status?: string;
   domain: string;
+  mail_delivery_status?: string;
   mail_message_id: string;
   mail_provider_route?: string;
   mail_request_id?: string;
@@ -165,6 +168,8 @@ export class PaymentEventEvidenceStore {
     record.accepted_at = now;
     record.callback_status = normalizeOptionalString(input.callback_status) || record.callback_status;
     record.domain = domain;
+    record.mail_delivery_status =
+      normalizeOptionalString(input.mail_delivery_status) || record.mail_delivery_status;
     record.mail_message_id = normalizeRequiredString(input.mail_message_id, "mail_message_id");
     record.mail_provider_route =
       normalizeOptionalString(input.mail_provider_route) || record.mail_provider_route;
@@ -381,6 +386,7 @@ export class PaymentEventEvidenceStore {
       inbox_proof_ref: "",
       internal_inbox_proof_ref: "",
       log_evidence_ref: "",
+      mail_delivery_status: "",
       mail_message_id: normalizeOptionalString(input.mail_message_id),
       mail_provider_route: "",
       mail_request_id: "",

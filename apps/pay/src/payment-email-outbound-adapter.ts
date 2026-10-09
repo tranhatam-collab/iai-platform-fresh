@@ -91,8 +91,25 @@ export interface PaymentEmailOutboundConfig {
   workspaceId?: string;
 }
 
+/**
+ * How far mail-api got with a handed-over email. Only `provider_accepted` means a provider took the
+ * message; `queued` and `deferred` are still waiting and `failed` is final, so none of those three
+ * may be shown or recorded as a delivered receipt.
+ */
+export type PaymentEmailDeliveryStatus = "deferred" | "failed" | "provider_accepted" | "queued";
+
+const deliveryStatuses: readonly string[] = ["deferred", "failed", "provider_accepted", "queued"];
+
+/** Reads mail-api's `delivery_status`; anything missing or unknown counts as not yet accepted. */
+export function normalizePaymentEmailDeliveryStatus(value: unknown): PaymentEmailDeliveryStatus {
+  return typeof value === "string" && deliveryStatuses.includes(value)
+    ? (value as PaymentEmailDeliveryStatus)
+    : "queued";
+}
+
 export interface PaymentEmailOutboundResult {
   acceptedAt: string;
+  deliveryStatus: PaymentEmailDeliveryStatus;
   mailResponse: Record<string, unknown>;
   messageId: string;
   payload: PaymentEmailOutboundPayload;
@@ -242,6 +259,7 @@ export async function sendPaymentEmailOutbound(
 
   return {
     acceptedAt: new Date().toISOString(),
+    deliveryStatus: normalizePaymentEmailDeliveryStatus(data.delivery_status),
     mailResponse: data,
     messageId: normalizeRequiredString(data.message_id, "data.message_id", "MAIL_API_REQUEST_FAILED"),
     payload,

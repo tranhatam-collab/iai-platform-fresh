@@ -173,13 +173,22 @@ export interface QueueSettingsInput {
   backoffBaseSeconds?: number;
   /** Longest wait between attempts before jitter (10..86400, clamped; default MAIL_QUEUE_BACKOFF_CAP_SECONDS, then 3600). */
   backoffCapSeconds?: number;
-  /** Produces the result of one delivery attempt. Defaults to the built-in in-process delivery. */
+  /** Produces the result of one delivery attempt. Overrides `providerAdapter` when given (tests). */
   deliver?: QueueDeliveryHook;
+  /**
+   * Which delivery stands behind the queue (default MAIL_PROVIDER_ADAPTER, then `none`). `none` has no
+   * provider: a delivery is deferred and finally failed with `no_provider_configured`, and the
+   * queue never reports `provider_accepted`. `fake` accepts every routed message without sending
+   * anything; it is for local runs and tests and is refused when NODE_ENV is production.
+   */
+  providerAdapter?: QueueProviderAdapterName;
   /** Clock used for claims and leases (tests). */
   now?: () => Date;
   /** Source of the retry jitter, a number in [0, 1) (tests pass a fixed one). */
   random?: () => number;
 }
+
+export type QueueProviderAdapterName = "fake" | "none";
 
 interface QueueSettings {
   backoffBaseSeconds: number;
@@ -2387,8 +2396,35 @@ function handleSendOperation(
   return buildSendResponse(deliveryState, queuePayload.recipients.length, queuePayload.stream);
 }
 
-/** The built-in in-process delivery: accepts whatever matches an active route. */
-function defaultQueueDelivery(input: QueueDeliveryInput): QueueDeliveryResult {
+function resolveProviderAdapterName(option: QueueProviderAdapterName | undefined, env: NodeJS.ProcessEnv): QueueProviderAdapterName {
+  const raw = (option ?? env.MAIL_PROVIDER_ADAPTER?.trim().toLowerCase()) || "none";
+  if (raw !== "none" && raw !== "fake") {
+    throw new Error(`${option !== undefined ? "queue option providerAdapter" : "MAIL_PROVIDER_ADAPTER"} must be "none" or "fake", got: ${JSON.stringify(raw)}`);
+  }
+
+  if (raw === "fake" && env.NODE_ENV === "production") {
+    throw new Error('MAIL_PROVIDER_ADAPTER=fake is not allowed when NODE_ENV is "production"; configure a real provider adapter.');
+  }
+
+  return raw;
+}
+
+/** No provider configured: a routed message can only be deferred and, in the end, failed. */
+function noProviderQueueDelivery(input: QueueDeliveryInput): QueueDeliveryResult {
+  if (!input.routeMatched) {
+    return fakeQueueDelivery(input);
+  }
+
+  return {
+    errorClass: "no_provider_configured",
+    eventType: "deferred",
+    providerResponseCode: "503",
+    providerResponseMessage: "no_provider_configured"
+  };
+}
+
+/** Stand-in delivery that accepts whatever matches an active route (MAIL_PROVIDER_ADAPTER=fake). */
+function fakeQueueDelivery(input: QueueDeliveryInput): QueueDeliveryResult {
   if (!input.routeMatched) {
     return {
       errorClass: "routing_failed",
@@ -3111,10 +3147,11 @@ export function resolveQueueSettings(
     86400,
     env
   );
+  const providerAdapter = resolveProviderAdapterName(input.providerAdapter, env);
   return {
     backoffBaseSeconds,
     backoffCapSeconds: Math.max(backoffCapSeconds, backoffBaseSeconds),
-    deliver: input.deliver ?? defaultQueueDelivery,
+    deliver: input.deliver ?? (providerAdapter === "fake" ? fakeQueueDelivery : noProviderQueueDelivery),
     leaseSeconds: resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env),
     maxAttempts: resolveBoundedInteger(input.maxAttempts, "MAIL_QUEUE_MAX_ATTEMPTS", DEFAULT_QUEUE_MAX_ATTEMPTS, 1, 10, env),
     now: input.now ?? (() => new Date()),

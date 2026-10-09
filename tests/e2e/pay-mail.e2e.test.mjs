@@ -744,3 +744,70 @@ describe("pay with a real mail-api", { skip: built ? false : "apps/pay or apps/m
     });
   });
 });
+
+describe("pay reports the delivery status of a real mail-api", { skip: built ? false : "apps/pay or apps/mail-api not built" }, () => {
+  /** Starts mail-api with the given provider settings and a pay in front of it; returns a sender and a stop. */
+  async function stack(mailEnv) {
+    const dir = mkdtempSync(path.join(tmpdir(), "iai-e2e-pay-status-"));
+    const dbPath = path.join(dir, "mail.db");
+    const mailApi = await startMailApi({ env: { MAIL_DB_URL: `sqlite:${dbPath}`, ...mailEnv } });
+    const db = new DatabaseSync(dbPath);
+    try {
+      const now = new Date().toISOString();
+      db.prepare(
+        "INSERT OR IGNORE INTO domains (id, workspace_id, domain, verification_status, created_at) VALUES (?, ?, ?, 'verified', ?)"
+      ).run("dom_e2e_tranhatam", DEV_WORKSPACE, "tranhatam.com", now);
+      for (const local of ["pay", "billing", "support"]) {
+        db.prepare(
+          "INSERT OR IGNORE INTO sender_identities (id, workspace_id, domain_id, email, allowed_streams_json, status, created_at) VALUES (?, ?, ?, ?, ?, 'active', ?)"
+        ).run(`sender_e2e_${local}`, DEV_WORKSPACE, "dom_e2e_tranhatam", `${local}@tranhatam.com`, JSON.stringify(["transactional"]), now);
+      }
+    } finally {
+      db.close();
+    }
+    const pay = await startPay({
+      PAY_EMAIL_ADAPTER_INTERNAL_KEY: INTERNAL_KEY,
+      MAIL_API_BASE_URL: `${mailApi.baseUrl}/v1`,
+      MAIL_API_KEY: mailApi.credentials.apiKey,
+      MAIL_API_WORKSPACE_ID: DEV_WORKSPACE,
+      PAYMENT_WEBHOOK_SECRET: WEBHOOK_SECRET,
+      ...networkGuardEnv({})
+    });
+    return {
+      mailApi,
+      pay,
+      async stop() {
+        await pay.stop();
+        await mailApi.stop();
+        rmSync(dir, { force: true, recursive: true });
+      }
+    };
+  }
+
+  const cases = [
+    ["provider_accepted", { MAIL_PROVIDER_ADAPTER: "fake" }, "provider_accepted"],
+    ["deferred", { MAIL_PROVIDER_ADAPTER: "none" }, "deferred"],
+    ["failed", { MAIL_PROVIDER_ADAPTER: "none", MAIL_QUEUE_MAX_ATTEMPTS: "1" }, "failed"]
+  ];
+
+  for (const [name, mailEnv, expected] of cases) {
+    test(`${name}: the status mail-api reports is the status pay reports`, async () => {
+      const { mailApi, pay, stop } = await stack(mailEnv);
+      try {
+        const response = await post(pay.baseUrl, "/internal/payment-email/send", emailInput());
+        assert.equal(response.status, 202, response.text);
+        const data = response.json.data;
+        assert.equal(data.delivery_status, expected);
+        assert.equal(data.mail_status, "queued", "the handoff itself is queued whatever the delivery status");
+
+        const detail = await getMessage(mailApi, data.message_id);
+        assert.equal(detail.json.data.status, expected, "the message in mail-api has the same status");
+        const events = await getMessageEvents(mailApi, data.message_id);
+        const types = events.json.data.items.map((item) => item.eventType);
+        assert.equal(types.includes("provider_accepted"), expected === "provider_accepted");
+      } finally {
+        await stop();
+      }
+    });
+  }
+});

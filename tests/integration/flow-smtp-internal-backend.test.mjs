@@ -24,6 +24,7 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
   const seed = createBackendConfig();
   const backend = createSmtpInternalBackend({
     databaseUrl: `sqlite:${dbPath}`,
+    queue: { providerAdapter: "fake" },
     remoteToken: SERVICE_TOKEN,
     seed
   });
@@ -139,6 +140,7 @@ test("internal smtp backend recipient check returns suppression rejection", asyn
   const seed = createBackendConfig();
   const backend = createSmtpInternalBackend({
     databaseUrl: `sqlite:${dbPath}`,
+    queue: { providerAdapter: "fake" },
     remoteToken: SERVICE_TOKEN,
     seed
   });

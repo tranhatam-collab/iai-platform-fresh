@@ -191,6 +191,8 @@ export async function startMailApi({ env = {} } = {}) {
       MAIL_SMTP_REMOTE_TOKEN: "e2e-smtp-remote-token",
       // Opt-in for hardened builds that otherwise refuse unauthenticated internal routes.
       MAIL_API_WEBHOOK_SECRET: "e2e-webhook-secret",
+      // Without a provider the queue never reports provider_accepted; these suites need the stand-in.
+      MAIL_PROVIDER_ADAPTER: "fake",
       ...env
     }
   });

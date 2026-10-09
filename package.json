@@ -36,7 +36,7 @@
     "test:flow-surface": "pnpm --filter @iai/flow build && node --test tests/integration/flow-surface.test.mjs",
     "test:docs": "pnpm --filter @iai/docs build && node --test tests/integration/docs-*.test.mjs",
     "test:nft": "pnpm --filter @iai/nft build && node --test tests/integration/nft-*.test.mjs",
-    "test:pay": "pnpm --filter @iai/pay build && node --test tests/integration/pay-surface.test.mjs",
+    "test:pay": "pnpm --filter @iai/pay build && node --test tests/integration/pay-surface.test.mjs tests/integration/pay-email-delivery-status.test.mjs",
     "test:dash": "pnpm --filter @iai/mail-core build && pnpm --filter @iai/mail-api build && pnpm --filter @iai/dash build && node --test tests/integration/dash-*.test.mjs",
     "test:flow": "pnpm --filter @iai/mail-core build && pnpm --filter @iai/mail-api build && pnpm --filter @iai/mail-web build && pnpm --filter @iai/flow build && node --test tests/integration/flow-*.test.mjs",
     "test:mail-smtp": "pnpm build && node --test tests/integration/mail-smtp-*.test.mjs",
