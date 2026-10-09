@@ -884,6 +884,7 @@ export function renderNotFoundPage(locale: Locale, path: string): string {
     locale,
     t(locale, "dash.page.not_found"),
     `
+      <main>
       <section class="hero simple-hero">
         <div class="hero-copy">
           <div class="hero-head">
@@ -899,6 +900,7 @@ export function renderNotFoundPage(locale: Locale, path: string): string {
           </div>
         </div>
       </section>
+      </main>
     `
   );
 }

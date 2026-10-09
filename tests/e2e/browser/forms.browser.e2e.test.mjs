@@ -112,6 +112,47 @@ function assertCleanRoundTrip(record, label) {
   assert.deepEqual(record.external, [], `${label}: requests left the page's own origin`);
 }
 
+/** Counts the landmarks and headings a screen reader relies on. */
+function landmarkFacts(page) {
+  return page.evaluate(() => ({
+    h1: [...document.querySelectorAll("h1")].filter((el) => (el.textContent ?? "").trim()).length,
+    lang: document.documentElement.lang,
+    main: document.querySelectorAll("main, [role=main]").length,
+    title: document.title.trim()
+  }));
+}
+
+describe("browser landmarks: routes the page-load suite does not visit", () => {
+  for (const [label, service, path, expectedStatus, headers] of [
+    ["web /feedback", () => web, "/feedback?lang=en", 200, {}],
+    ["dash HTML 404 page", () => dash, "/no-such-page?lang=en", 404, DASH_SESSION]
+  ]) {
+    test(`${label} has exactly one <main>, one <h1> and a clean render`, async (t) => {
+      if (skipReason || !service()) {
+        t.skip(skipReason ?? `${label}: service unavailable`);
+        return;
+      }
+      const { context, page, record } = await openContext(service(), headers);
+      try {
+        const response = await page.goto(new URL(path, service().baseUrl).href, { waitUntil: "networkidle" });
+        assert.equal(response?.status(), expectedStatus);
+        const facts = await landmarkFacts(page);
+        assert.equal(facts.main, 1, `expected exactly one <main>, found ${facts.main}`);
+        assert.equal(facts.h1, 1, `expected exactly one non-empty <h1>, found ${facts.h1}`);
+        assert.ok(facts.lang, "<html lang> is missing");
+        assert.ok(facts.title, "<title> is empty");
+        if (expectedStatus === 404) {
+          // The browser logs the document's own 404 as a console error; nothing else is tolerated.
+          record.consoleErrors = record.consoleErrors.filter((message) => !/server responded with a status of 404/u.test(message));
+        }
+        assertCleanRoundTrip(record, label);
+      } finally {
+        await context.close();
+      }
+    });
+  }
+});
+
 describe("browser forms: dash and web", () => {
   test("dash: submitting a publish-readiness action form redirects within the origin and renders its result", async (t) => {
     if (skipReason || !dash) {
@@ -164,6 +205,7 @@ describe("browser forms: dash and web", () => {
       assert.ok(record.requests.some((request) => request === "POST /feedback"), "the feedback form was not posted");
       assert.equal(await page.locator("form[action$='/feedback']").count(), 0, "the form is still shown after a valid submission");
       assert.ok((await page.locator("h1").count()) >= 1);
+      assert.equal((await landmarkFacts(page)).main, 1, "the confirmation page has no single <main>");
       assertCleanRoundTrip(record, "web feedback");
     } finally {
       await context.close();
