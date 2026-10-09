@@ -184,6 +184,11 @@ export interface QueueSettingsInput {
   providerAdapter?: QueueProviderAdapterName;
   /** Clock used for claims and leases (tests). */
   now?: () => Date;
+  /**
+   * Whether the send path delivers a job itself right after queueing it (default MAIL_QUEUE_INLINE, then
+   * true). With false a separate worker process takes the jobs and a send answers `queued`.
+   */
+  inline?: boolean;
   /** Source of the retry jitter, a number in [0, 1) (tests pass a fixed one). */
   random?: () => number;
 }
@@ -194,6 +199,7 @@ interface QueueSettings {
   backoffBaseSeconds: number;
   backoffCapSeconds: number;
   deliver: QueueDeliveryHook;
+  inline: boolean;
   leaseSeconds: number;
   maxAttempts: number;
   now: () => Date;
@@ -243,7 +249,7 @@ export interface QueueDeliveryResult {
   providerResponseMessage: string;
 }
 
-export type QueueDeliveryHook = (input: QueueDeliveryInput) => QueueDeliveryResult;
+export type QueueDeliveryHook = (input: QueueDeliveryInput) => QueueDeliveryResult | Promise<QueueDeliveryResult>;
 
 export const DEFAULT_QUEUE_MAX_ATTEMPTS = 5;
 export const DEFAULT_QUEUE_LEASE_SECONDS = 300;
@@ -337,6 +343,8 @@ export interface SmtpInternalBackend {
   queue?: {
     claimNextJob(): ClaimedQueueJob | undefined;
     processNext(): void;
+    /** Like processNext, but the delivery may be asynchronous. Resolves to whether a job was claimed. */
+    processNextAsync(): Promise<boolean>;
   };
   /**
    * Read-only views over the SQLite data that /v1/send writes and that send-time
@@ -1216,10 +1224,59 @@ class MailPersistenceStore {
     }
   }
 
-  processNextQueuedJob() {
+  /** Runs the send path's own delivery when the queue is processed inline (MAIL_QUEUE_INLINE, default on). */
+  processInline() {
+    if (this.queueSettings.inline) {
+      this.processNextQueuedJob();
+    }
+  }
+
+  /** Claims and delivers one job with a synchronous delivery hook. Returns whether a job was claimed. */
+  processNextQueuedJob(): boolean {
+    const started = this.beginQueuedJob();
+    if (started === undefined) {
+      return false;
+    }
+
+    if (started === "unreadable") {
+      return true;
+    }
+
+    const result = this.queueSettings.deliver(started.input);
+    if (result instanceof Promise) {
+      // Only reachable with a custom hook; the job stays claimed and returns to the queue when its lease runs out.
+      void result.catch(() => undefined);
+      throw new Error("processNext needs a synchronous delivery hook; use processNextAsync.");
+    }
+
+    this.recordDelivery(started, result);
+    return true;
+  }
+
+  /** Claims and delivers one job; the delivery may be asynchronous. Returns whether a job was claimed. */
+  async processNextQueuedJobAsync(): Promise<boolean> {
+    const started = this.beginQueuedJob();
+    if (started === undefined) {
+      return false;
+    }
+
+    if (started === "unreadable") {
+      return true;
+    }
+
+    this.recordDelivery(started, await this.queueSettings.deliver(started.input));
+    return true;
+  }
+
+  /**
+   * Claims the next due job and works out what the delivery needs to know about it. Returns undefined when
+   * no job was claimed, and "unreadable" when one was claimed but its payload could not be parsed: that job is
+   * already failed, and counts as a claim so a worker moves straight on to the next one.
+   */
+  private beginQueuedJob() {
     const claimedJob = this.claimNextJob();
     if (!claimedJob) {
-      return;
+      return undefined;
     }
 
     let payload: SmtpQueueRequest;
@@ -1227,23 +1284,29 @@ class MailPersistenceStore {
       payload = JSON.parse(claimedJob.payloadJson) as SmtpQueueRequest;
     } catch (error) {
       this.markJobFailed(claimedJob.id, `Unable to parse queued payload: ${String(error)}`);
-      return;
+      return "unreadable" as const;
     }
 
     const route = this.selectProviderRoute(payload.workspaceId, payload.stream);
-    const attemptId = `att_${randomUUID()}`;
     const startedAt = this.queueSettings.now().toISOString();
-    const outcome = this.finalizeOutcome(
-      this.queueSettings.deliver({
-        attempt: claimedJob.attempts,
-        messageId: payload.messageId,
-        routeMatched: Boolean(route),
-        stream: payload.stream,
-        workspaceId: payload.workspaceId
-      }),
-      claimedJob.attempts,
-      claimedJob.maxAttempts
-    );
+    const input: QueueDeliveryInput = {
+      attempt: claimedJob.attempts,
+      messageId: payload.messageId,
+      routeMatched: Boolean(route),
+      stream: payload.stream,
+      workspaceId: payload.workspaceId
+    };
+    return { claimedJob, input, payload, route, startedAt };
+  }
+
+  /** Writes the attempt, event, message and job rows for one finished delivery (all or nothing). */
+  private recordDelivery(
+    started: Exclude<ReturnType<MailPersistenceStore["beginQueuedJob"]>, "unreadable" | undefined>,
+    result: QueueDeliveryResult
+  ) {
+    const { claimedJob, payload, route, startedAt } = started;
+    const attemptId = `att_${randomUUID()}`;
+    const outcome = this.finalizeOutcome(result, claimedJob.attempts, claimedJob.maxAttempts);
     const finishedAt = this.queueSettings.now().toISOString();
     const providerRouteId = route?.routeId ?? "unrouted";
     const providerType = route?.providerType ?? "selfhosted";
@@ -1542,21 +1605,35 @@ class MailPersistenceStore {
     const now = nowDate.toISOString();
     const expiredBefore = new Date(nowDate.getTime() - this.queueSettings.leaseSeconds * 1000).toISOString();
 
-    this.db
-      .prepare(
-        `
-          UPDATE smtp_queue_jobs
-          SET
-            status = 'failed',
-            last_error = 'max_attempts_exceeded',
-            last_error_class = 'lease_expired',
-            updated_at = ?
-          WHERE status = 'processing'
-            AND updated_at <= ?
-            AND attempts >= max_attempts;
-        `
-      )
-      .run(now, expiredBefore);
+    // A job whose claim ran out with no attempts left is failed, and so is its message. The UPDATE ...
+    // RETURNING hands each such job to exactly one caller, which also records the failure event.
+    this.db.exec("BEGIN;");
+    try {
+      const failedJobs = this.db
+        .prepare(
+          `
+            UPDATE smtp_queue_jobs
+            SET
+              status = 'failed',
+              last_error = 'max_attempts_exceeded',
+              last_error_class = 'lease_expired',
+              updated_at = ?
+            WHERE status = 'processing'
+              AND updated_at <= ?
+              AND attempts >= max_attempts
+            RETURNING id, message_id AS messageId, workspace_id AS workspaceId, payload_json AS payloadJson;
+          `
+        )
+        .all(now, expiredBefore) as Array<{ id: string; messageId: string; payloadJson: string; workspaceId: string }>;
+
+      for (const job of failedJobs) {
+        this.recordLeaseFailure(job, now);
+      }
+      this.db.exec("COMMIT;");
+    } catch (error) {
+      this.db.exec("ROLLBACK;");
+      throw error;
+    }
 
     this.db
       .prepare(
@@ -1571,6 +1648,43 @@ class MailPersistenceStore {
         `
       )
       .run(now, expiredBefore);
+  }
+
+  /** Fails the message of a job that ran out of attempts through its lease, and records the event. */
+  private recordLeaseFailure(job: { id: string; messageId: string; payloadJson: string; workspaceId: string }, now: string) {
+    let traceId = `lease_${job.id}`;
+    let source = "mail-queue";
+    try {
+      const payload = JSON.parse(job.payloadJson) as Partial<SmtpQueueRequest>;
+      traceId = payload.traceId ?? traceId;
+      source = payload.source ?? source;
+    } catch {
+      // the event is still recorded, with generic trace details
+    }
+
+    this.db
+      .prepare("UPDATE messages SET status = 'failed', last_event_at = ?, updated_at = ? WHERE id = ?;")
+      .run(now, now, job.messageId);
+    this.db
+      .prepare(
+        `
+          INSERT INTO message_events (
+            id, message_id, workspace_id, event_type, occurred_at, payload_json,
+            provider_message_id, provider_type, source, trace_id, created_at
+          ) VALUES (?, ?, ?, 'failed', ?, ?, NULL, 'selfhosted', ?, ?, ?)
+          ON CONFLICT(id) DO NOTHING;
+        `
+      )
+      .run(
+        `evt_${job.messageId}_failed_lease_${job.id}`,
+        job.messageId,
+        job.workspaceId,
+        now,
+        JSON.stringify({ errorClass: "lease_expired", reason: "max_attempts_exceeded", retryable: false }),
+        source,
+        traceId,
+        now
+      );
   }
 
   private markJobFailed(jobId: string, message: string) {
@@ -1866,6 +1980,36 @@ export function resolveSmtpInternalAuth(
 
 let reportedInternalAuthMode: SmtpInternalAuthMode | undefined;
 
+type QueueApi = NonNullable<SmtpInternalBackend["queue"]>;
+
+function buildQueueApi(store: MailPersistenceStore): QueueApi {
+  return {
+    claimNextJob: () => {
+      const job = store.claimNextJob();
+      return job ? { attempts: job.attempts, id: job.id } : undefined;
+    },
+    processNext: () => {
+      store.processNextQueuedJob();
+    },
+    processNextAsync: () => store.processNextQueuedJobAsync()
+  };
+}
+
+export interface MailQueueHandle {
+  close(): void;
+  queue: QueueApi;
+}
+
+/**
+ * Opens only the delivery queue on the mail database, for a worker process that runs next to
+ * mail-api. It applies pending migrations but seeds nothing and serves no routes.
+ */
+export function openMailQueue(options: { databaseUrl?: string; queue?: QueueSettingsInput } = {}): MailQueueHandle {
+  const databaseUrl = options.databaseUrl ?? process.env.MAIL_DB_URL ?? "sqlite:/tmp/iai-mail.db";
+  const store = new MailPersistenceStore(databaseUrl, undefined, resolveQueueSettings(options.queue));
+  return { close: () => store.close(), queue: buildQueueApi(store) };
+}
+
 export function createSmtpInternalBackend(
   options: SmtpInternalBackendOptions = {}
 ): SmtpInternalBackend {
@@ -1910,13 +2054,7 @@ export function createSmtpInternalBackend(
     close() {
       store.close();
     },
-    queue: {
-      claimNextJob: () => {
-        const job = store.claimNextJob();
-        return job ? { attempts: job.attempts, id: job.id } : undefined;
-      },
-      processNext: () => store.processNextQueuedJob()
-    },
+    queue: buildQueueApi(store),
     persistedSources,
     checkPersistedReadAuthorization(request) {
       try {
@@ -2286,7 +2424,7 @@ function handleQueueOperation(store: MailPersistenceStore, payload: SmtpQueueReq
     providerRouteId: providerRoute,
     queuedAt
   });
-  store.processNextQueuedJob();
+  store.processInline();
 
   return {
     messageEventId,
@@ -2385,7 +2523,7 @@ function handleSendOperation(
       queuedAt
     }
   );
-  store.processNextQueuedJob();
+  store.processInline();
 
   const deliveryState = store.getMessageDeliveryState(queuePayload.messageId) ?? {
     deliveryStatus: "queued",
@@ -2394,6 +2532,27 @@ function handleSendOperation(
   };
 
   return buildSendResponse(deliveryState, queuePayload.recipients.length, queuePayload.stream);
+}
+
+function resolveInlineFlag(option: boolean | undefined, env: NodeJS.ProcessEnv): boolean {
+  if (option !== undefined) {
+    return option;
+  }
+
+  const raw = env.MAIL_QUEUE_INLINE?.trim().toLowerCase();
+  if (raw === undefined || raw === "") {
+    return true;
+  }
+
+  if (raw === "1" || raw === "true") {
+    return true;
+  }
+
+  if (raw === "0" || raw === "false") {
+    return false;
+  }
+
+  throw new Error(`MAIL_QUEUE_INLINE must be 1, 0, true or false, got: ${JSON.stringify(raw)}`);
 }
 
 function resolveProviderAdapterName(option: QueueProviderAdapterName | undefined, env: NodeJS.ProcessEnv): QueueProviderAdapterName {
@@ -3152,6 +3311,7 @@ export function resolveQueueSettings(
     backoffBaseSeconds,
     backoffCapSeconds: Math.max(backoffCapSeconds, backoffBaseSeconds),
     deliver: input.deliver ?? (providerAdapter === "fake" ? fakeQueueDelivery : noProviderQueueDelivery),
+    inline: resolveInlineFlag(input.inline, env),
     leaseSeconds: resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env),
     maxAttempts: resolveBoundedInteger(input.maxAttempts, "MAIL_QUEUE_MAX_ATTEMPTS", DEFAULT_QUEUE_MAX_ATTEMPTS, 1, 10, env),
     now: input.now ?? (() => new Date()),

@@ -17,6 +17,10 @@
     "./bootstrap": {
       "types": "./dist/bootstrap.d.ts",
       "default": "./dist/bootstrap.js"
+    },
+    "./queue-worker": {
+      "types": "./dist/queue-worker.d.ts",
+      "default": "./dist/queue-worker.js"
     }
   },
   "bin": {

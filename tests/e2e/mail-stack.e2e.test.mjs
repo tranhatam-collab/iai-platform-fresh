@@ -11,9 +11,13 @@
  * `todo`, so they run without failing the suite.
  */
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { after, before, describe, test } from "node:test";
 
-import { builtEntryAvailable, request, startMailApi } from "./support/harness.mjs";
+import { builtEntryAvailable, repoRoot, request, skipUnlessBuilt, startMailApi } from "./support/harness.mjs";
 import {
   DEV_SENDER,
   DEV_WORKSPACE,
@@ -29,6 +33,7 @@ import {
   uniqueKey,
   waitFor
 } from "./support/mail-helpers.mjs";
+import { MAIL_WORKER_ENTRY, startMailWorker } from "./support/mail-worker.mjs";
 import { opensslAvailable, startMailSmtp } from "./support/mail-smtp.mjs";
 
 const apiBuilt = builtEntryAvailable("apps/mail-api/dist/bootstrap.js");
@@ -36,7 +41,7 @@ const smtpBuilt = builtEntryAvailable("apps/mail-smtp/dist/index.js");
 
 const STACK_TRACE = /(\/home\/|\/Users\/|node_modules|at [\w.<>]+ \(.*:\d+:\d+\)|ENOENT)/;
 
-describe("mail-api: /v1/send", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-api: /v1/send", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   let api;
 
   before(async () => {
@@ -330,7 +335,7 @@ describe("mail-api: /v1/send", { skip: apiBuilt ? false : "apps/mail-api not bui
   });
 });
 
-describe("mail-api: key configuration fails closed", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-api: key configuration fails closed", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   test("without MAIL_API_KEY /v1/send answers 503 and never queues", async () => {
     const api = await startMailApi({ env: { MAIL_API_KEY: "" } });
     try {
@@ -347,7 +352,7 @@ describe("mail-api: key configuration fails closed", { skip: apiBuilt ? false : 
   });
 });
 
-describe("mail-api: internal SMTP control routes", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-api: internal SMTP control routes", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   let api;
   const operations = ["auth", "mail-from", "recipient", "normalize", "queue", "audit"];
 
@@ -468,7 +473,7 @@ describe("mail-api: internal SMTP control routes", { skip: apiBuilt ? false : "a
   });
 });
 
-describe("mail-api: inbound webhook", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-api: inbound webhook", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   let api;
   const secret = () => api.credentials.webhookSecret;
 
@@ -621,7 +626,7 @@ describe("mail-api: inbound webhook", { skip: apiBuilt ? false : "apps/mail-api 
   });
 });
 
-const smtpSkip = !apiBuilt || !smtpBuilt
+const smtpSkip = skipUnlessBuilt(apiBuilt && smtpBuilt, "apps/mail-api or apps/mail-smtp not built")
   ? "apps/mail-api or apps/mail-smtp not built"
   : !opensslAvailable()
     ? "the openssl CLI is needed to generate a throwaway STARTTLS certificate"
@@ -905,6 +910,141 @@ describe("mail-smtp (remote mode) against a real mail-api", { skip: smtpSkip }, 
   });
 });
 
-describe("mail-worker", () => {
-  test("runs as a process", { skip: "apps/mail-worker is a library (src/index.ts exports processQueuedMessage only); it has no process entry point. Queue processing is covered inline by mail-api's processNextQueuedJob in the tests above." }, () => {});
+describe("mail-worker", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
+  let dir;
+  let dbPath;
+  let api;
+  const workers = [];
+
+  const rows = (sql) => {
+    const db = new DatabaseSync(dbPath);
+    try {
+      return db.prepare(sql).all().map((row) => ({ ...row }));
+    } finally {
+      db.close();
+    }
+  };
+  const startWorker = async (env = {}) => {
+    const worker = await startMailWorker({ dbUrl: `sqlite:${dbPath}`, env });
+    workers.push(worker);
+    return worker;
+  };
+  const sendQueued = async (count) => {
+    const ids = [];
+    for (let index = 0; index < count; index += 1) {
+      const response = await sendMail(api, { subject: `Worker message ${index}` });
+      assert.equal(response.status, 202, response.text);
+      assert.equal(response.json.data.delivery_status, "queued", "with the queue not inline a send only queues");
+      ids.push(response.json.data.message_id);
+    }
+    return ids;
+  };
+  const allHave = (ids, status) => () => {
+    const found = rows("SELECT id, status FROM messages;");
+    return ids.every((id) => found.find((row) => row.id === id)?.status === status) ? found : false;
+  };
+
+  before(async () => {
+    dir = mkdtempSync(path.join(tmpdir(), "iai-e2e-worker-"));
+    dbPath = path.join(dir, "mail.db");
+    api = await startMailApi({ env: { MAIL_DB_URL: `sqlite:${dbPath}`, MAIL_PROVIDER_ADAPTER: "fake", MAIL_QUEUE_INLINE: "0" } });
+  });
+
+  after(async () => {
+    for (const worker of workers) {
+      await worker.stop();
+    }
+    await api?.stop();
+    rmSync(dir, { force: true, recursive: true });
+  });
+
+  test("the mail-worker package starts the process these tests run", () => {
+    const manifest = JSON.parse(readFileSync(path.join(repoRoot, "apps/mail-worker/package.json"), "utf8"));
+    const target = path.resolve(path.join(repoRoot, "apps/mail-worker"), manifest.scripts.start.replace(/^node /u, ""));
+    assert.equal(target, path.join(repoRoot, MAIL_WORKER_ENTRY));
+  });
+
+  test("runs as a process: it delivers what mail-api queued and exits cleanly on SIGTERM", async () => {
+    const ids = await sendQueued(3);
+    assert.deepEqual(rows("SELECT DISTINCT status FROM smtp_queue_jobs;"), [{ status: "queued" }]);
+
+    const worker = await startWorker();
+    await waitFor(allHave(ids, "provider_accepted"), { timeoutMs: 15000, description: "the worker to deliver the queued messages" });
+    for (const id of ids) {
+      const events = await getMessageEvents(api, id);
+      assert.equal(events.json.data.items.at(-1).eventType, "provider_accepted");
+    }
+
+    const result = await worker.stop();
+    assert.equal(result.code, 0, result.output);
+    assert.match(result.output, /mail_worker_stopping/u);
+    assert.match(result.output, /mail_worker_stopped/u);
+  });
+
+  test("a restarted worker creates no duplicate attempts", async () => {
+    const before = rows("SELECT message_id, attempt_number FROM delivery_attempts ORDER BY message_id;");
+    const ids = await sendQueued(2);
+    const worker = await startWorker();
+    await waitFor(allHave(ids, "provider_accepted"), { timeoutMs: 15000, description: "the restarted worker to deliver" });
+    await new Promise((resolve) => setTimeout(resolve, 2500)); // two more idle polls: nothing may be delivered again
+    const result = await worker.stop();
+    assert.equal(result.code, 0, result.output);
+
+    const attempts = rows("SELECT message_id, attempt_number FROM delivery_attempts;");
+    assert.equal(attempts.length, before.length + 2);
+    assert.ok(attempts.every((attempt) => attempt.attempt_number === 1), "every message was delivered exactly once");
+    assert.equal(new Set(attempts.map((attempt) => attempt.message_id)).size, attempts.length);
+    assert.deepEqual(rows("SELECT DISTINCT attempts FROM smtp_queue_jobs;"), [{ attempts: 1 }]);
+  });
+
+  test("two workers share the queue without delivering a message twice", async () => {
+    const ids = await sendQueued(12);
+    const [first, second] = await Promise.all([startWorker({ MAIL_WORKER_CONCURRENCY: "2" }), startWorker({ MAIL_WORKER_CONCURRENCY: "2" })]);
+    await waitFor(allHave(ids, "provider_accepted"), { timeoutMs: 20000, description: "two workers to deliver the queue" });
+    for (const worker of [first, second]) {
+      assert.equal((await worker.stop()).code, 0);
+    }
+
+    for (const id of ids) {
+      assert.deepEqual(rows(`SELECT attempt_number, status FROM delivery_attempts WHERE message_id = '${id}';`), [{ attempt_number: 1, status: "accepted" }]);
+      assert.equal(rows(`SELECT COUNT(*) AS n FROM message_events WHERE message_id = '${id}' AND event_type = 'provider_accepted';`)[0].n, 1);
+    }
+    assert.deepEqual(rows("SELECT DISTINCT attempts FROM smtp_queue_jobs;"), [{ attempts: 1 }]);
+  });
+
+  test("without a provider a message is retried and finally failed as no_provider_configured", async () => {
+    const ids = await sendQueued(1);
+    // The limit is stored on the job when mail-api queues it; give this one two attempts.
+    const db = new DatabaseSync(dbPath);
+    try {
+      db.prepare("UPDATE smtp_queue_jobs SET max_attempts = 2 WHERE message_id = ?;").run(ids[0]);
+    } finally {
+      db.close();
+    }
+    const worker = await startWorker({
+      MAIL_PROVIDER_ADAPTER: "none",
+      MAIL_QUEUE_BACKOFF_BASE_SECONDS: "1",
+      MAIL_QUEUE_BACKOFF_CAP_SECONDS: "10"
+    });
+    await waitFor(allHave(ids, "failed"), { timeoutMs: 20000, description: "the message to run out of attempts" });
+    assert.equal((await worker.stop()).code, 0);
+    assert.deepEqual(rows(`SELECT attempt_number, status, error_class FROM delivery_attempts WHERE message_id = '${ids[0]}' ORDER BY attempt_number;`), [
+      { attempt_number: 1, error_class: "no_provider_configured", status: "deferred" },
+      { attempt_number: 2, error_class: "no_provider_configured", status: "failed" }
+    ]);
+    assert.deepEqual(rows(`SELECT status, last_error, last_error_class FROM smtp_queue_jobs WHERE message_id = '${ids[0]}';`), [
+      { last_error: "max_attempts_exceeded", last_error_class: "no_provider_configured", status: "failed" }
+    ]);
+    assert.equal(rows(`SELECT COUNT(*) AS n FROM message_events WHERE message_id = '${ids[0]}' AND event_type = 'provider_accepted';`)[0].n, 0);
+  });
+
+  test("without a provider the worker defers instead of accepting", async () => {
+    const ids = await sendQueued(1);
+    const worker = await startWorker({ MAIL_PROVIDER_ADAPTER: "none" });
+    await waitFor(allHave(ids, "deferred"), { timeoutMs: 15000, description: "the worker to defer the message" });
+    assert.equal((await worker.stop()).code, 0);
+    assert.deepEqual(rows(`SELECT status, error_class FROM delivery_attempts WHERE message_id = '${ids[0]}';`), [
+      { error_class: "no_provider_configured", status: "deferred" }
+    ]);
+  });
 });
