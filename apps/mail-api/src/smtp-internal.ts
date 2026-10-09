@@ -52,7 +52,7 @@ const DEFAULT_DEV_PASSWORD = "dev-secret";
 
 type SmtpOperation = "auth" | "mail-from" | "recipient" | "normalize" | "queue" | "audit";
 type QueueJobStatus = "queued" | "processing" | "completed" | "failed";
-type DeliveryOutcome = "provider_accepted" | "failed";
+type DeliveryOutcome = "provider_accepted" | "deferred" | "failed";
 
 interface SmtpAuthResult {
   allowedStreams: string[];
@@ -159,6 +159,8 @@ interface QueueJobRecord {
   /** Number of times the job has been claimed, this claim included. */
   attempts: number;
   id: string;
+  /** Attempts the job may use in all (stored on the job when it was queued). */
+  maxAttempts: number;
   payloadJson: string;
 }
 
@@ -167,15 +169,72 @@ export interface QueueSettingsInput {
   maxAttempts?: number;
   /** Seconds after which a claimed job that was never finished returns to the queue (10..3600; default MAIL_QUEUE_LEASE_SECONDS, then 300). */
   leaseSeconds?: number;
+  /** Seconds before the first retry (1..3600, clamped; default MAIL_QUEUE_BACKOFF_BASE_SECONDS, then 30). */
+  backoffBaseSeconds?: number;
+  /** Longest wait between attempts before jitter (10..86400, clamped; default MAIL_QUEUE_BACKOFF_CAP_SECONDS, then 3600). */
+  backoffCapSeconds?: number;
+  /** Produces the result of one delivery attempt. Defaults to the built-in in-process delivery. */
+  deliver?: QueueDeliveryHook;
   /** Clock used for claims and leases (tests). */
   now?: () => Date;
+  /** Source of the retry jitter, a number in [0, 1) (tests pass a fixed one). */
+  random?: () => number;
 }
 
 interface QueueSettings {
+  backoffBaseSeconds: number;
+  backoffCapSeconds: number;
+  deliver: QueueDeliveryHook;
   leaseSeconds: number;
   maxAttempts: number;
   now: () => Date;
+  random: () => number;
 }
+
+export const DEFAULT_QUEUE_BACKOFF_BASE_SECONDS = 30;
+export const DEFAULT_QUEUE_BACKOFF_CAP_SECONDS = 3600;
+/** Share of the wait that may be added as jitter. */
+export const QUEUE_BACKOFF_JITTER_RATIO = 0.2;
+
+/**
+ * Milliseconds to wait after the given (1-based) attempt failed retryably:
+ * min(base * 2^(attempt - 1), cap), plus up to 20 percent jitter drawn from `random()` in [0, 1).
+ */
+export function computeBackoffDelayMs(
+  attempt: number,
+  baseSeconds: number,
+  capSeconds: number,
+  random: () => number
+): number {
+  const exponent = Math.min(Math.max(attempt - 1, 0), 30);
+  const seconds = Math.min(baseSeconds * 2 ** exponent, capSeconds);
+  const jitter = Math.min(Math.max(random(), 0), 0.999999999);
+  return Math.round(seconds * 1000 * (1 + QUEUE_BACKOFF_JITTER_RATIO * jitter));
+}
+
+/** What one delivery attempt needs to know about the job. */
+export interface QueueDeliveryInput {
+  /** 1-based number of this attempt. */
+  attempt: number;
+  messageId: string;
+  routeMatched: boolean;
+  stream: string;
+  workspaceId: string;
+}
+
+/**
+ * Outcome of one delivery attempt. `deferred` is a retryable failure (the job is tried again later,
+ * until it runs out of attempts); `failed` is final. `errorClass` is a short class for either.
+ */
+export interface QueueDeliveryResult {
+  errorClass?: string;
+  eventType: "provider_accepted" | "deferred" | "failed";
+  providerMessageId?: string;
+  providerResponseCode: string;
+  providerResponseMessage: string;
+}
+
+export type QueueDeliveryHook = (input: QueueDeliveryInput) => QueueDeliveryResult;
 
 export const DEFAULT_QUEUE_MAX_ATTEMPTS = 5;
 export const DEFAULT_QUEUE_LEASE_SECONDS = 300;
@@ -186,13 +245,11 @@ export interface ClaimedQueueJob {
   id: string;
 }
 
-interface QueueProcessingResult {
-  eventType: DeliveryOutcome;
+interface QueueProcessingResult extends QueueDeliveryResult {
+  /** The job ran out of attempts while the result was still retryable. */
+  maxAttemptsExceeded?: boolean;
   /** When a deferred delivery may be tried again (recorded on the attempt). */
   nextRetryAt?: string;
-  providerMessageId?: string;
-  providerResponseCode: string;
-  providerResponseMessage: string;
 }
 
 interface ResolvedSeedConfig {
@@ -1166,9 +1223,19 @@ class MailPersistenceStore {
 
     const route = this.selectProviderRoute(payload.workspaceId, payload.stream);
     const attemptId = `att_${randomUUID()}`;
-    const startedAt = new Date().toISOString();
-    const finishedAt = new Date().toISOString();
-    const outcome = buildQueueProcessingResult(payload, route);
+    const startedAt = this.queueSettings.now().toISOString();
+    const outcome = this.finalizeOutcome(
+      this.queueSettings.deliver({
+        attempt: claimedJob.attempts,
+        messageId: payload.messageId,
+        routeMatched: Boolean(route),
+        stream: payload.stream,
+        workspaceId: payload.workspaceId
+      }),
+      claimedJob.attempts,
+      claimedJob.maxAttempts
+    );
+    const finishedAt = this.queueSettings.now().toISOString();
     const providerRouteId = route?.routeId ?? "unrouted";
     const providerType = route?.providerType ?? "selfhosted";
 
@@ -1204,13 +1271,13 @@ class MailPersistenceStore {
           attemptId,
           payload.messageId,
           claimedJob.attempts,
-          outcome.eventType === "provider_accepted" ? "accepted" : "failed",
+          outcome.eventType === "provider_accepted" ? "accepted" : outcome.eventType,
           providerRouteId,
           providerType,
           outcome.providerMessageId ?? null,
           outcome.providerResponseCode,
           outcome.providerResponseMessage,
-          outcome.eventType === "provider_accepted" ? null : "routing_failed",
+          outcome.eventType === "provider_accepted" ? null : outcome.errorClass ?? "delivery_failed",
           JSON.stringify({
             routeMatched: Boolean(route)
           }),
@@ -1253,7 +1320,10 @@ class MailPersistenceStore {
             providerResponseCode: outcome.providerResponseCode,
             providerResponseMessage: outcome.providerResponseMessage,
             providerRouteId,
-            retryable: false
+            ...(outcome.errorClass ? { errorClass: outcome.errorClass } : {}),
+            ...(outcome.maxAttemptsExceeded ? { reason: "max_attempts_exceeded" } : {}),
+            ...(outcome.nextRetryAt ? { nextAttemptAt: outcome.nextRetryAt } : {}),
+            retryable: outcome.eventType === "deferred"
           }),
           outcome.providerMessageId ?? null,
           providerType,
@@ -1285,23 +1355,84 @@ class MailPersistenceStore {
           payload.messageId
         );
 
-      this.db
-        .prepare(
-          `
-            UPDATE smtp_queue_jobs
-            SET
-              status = 'completed',
-              updated_at = ?
-            WHERE id = ?;
-          `
-        )
-        .run(finishedAt, claimedJob.id);
+      if (outcome.eventType === "deferred") {
+        // Back to the queue, not claimable before the retry time.
+        this.db
+          .prepare(
+            `
+              UPDATE smtp_queue_jobs
+              SET
+                status = 'queued',
+                next_attempt_at = ?,
+                last_error = ?,
+                last_error_class = ?,
+                updated_at = ?
+              WHERE id = ?;
+            `
+          )
+          .run(
+            outcome.nextRetryAt ?? null,
+            outcome.providerResponseMessage.slice(0, 500),
+            outcome.errorClass ?? "deferred",
+            finishedAt,
+            claimedJob.id
+          );
+      } else if (outcome.eventType === "failed" && outcome.errorClass !== "routing_failed") {
+        this.db
+          .prepare(
+            `
+              UPDATE smtp_queue_jobs
+              SET
+                status = 'failed',
+                last_error = ?,
+                last_error_class = ?,
+                updated_at = ?
+              WHERE id = ?;
+            `
+          )
+          .run(
+            (outcome.maxAttemptsExceeded ? "max_attempts_exceeded" : outcome.providerResponseMessage).slice(0, 500),
+            outcome.errorClass ?? "delivery_failed",
+            finishedAt,
+            claimedJob.id
+          );
+      } else {
+        this.db
+          .prepare(
+            `
+              UPDATE smtp_queue_jobs
+              SET
+                status = 'completed',
+                updated_at = ?
+              WHERE id = ?;
+            `
+          )
+          .run(finishedAt, claimedJob.id);
+      }
 
       this.db.exec("COMMIT;");
     } catch (error) {
       this.db.exec("ROLLBACK;");
       this.markJobFailed(claimedJob.id, String(error));
     }
+  }
+
+  /**
+   * A deferred result gets its retry time, or becomes final once the job has used up its attempts
+   * (reason max_attempts_exceeded, the provider's error class kept).
+   */
+  private finalizeOutcome(result: QueueDeliveryResult, attempt: number, maxAttempts: number): QueueProcessingResult {
+    if (result.eventType !== "deferred") {
+      return result;
+    }
+
+    if (attempt >= maxAttempts) {
+      return { ...result, eventType: "failed", maxAttemptsExceeded: true };
+    }
+
+    const settings = this.queueSettings;
+    const delayMs = computeBackoffDelayMs(attempt, settings.backoffBaseSeconds, settings.backoffCapSeconds, settings.random);
+    return { ...result, nextRetryAt: new Date(settings.now().getTime() + delayMs).toISOString() };
   }
 
   insertAuditLog(input: AuditLogInput) {
@@ -1375,7 +1506,7 @@ class MailPersistenceStore {
           WHERE id = ?
             AND status = 'queued'
             AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
-          RETURNING id, payload_json AS payloadJson, attempts;
+          RETURNING id, payload_json AS payloadJson, attempts, max_attempts AS maxAttempts;
         `
       )
       .get(now, next.id, now) as QueueJobRecord | undefined;
@@ -2239,12 +2370,11 @@ function handleSendOperation(
   return buildSendResponse(deliveryState, queuePayload.recipients.length, queuePayload.stream);
 }
 
-function buildQueueProcessingResult(
-  payload: SmtpQueueRequest,
-  route: ProviderRouteSelection | undefined
-): QueueProcessingResult {
-  if (!route) {
+/** The built-in in-process delivery: accepts whatever matches an active route. */
+function defaultQueueDelivery(input: QueueDeliveryInput): QueueDeliveryResult {
+  if (!input.routeMatched) {
     return {
+      errorClass: "routing_failed",
       eventType: "failed",
       providerResponseCode: "500",
       providerResponseMessage: "No active provider route matched."
@@ -2253,7 +2383,7 @@ function buildQueueProcessingResult(
 
   return {
     eventType: "provider_accepted",
-    providerMessageId: `provider_${payload.messageId}`,
+    providerMessageId: `provider_${input.messageId}`,
     providerResponseCode: "202",
     providerResponseMessage: "accepted by internal worker"
   };
@@ -2923,14 +3053,55 @@ function resolveBoundedInteger(
   return parsed;
 }
 
+/** Like resolveBoundedInteger, but a whole number outside the range is moved to the nearest limit. */
+function resolveClampedInteger(
+  option: number | undefined,
+  envName: string,
+  fallback: number,
+  min: number,
+  max: number,
+  env: NodeJS.ProcessEnv
+): number {
+  const raw = option !== undefined ? String(option) : env[envName]?.trim();
+  if (raw === undefined || raw === "") {
+    return fallback;
+  }
+
+  if (!/^\d+$/u.test(raw)) {
+    throw new Error(`${option !== undefined ? "queue option" : envName} must be a whole number, got: ${JSON.stringify(raw)}`);
+  }
+
+  return Math.min(Math.max(Number(raw), min), max);
+}
+
 export function resolveQueueSettings(
   input: QueueSettingsInput = {},
   env: NodeJS.ProcessEnv = process.env
 ): QueueSettings {
+  const backoffBaseSeconds = resolveClampedInteger(
+    input.backoffBaseSeconds,
+    "MAIL_QUEUE_BACKOFF_BASE_SECONDS",
+    DEFAULT_QUEUE_BACKOFF_BASE_SECONDS,
+    1,
+    3600,
+    env
+  );
+  const backoffCapSeconds = resolveClampedInteger(
+    input.backoffCapSeconds,
+    "MAIL_QUEUE_BACKOFF_CAP_SECONDS",
+    DEFAULT_QUEUE_BACKOFF_CAP_SECONDS,
+    10,
+    86400,
+    env
+  );
   return {
+    backoffBaseSeconds,
+    backoffCapSeconds: Math.max(backoffCapSeconds, backoffBaseSeconds),
+    deliver: input.deliver ?? defaultQueueDelivery,
     leaseSeconds: resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env),
     maxAttempts: resolveBoundedInteger(input.maxAttempts, "MAIL_QUEUE_MAX_ATTEMPTS", DEFAULT_QUEUE_MAX_ATTEMPTS, 1, 10, env),
-    now: input.now ?? (() => new Date())
+    now: input.now ?? (() => new Date()),
+    random: input.random ?? Math.random
   };
 }
 
