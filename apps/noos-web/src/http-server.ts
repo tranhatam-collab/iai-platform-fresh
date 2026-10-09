@@ -1,9 +1,11 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { getCommerceSourceMode } from "./data.js";
+import { getCommerceSourceMode, isCommerceDataReadable } from "./data.js";
 import { renderCheckoutFromForm, renderRoute } from "./render.js";
 import { defaultLocale, type Locale } from "./i18n.js";
 
 export interface NoosWebServerOptions {
+  /** Directory holding the commerce documents that /ready checks. Defaults to `docs/noos`. */
+  docsRoot?: string;
   port?: number;
 }
 
@@ -81,7 +83,12 @@ function respondUnhandledError(res: ServerResponse, error: unknown): void {
   }
 }
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse, port: number): Promise<void> {
+async function handleRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  port: number,
+  docsRoot?: string
+): Promise<void> {
   if (!req.url || !req.method) {
     respondBadRequest(res);
     return;
@@ -111,6 +118,19 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse, port: nu
         2
       )
     );
+    return;
+  }
+
+  // /health says the process is up; /ready says the data every page is built from can be read.
+  if (url.pathname === "/ready") {
+    const ready = isCommerceDataReadable(docsRoot);
+    res.writeHead(ready ? 200 : 503, {
+      "cache-control": "no-store",
+      "content-type": "application/json; charset=utf-8",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "x-content-type-options": "nosniff"
+    });
+    res.end(JSON.stringify({ status: ready ? "ready" : "not_ready", service: "noos-web" }, null, 2));
     return;
   }
 
@@ -150,7 +170,7 @@ export function createNoosWebServer(options: NoosWebServerOptions = {}): Server 
   const port = options.port ?? Number(process.env.NOOS_WEB_PORT ?? 4320);
 
   return createServer((req, res) => {
-    handleRequest(req, res, port).catch((error: unknown) => {
+    handleRequest(req, res, port, options.docsRoot).catch((error: unknown) => {
       respondUnhandledError(res, error);
     });
   });

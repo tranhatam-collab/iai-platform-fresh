@@ -200,6 +200,7 @@ export function renderDeveloperHome(config: DeveloperRenderConfig, locale: Local
         <p>${escapeHtml(t(locale, "footer.trust"))}</p>
         <p>${escapeHtml(t(locale, "footer.entity"))}</p>
         <p><a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a></p>
+        ${renderFooterPolicyLinks(locale)}
       </footer>
     `
   );
@@ -297,6 +298,7 @@ export function renderDeveloperRequiredRoute(
         <p>${escapeHtml(t(locale, "footer.trust"))}</p>
         <p>${escapeHtml(t(locale, "footer.entity"))}</p>
         <p><a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a></p>
+        ${renderFooterPolicyLinks(locale)}
       </footer>
     `
   );
@@ -361,6 +363,7 @@ export function renderDeveloperPolicyRoute(
         <p>${escapeHtml(t(locale, "footer.trust"))}</p>
         <p>${escapeHtml(t(locale, "footer.entity"))}</p>
         <p><a href="https://docs.iai.one/legal/iai-flow/">${escapeHtml(t(locale, "footer.legal.iai_flow"))}</a></p>
+        ${renderFooterPolicyLinks(locale)}
       </footer>
     `
   );
@@ -510,6 +513,16 @@ function renderPolicyRouteCard(
       </div>
     </article>
   `;
+}
+
+function renderFooterPolicyLinks(locale: Locale): string {
+  const links = policyRoutePaths
+    .map(
+      (routePath) =>
+        `<a href="${escapeHtml(buildLocalizedPath(routePath, locale))}">${escapeHtml(resolvePolicyRouteLabel(routePath, locale))}</a>`
+    )
+    .join(" · ");
+  return `<p class="footer-policy">${links}</p>`;
 }
 
 function resolvePolicyRouteLabel(routePath: DeveloperPolicyRoutePath, locale: Locale): string {
