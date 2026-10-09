@@ -340,3 +340,53 @@ test("separate processes claiming from one table never claim a job twice", async
     cleanup();
   }
 });
+
+test("a job failed by an expired lease with no attempts left fails its message and records the event", async () => {
+  const { cleanup, dbPath, url } = tempDb();
+  const time = clock();
+  const backend = openBackend(url, { inline: false, leaseSeconds: 60, now: time.now });
+  try {
+    const failing = await queuedJob(backend, dbPath, "idem-lease-fail", { maxAttempts: 1 });
+    const retryable = await queuedJob(backend, dbPath, "idem-lease-retry", { maxAttempts: 3 });
+    withDb(dbPath, (db) => {
+      db.prepare("UPDATE smtp_queue_jobs SET created_at = ? WHERE id = ?;").run("2026-10-09T08:00:00.000Z", failing);
+      db.prepare("UPDATE smtp_queue_jobs SET created_at = ? WHERE id = ?;").run("2026-10-09T08:01:00.000Z", retryable);
+    });
+    const messageOf = (jobId) => withDb(dbPath, (db) => db.prepare("SELECT message_id AS id FROM smtp_queue_jobs WHERE id = ?;").get(jobId).id);
+    const failingMessage = messageOf(failing);
+    const retryableMessage = messageOf(retryable);
+    const status = (messageId) => withDb(dbPath, (db) => db.prepare("SELECT status FROM messages WHERE id = ?;").get(messageId).status);
+
+    // Both jobs are claimed and never finished.
+    assert.equal(backend.queue.claimNextJob()?.id, failing);
+    assert.equal(backend.queue.claimNextJob()?.id, retryable);
+    time.advanceSeconds(61);
+    assert.equal(backend.queue.claimNextJob()?.id, retryable, "the job with attempts left is claimed again; the other is failed");
+
+    assert.equal(jobRow(dbPath, failing).status, "failed");
+    assert.equal(status(failingMessage), "failed");
+    const events = withDb(dbPath, (db) =>
+      db.prepare("SELECT event_type, payload_json FROM message_events WHERE message_id = ? AND event_type = 'failed';").all(failingMessage).map((row) => ({ ...row }))
+    );
+    assert.equal(events.length, 1);
+    assert.deepEqual(JSON.parse(events[0].payload_json), { errorClass: "lease_expired", reason: "max_attempts_exceeded", retryable: false });
+    assert.notEqual(status(retryableMessage), "failed", "a job with attempts left keeps its message");
+
+    // No failed job may leave its message queued or processing, and the failure is recorded once.
+    withDb(dbPath, (db) => {
+      const stranded = db
+        .prepare("SELECT j.id FROM smtp_queue_jobs j JOIN messages m ON m.id = j.message_id WHERE j.status = 'failed' AND m.status IN ('queued', 'processing');")
+        .all();
+      assert.deepEqual(stranded, []);
+    });
+    time.advanceSeconds(3600);
+    backend.queue.claimNextJob();
+    assert.equal(
+      withDb(dbPath, (db) => db.prepare("SELECT COUNT(*) AS n FROM message_events WHERE message_id = ? AND event_type = 'failed';").get(failingMessage).n),
+      1
+    );
+  } finally {
+    backend.close();
+    cleanup();
+  }
+});

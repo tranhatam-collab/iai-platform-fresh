@@ -1594,21 +1594,35 @@ class MailPersistenceStore {
     const now = nowDate.toISOString();
     const expiredBefore = new Date(nowDate.getTime() - this.queueSettings.leaseSeconds * 1000).toISOString();
 
-    this.db
-      .prepare(
-        `
-          UPDATE smtp_queue_jobs
-          SET
-            status = 'failed',
-            last_error = 'max_attempts_exceeded',
-            last_error_class = 'lease_expired',
-            updated_at = ?
-          WHERE status = 'processing'
-            AND updated_at <= ?
-            AND attempts >= max_attempts;
-        `
-      )
-      .run(now, expiredBefore);
+    // A job whose claim ran out with no attempts left is failed, and so is its message. The UPDATE ...
+    // RETURNING hands each such job to exactly one caller, which also records the failure event.
+    this.db.exec("BEGIN;");
+    try {
+      const failedJobs = this.db
+        .prepare(
+          `
+            UPDATE smtp_queue_jobs
+            SET
+              status = 'failed',
+              last_error = 'max_attempts_exceeded',
+              last_error_class = 'lease_expired',
+              updated_at = ?
+            WHERE status = 'processing'
+              AND updated_at <= ?
+              AND attempts >= max_attempts
+            RETURNING id, message_id AS messageId, workspace_id AS workspaceId, payload_json AS payloadJson;
+          `
+        )
+        .all(now, expiredBefore) as Array<{ id: string; messageId: string; payloadJson: string; workspaceId: string }>;
+
+      for (const job of failedJobs) {
+        this.recordLeaseFailure(job, now);
+      }
+      this.db.exec("COMMIT;");
+    } catch (error) {
+      this.db.exec("ROLLBACK;");
+      throw error;
+    }
 
     this.db
       .prepare(
@@ -1623,6 +1637,43 @@ class MailPersistenceStore {
         `
       )
       .run(now, expiredBefore);
+  }
+
+  /** Fails the message of a job that ran out of attempts through its lease, and records the event. */
+  private recordLeaseFailure(job: { id: string; messageId: string; payloadJson: string; workspaceId: string }, now: string) {
+    let traceId = `lease_${job.id}`;
+    let source = "mail-queue";
+    try {
+      const payload = JSON.parse(job.payloadJson) as Partial<SmtpQueueRequest>;
+      traceId = payload.traceId ?? traceId;
+      source = payload.source ?? source;
+    } catch {
+      // the event is still recorded, with generic trace details
+    }
+
+    this.db
+      .prepare("UPDATE messages SET status = 'failed', last_event_at = ?, updated_at = ? WHERE id = ?;")
+      .run(now, now, job.messageId);
+    this.db
+      .prepare(
+        `
+          INSERT INTO message_events (
+            id, message_id, workspace_id, event_type, occurred_at, payload_json,
+            provider_message_id, provider_type, source, trace_id, created_at
+          ) VALUES (?, ?, ?, 'failed', ?, ?, NULL, 'selfhosted', ?, ?, ?)
+          ON CONFLICT(id) DO NOTHING;
+        `
+      )
+      .run(
+        `evt_${job.messageId}_failed_lease_${job.id}`,
+        job.messageId,
+        job.workspaceId,
+        now,
+        JSON.stringify({ errorClass: "lease_expired", reason: "max_attempts_exceeded", retryable: false }),
+        source,
+        traceId,
+        now
+      );
   }
 
   private markJobFailed(jobId: string, message: string) {
