@@ -1224,10 +1224,14 @@ class MailPersistenceStore {
     }
   }
 
-  /** Runs the send path's own delivery when the queue is processed inline (MAIL_QUEUE_INLINE, default on). */
-  processInline() {
+  /**
+   * Runs the send path's own delivery when the queue is processed inline (MAIL_QUEUE_INLINE, default on).
+   * The delivery is awaited, so a hook may be asynchronous: a resolved result is recorded and a rejection is a
+   * temporary failure, exactly as on the worker path.
+   */
+  async processInline(): Promise<void> {
     if (this.queueSettings.inline) {
-      this.processNextQueuedJob();
+      await this.processNextQueuedJobAsync();
     }
   }
 
@@ -1250,7 +1254,9 @@ class MailPersistenceStore {
     }
 
     if (result instanceof Promise) {
-      // Only reachable with a custom hook; the job stays claimed and returns to the queue when its lease runs out.
+      // Only the synchronous public processNext() gets here, with a custom hook that returns a Promise: it cannot
+      // wait for it, so that job stays claimed and returns to the queue when its lease runs out. Inline delivery
+      // and workers use processNextAsync(), which awaits the hook.
       void result.catch(() => undefined);
       throw new Error("processNext needs a synchronous delivery hook; use processNextAsync.");
     }
@@ -2031,13 +2037,7 @@ export function createSmtpInternalBackend(
   const maxBodyBytes = resolveMaxBodyBytes(options.maxBodyBytes);
   const seed = resolveSeed(options.seed, process.env.NODE_ENV);
   const databaseUrl = options.databaseUrl ?? process.env.MAIL_DB_URL ?? "sqlite:/tmp/iai-mail.db";
-  const queueSettings = resolveQueueSettings(options.queue);
-  if (queueSettings.inline && queueSettings.deliver.constructor.name === "AsyncFunction") {
-    // The send path delivers synchronously; an asynchronous hook would leave the job claimed until its lease ends.
-    throw new Error("An asynchronous delivery hook needs queue.inline = false (MAIL_QUEUE_INLINE=0) and a worker process.");
-  }
-
-  const store = new MailPersistenceStore(databaseUrl, seed, queueSettings);
+  const store = new MailPersistenceStore(databaseUrl, seed, resolveQueueSettings(options.queue));
 
   reportInternalAuthPosture(internalAuth);
   if (process.env.NODE_ENV === "production" && store.hasDefaultDevCredential()) {
@@ -2133,7 +2133,7 @@ export function createSmtpInternalBackend(
           const workspaceId = requireWorkspaceId(request, url);
           const body = await readRequestBody(request, maxBodyBytes);
           const payload = asRecord(body) as MailApiSendRequest;
-          const result = handleSendOperation(store, payload, {
+          const result = await handleSendOperation(store, payload, {
             requestId,
             workspaceId
           });
@@ -2257,7 +2257,7 @@ export function createSmtpInternalBackend(
           }
           case "queue": {
             const payload = asRecord(body) as unknown as SmtpQueueRequest;
-            const result = handleQueueOperation(store, payload);
+            const result = await handleQueueOperation(store, payload);
             writeRawJson(response, 200, result);
             return true;
           }
@@ -2439,7 +2439,7 @@ function handleNormalizeOperation(store: MailPersistenceStore, payload: SmtpNorm
   };
 }
 
-function handleQueueOperation(store: MailPersistenceStore, payload: SmtpQueueRequest) {
+async function handleQueueOperation(store: MailPersistenceStore, payload: SmtpQueueRequest) {
   const queuePayload = validateQueuePayload(payload);
   const selectedRoute = store.selectProviderRoute(queuePayload.workspaceId, queuePayload.stream);
   const providerRoute = selectedRoute?.routeId;
@@ -2451,7 +2451,7 @@ function handleQueueOperation(store: MailPersistenceStore, payload: SmtpQueueReq
     providerRouteId: providerRoute,
     queuedAt
   });
-  store.processInline();
+  await store.processInline();
 
   return {
     messageEventId,
@@ -2487,7 +2487,7 @@ function handleAuditOperation(store: MailPersistenceStore, payload: SmtpAuditReq
   };
 }
 
-function handleSendOperation(
+async function handleSendOperation(
   store: MailPersistenceStore,
   payload: MailApiSendRequest,
   input: {
@@ -2550,7 +2550,7 @@ function handleSendOperation(
       queuedAt
     }
   );
-  store.processInline();
+  await store.processInline();
 
   const deliveryState = store.getMessageDeliveryState(queuePayload.messageId) ?? {
     deliveryStatus: "queued",

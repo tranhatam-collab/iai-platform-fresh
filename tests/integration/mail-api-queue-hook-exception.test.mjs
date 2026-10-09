@@ -16,6 +16,7 @@ import { dispatchToHandler } from "../support/http-handler.mjs";
 
 const API_KEY = "mail-api-key-for-tests";
 const WORKSPACE = "ws_hookerr";
+const ACCEPTED = { eventType: "provider_accepted", providerMessageId: "prov_1", providerResponseCode: "250", providerResponseMessage: "ok" };
 const SEED = {
   blockedRecipient: "blocked@example.com",
   defaultSender: "ops@hookerr.example",
@@ -260,30 +261,26 @@ test("only the error class is stored, never the error text", async () => {
   }
 });
 
-test("an asynchronous hook is refused together with inline delivery; a Promise-returning hook on that path leaves the job to its lease", async () => {
-  const { cleanup, dbPath, url } = tempDb();
-  assert.throws(
-    () => createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { deliver: async () => ({}) }, seed: SEED }),
-    /asynchronous delivery hook needs queue\.inline = false/u
-  );
-
-  // A function that merely returns a Promise cannot be told apart at startup. On the inline path it is not
-  // awaited: the send answers 500 and the job stays claimed until its lease runs out, then it is retried.
-  const time = clock();
-  const backend = createSmtpInternalBackend({
-    apiKey: API_KEY,
-    databaseUrl: url,
-    queue: { deliver: () => Promise.reject(new Error("late")), leaseSeconds: 60, now: time.now },
-    seed: SEED
-  });
-  try {
-    const { status } = await send(backend, "idem-promise-inline");
-    assert.equal(status, 500);
-    assert.deepEqual(query(dbPath, "SELECT status, attempts FROM smtp_queue_jobs;"), [{ attempts: 1, status: "processing" }]);
-    time.advance(61);
-    assert.equal(backend.queue.claimNextJob()?.attempts, 2, "the job is claimed again once the lease has run out");
-  } finally {
-    backend.close();
-    cleanup();
+test("inline delivery awaits an asynchronous hook: a resolved result is recorded and a rejection is a temporary failure", async () => {
+  const hooks = [
+    ["async function resolving accepted", async () => ACCEPTED, 202, "provider_accepted", "completed", "accepted"],
+    ["plain function returning a resolved Promise", () => Promise.resolve(ACCEPTED), 202, "provider_accepted", "completed", "accepted"],
+    ["async function rejecting with a timeout", async () => { throw withCode("connect ETIMEDOUT", "ETIMEDOUT"); }, 202, "deferred", "queued", "deferred"],
+    ["plain function returning a rejected Promise", () => Promise.reject(new Error("socket hang up")), 202, "deferred", "queued", "deferred"]
+  ];
+  for (const [name, deliver, expectedStatus, expectedDelivery, expectedJob, expectedAttempt] of hooks) {
+    const { cleanup, dbPath, url } = tempDb();
+    const backend = createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { deliver }, seed: SEED });
+    try {
+      const { body, status } = await send(backend, `idem-inline-${expectedDelivery}`);
+      assert.equal(status, expectedStatus, name);
+      assert.equal(body.data.delivery_status, expectedDelivery, name);
+      assert.deepEqual(query(dbPath, "SELECT status FROM smtp_queue_jobs;"), [{ status: expectedJob }], name);
+      assert.deepEqual(query(dbPath, "SELECT status FROM delivery_attempts;"), [{ status: expectedAttempt }], name);
+      assert.deepEqual(query(dbPath, "SELECT COUNT(*) AS stuck FROM smtp_queue_jobs WHERE status = 'processing';"), [{ stuck: 0 }], `${name}: no job is left processing`);
+    } finally {
+      backend.close();
+      cleanup();
+    }
   }
 });
