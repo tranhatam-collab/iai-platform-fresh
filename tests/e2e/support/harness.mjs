@@ -157,13 +157,17 @@ export async function startService({
   }
 
   for (let attempt = 0; ; attempt += 1) {
+    let port;
     try {
-      return await startServiceOnce({ name, entry, env, portEnv, hostEnv, readyPath, readyTimeoutMs, port: await getPort() });
+      port = await getPort();
+      return await startServiceOnce({ name, entry, env, portEnv, hostEnv, readyPath, readyTimeoutMs, port });
     } catch (error) {
       const portTaken = error instanceof EarlyExitError && /EADDRINUSE/u.test(error.output);
       if (!portTaken || attempt >= PORT_IN_USE_RETRIES) {
         throw error;
       }
+      // One line per retry so the frequency of taken ports can be counted from the run logs.
+      process.stderr.write(`[harness] ${name}: port ${port} in use, retry ${attempt + 1}/${PORT_IN_USE_RETRIES}\n`);
     }
   }
 }

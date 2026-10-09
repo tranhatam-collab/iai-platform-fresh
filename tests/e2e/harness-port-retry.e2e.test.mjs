@@ -62,8 +62,22 @@ describe("startService port retry", () => {
     const free = await getFreePort();
     const { getPort, picked } = portPicker([held.port, free]);
     let service;
+    const logged = [];
+    const originalWrite = process.stderr.write;
+    process.stderr.write = (chunk, ...rest) => {
+      logged.push(String(chunk));
+      return originalWrite.call(process.stderr, chunk, ...rest);
+    };
     try {
-      service = await startService({ ...FIXTURE, getPort });
+      try {
+        service = await startService({ ...FIXTURE, getPort });
+      } finally {
+        process.stderr.write = originalWrite;
+      }
+      assert.ok(
+        logged.some((line) => line.includes(`port ${held.port} in use, retry 1/${PORT_IN_USE_RETRIES}`)),
+        "each retry must log one line to stderr"
+      );
       assert.deepEqual(picked, [held.port, free], "the second attempt must use the new port");
       assert.equal(service.port, free);
       const response = await fetch(`${service.baseUrl}/health`);
