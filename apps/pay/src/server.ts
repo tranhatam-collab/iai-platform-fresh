@@ -1659,6 +1659,8 @@ function hasEvidenceLookupKey(body: Record<string, unknown>): boolean {
 
 function statusForPaymentEmailOutboundError(error: PaymentEmailOutboundAdapterError): number {
   switch (error.code) {
+    case "MAIL_API_BASE_URL_INVALID":
+    case "MAIL_API_BASE_URL_MISSING":
     case "MAIL_API_KEY_MISSING":
     case "MAIL_API_WORKSPACE_ID_MISSING":
       return 503;
