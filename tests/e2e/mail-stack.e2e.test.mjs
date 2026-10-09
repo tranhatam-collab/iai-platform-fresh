@@ -50,6 +50,11 @@ describe("mail-api: /v1/send", { skip: apiBuilt ? false : "apps/mail-api not bui
     const health = await request(api.baseUrl, "/health");
     assert.equal(health.status, 200);
     assert.equal(health.json.data.status, "ok");
+    assert.deepEqual(health.json.data.checks, [
+      { name: "database", status: "ok" },
+      { name: "queue", status: "ok" }
+    ]);
+    assert.deepEqual(health.json.data.failed, []);
 
     const deps = await request(api.baseUrl, "/v1/health/dependencies");
     assert.equal(deps.status, 200);

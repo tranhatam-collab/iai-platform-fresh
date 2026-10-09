@@ -270,11 +270,28 @@ async function handleRequest(
     }
 
     if (url.pathname === "/health") {
-      respondSuccess(response, 200, requestId, {
+      // Pass/fail per component only: this route is unauthenticated, so it never
+      // carries error text, paths or counts.
+      const components = smtpInternalBackend.checkHealth?.().components ?? [];
+      const failed = components.filter((item) => !item.ok).map((item) => item.name);
+      const healthy = failed.length === 0;
+      const data = {
+        checks: components.map((item) => ({ name: item.name, status: item.ok ? "ok" : "failed" })),
+        failed,
         service: "api.flow",
-        status: "ok",
+        status: healthy ? "ok" : "unavailable",
         timestamp: now
-      });
+      };
+
+      if (healthy) {
+        respondSuccess(response, 200, requestId, data);
+      } else {
+        writeJson(response, 503, {
+          data,
+          meta: { request_id: requestId, timestamp: now },
+          ok: false
+        });
+      }
       return;
     }
 
