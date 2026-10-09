@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+# The root .gitignore ignores every package-lock.json (pnpm workspace). This
+# package is intentionally outside the workspace and needs its lockfile
+# committed so CI installs the same wrangler/workerd with `npm ci`.
+!package-lock.json
