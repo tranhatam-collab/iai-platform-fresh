@@ -76,7 +76,7 @@ ssh root@mail.iai.one '
 | `NODE_ENV` | no | `production` (set by the Dockerfile) | In production the dev SMTP login (`smtp-dev` / `dev-secret` / `ws_dev`) is never seeded |
 | `MAIL_SMTP_REMOTE_TOKEN` | no | — | Service token for `/v1/internal/smtp/*`. Path B does not need those routes: while unset they answer 503 (fail closed) and a startup error is logged. Set it only if this container should serve them |
 | `MAIL_API_KEY` | no | — | Bearer key for `POST /v1/send` and persisted `GET /v1/messages/:id[/events]`; while unset they answer 503 |
-| `MAIL_API_HEALTH_MAX_QUEUE_DEPTH` | no | `1000` | Queued jobs above which `GET /health` reports the queue as failed (HTTP 503) |
+| `MAIL_API_HEALTH_MAX_QUEUE_DEPTH` | no | `1000` | Queued jobs above which `GET /ready` reports the queue as failed (HTTP 503); `GET /health` (liveness, SQLite only) is not affected |
 
 ## Volume contract
 

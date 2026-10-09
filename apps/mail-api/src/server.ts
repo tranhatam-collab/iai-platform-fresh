@@ -269,10 +269,18 @@ async function handleRequest(
       throw new HttpError(405, "VALIDATION_ERROR", "Only GET and POST methods are supported by this service.");
     }
 
-    if (url.pathname === "/health") {
-      // Pass/fail per component only: this route is unauthenticated, so it never
-      // carries error text, paths or counts.
-      const components = smtpInternalBackend.checkHealth?.().components ?? [];
+    if (url.pathname === "/health" || url.pathname === "/ready") {
+      // /health is liveness (can the service reach its database); /ready is readiness
+      // (database plus queue depth). Pass/fail per component only: these routes are
+      // unauthenticated, so they never carry error text, paths or counts.
+      const required: Array<"database" | "queue"> =
+        url.pathname === "/health" ? ["database"] : ["database", "queue"];
+      // A backend that cannot report health is not healthy: fail closed.
+      const report = smtpInternalBackend.checkHealth?.();
+      const components = required.map((name) => ({
+        name,
+        ok: report?.components.find((item) => item.name === name)?.ok === true
+      }));
       const failed = components.filter((item) => !item.ok).map((item) => item.name);
       const healthy = failed.length === 0;
       const data = {
