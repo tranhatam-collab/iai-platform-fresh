@@ -13,7 +13,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
-import { builtEntryAvailable, getFreePort, request, startMailApi, startService } from "./support/harness.mjs";
+import { builtEntryAvailable, getFreePort, request, skipUnlessBuilt, startMailApi, startService } from "./support/harness.mjs";
 
 const WORKSPACE = "ws_flow_main";
 const SESSION = { "x-dash-session": "e2e-session" };
@@ -27,7 +27,7 @@ function flowApi(api, pathname) {
   return request(api.baseUrl, `${pathname}${pathname.includes("?") ? "&" : "?"}workspace_id=${WORKSPACE}`);
 }
 
-describe("flow, dash and web against a real mail-api", { skip: built ? false : "mail-api, dash, web or flow not built" }, () => {
+describe("flow, dash and web against a real mail-api", { skip: skipUnlessBuilt(built, "mail-api, dash, web or flow not built") }, () => {
   let api;
   let dash;
   let web;
@@ -35,7 +35,8 @@ describe("flow, dash and web against a real mail-api", { skip: built ? false : "
 
   before(async () => {
     api = await startMailApi();
-    [dash, web, flow] = await Promise.all([
+    // allSettled, not all: when one service fails to start the others must still be recorded so after() stops them
+    const results = await Promise.allSettled([
       startService({
         name: "dash",
         entry: "apps/dash/dist/index.js",
@@ -58,6 +59,11 @@ describe("flow, dash and web against a real mail-api", { skip: built ? false : "
         env: { FLOW_API_FLOW_URL: api.baseUrl }
       })
     ]);
+    [dash, web, flow] = results.map((result) => (result.status === "fulfilled" ? result.value : undefined));
+    const failure = results.find((result) => result.status === "rejected");
+    if (failure) {
+      throw failure.reason;
+    }
   });
 
   after(async () => {

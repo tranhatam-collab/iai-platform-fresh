@@ -21,7 +21,7 @@ import path from "node:path";
 import { after, before, describe, test } from "node:test";
 
 import { sendJson, startFakeServer } from "./support/fake-http.mjs";
-import { builtEntryAvailable, request, startMailApi, startService } from "./support/harness.mjs";
+import { builtEntryAvailable, request, skipUnlessBuilt, startMailApi, startService } from "./support/harness.mjs";
 import { DEV_WORKSPACE, getMessage, getMessageEvents, uniqueKey } from "./support/mail-helpers.mjs";
 import { BLOCKED_MARKER, networkGuardEnv } from "./support/network-guard.mjs";
 
@@ -84,7 +84,7 @@ function post(base, pathname, body, headers = { "x-pay-email-adapter-key": INTER
   });
 }
 
-describe("pay with a real mail-api", { skip: built ? false : "apps/pay or apps/mail-api not built" }, () => {
+describe("pay with a real mail-api", { skip: skipUnlessBuilt(built, "apps/pay or apps/mail-api not built") }, () => {
   let workDir;
   let mailApi;
   let tenant;
@@ -745,7 +745,7 @@ describe("pay with a real mail-api", { skip: built ? false : "apps/pay or apps/m
   });
 });
 
-describe("pay reports the delivery status of a real mail-api", { skip: built ? false : "apps/pay or apps/mail-api not built" }, () => {
+describe("pay reports the delivery status of a real mail-api", { skip: skipUnlessBuilt(built, "apps/pay or apps/mail-api not built") }, () => {
   /** Starts mail-api with the given provider settings and a pay in front of it; returns a sender and a stop. */
   async function stack(mailEnv) {
     const dir = mkdtempSync(path.join(tmpdir(), "iai-e2e-pay-status-"));
@@ -765,14 +765,21 @@ describe("pay reports the delivery status of a real mail-api", { skip: built ? f
     } finally {
       db.close();
     }
-    const pay = await startPay({
-      PAY_EMAIL_ADAPTER_INTERNAL_KEY: INTERNAL_KEY,
-      MAIL_API_BASE_URL: `${mailApi.baseUrl}/v1`,
-      MAIL_API_KEY: mailApi.credentials.apiKey,
-      MAIL_API_WORKSPACE_ID: DEV_WORKSPACE,
-      PAYMENT_WEBHOOK_SECRET: WEBHOOK_SECRET,
-      ...networkGuardEnv({})
-    });
+    let pay;
+    try {
+      pay = await startPay({
+        PAY_EMAIL_ADAPTER_INTERNAL_KEY: INTERNAL_KEY,
+        MAIL_API_BASE_URL: `${mailApi.baseUrl}/v1`,
+        MAIL_API_KEY: mailApi.credentials.apiKey,
+        MAIL_API_WORKSPACE_ID: DEV_WORKSPACE,
+        PAYMENT_WEBHOOK_SECRET: WEBHOOK_SECRET,
+        ...networkGuardEnv({})
+      });
+    } catch (error) {
+      await mailApi.stop(); // do not leave mail-api running when pay cannot start
+      rmSync(dir, { force: true, recursive: true });
+      throw error;
+    }
     return {
       mailApi,
       pay,

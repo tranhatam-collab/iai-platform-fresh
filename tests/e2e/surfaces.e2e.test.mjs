@@ -19,6 +19,7 @@ import {
   healthStatus,
   rawRequest,
   request,
+  skipUnlessBuilt,
   startMailApi,
   startService
 } from "./support/harness.mjs";
@@ -39,7 +40,7 @@ after(async () => {
 
 for (const surface of SURFACES) {
   const skipReason = !builtEntryAvailable(surface.entry)
-    ? `${surface.entry} not built`
+    ? skipUnlessBuilt(false, `${surface.entry} not built`)
     : surface.requiresDocsFixtures && !docsFixturesAvailable()
       ? "needs gitignored docs/noos fixtures (set up the private docs pack to run)"
       : false;
