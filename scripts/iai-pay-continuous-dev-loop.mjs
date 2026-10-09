@@ -7,6 +7,20 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const outputDir = process.env.IAI_PAY_LOOP_OUTPUT_DIR ?? "/private/tmp/iai-pay-continuous-dev-loop";
 const defaultIntervalMinutes = 10;
+const defaultD1TimeoutMs = 120_000;
+const defaultCommandTimeoutMs = 60_000;
+const killSignal = "SIGKILL";
+
+function resolveTimeoutMs(name, fallback) {
+  const raw = process.env[name]?.trim();
+  if (!raw) {
+    return fallback;
+  }
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const d1TimeoutMs = resolveTimeoutMs("IAI_PAY_LOOP_D1_TIMEOUT_MS", defaultD1TimeoutMs);
 
 const activeSites = [
   {
@@ -52,13 +66,37 @@ function parseArgs() {
   };
 }
 
+/**
+ * Run a command with a hard timeout. A command that cannot be started (ENOENT),
+ * runs out of time, is killed by a signal or exits non-zero is a failure; the
+ * reason never contains command output.
+ */
 function run(command, args, options = {}) {
-  return spawnSync(command, args, {
+  const result = spawnSync(command, args, {
     cwd: options.cwd ?? root,
     encoding: "utf8",
+    killSignal,
     maxBuffer: 1024 * 1024 * 20,
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: options.timeoutMs ?? defaultCommandTimeoutMs
   });
+
+  let failure = null;
+  if (result.error) {
+    failure = result.error.code === "ETIMEDOUT" ? "timeout" : `spawn_error:${result.error.code ?? "unknown"}`;
+  } else if (result.signal) {
+    failure = `signal:${result.signal}`;
+  } else if (result.status !== 0) {
+    failure = `exit:${result.status}`;
+  }
+
+  return {
+    failure,
+    ok: failure === null,
+    status: result.status,
+    stderr: result.stderr ?? "",
+    stdout: result.stdout ?? ""
+  };
 }
 
 function stripAnsi(value) {
@@ -85,17 +123,30 @@ function parseJsonArrayFromWrangler(output) {
   return null;
 }
 
+function classifyD1Failure(failure) {
+  if (failure === "timeout") {
+    return "d1_timeout";
+  }
+  if (failure === "spawn_error:ENOENT") {
+    return "wrangler_missing";
+  }
+  return "d1_unreachable";
+}
+
 function queryD1(command) {
   const result = run(
     "wrangler",
     ["d1", "execute", "pay-iai-one-prod", "--remote", "--json", "--command", command],
-    { cwd: join(root, "pay.iai.one") }
+    { cwd: join(root, "pay.iai.one"), timeoutMs: d1TimeoutMs }
   );
   const combined = `${result.stdout}\n${result.stderr}`;
 
-  if (result.status !== 0) {
+  if (!result.ok) {
+    // Only a fixed error class and the exit code are reported; wrangler's own
+    // output is never copied into the report.
     return {
-      error: stripAnsi(combined).trim(),
+      error: classifyD1Failure(result.failure),
+      exit_code: result.status,
       ok: false,
       rows: []
     };
@@ -103,7 +154,7 @@ function queryD1(command) {
 
   const parsed = parseJsonArrayFromWrangler(result.stdout) ?? parseJsonArrayFromWrangler(combined);
   return {
-    error: parsed ? null : "Could not parse wrangler D1 JSON output.",
+    error: parsed ? null : "d1_unparsable_output",
     ok: Boolean(parsed?.[0]?.success),
     rows: parsed?.[0]?.results ?? []
   };
@@ -112,7 +163,8 @@ function queryD1(command) {
 function commandOutput(command, args, options = {}) {
   const result = run(command, args, options);
   return {
-    ok: result.status === 0,
+    failure: result.failure,
+    ok: result.ok,
     output: stripAnsi(`${result.stdout}\n${result.stderr}`).trim(),
     status: result.status
   };
@@ -282,26 +334,33 @@ function runOnce() {
   };
   const paths = writeReports(snapshot);
 
+  const ok = d1.ok && guard.ok;
+
   process.stdout.write(
     [
       `[iai-pay-loop] ${snapshot.generated_at}`,
       `[iai-pay-loop] d1=${d1.ok ? "PASS" : "FAIL"} guard=${guard.ok ? "PASS" : "FAIL"}`,
-      `[iai-pay-loop] missing_d1=${plan.blockers.missing_d1_site_or_tenant.length}`,
+      `[iai-pay-loop] missing_d1=${d1.ok ? plan.blockers.missing_d1_site_or_tenant.length : "not_evaluated"}`,
       `[iai-pay-loop] missing_webhook_registry=${plan.blockers.missing_webhook_registry_entries.length}`,
       `[iai-pay-loop] missing_sandbox_credentials=${plan.blockers.missing_sandbox_credentials.length}`,
       `[iai-pay-loop] report=${relative(root, paths.mdPath)}`
     ].join("\n") + "\n"
   );
+
+  return ok;
 }
 
 async function main() {
   const args = parseArgs();
-  runOnce();
+  const ok = runOnce();
 
   if (!args.loop) {
+    // A failed D1 query or guard check must not look like a green run.
+    process.exitCode = ok ? 0 : 1;
     return;
   }
 
+  // Loop mode keeps running; every pass still reports PASS/FAIL on stdout.
   const intervalMs = args.intervalMinutes * 60 * 1000;
   process.stdout.write(`[iai-pay-loop] running every ${args.intervalMinutes} minute(s)\n`);
   setInterval(runOnce, intervalMs);
