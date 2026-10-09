@@ -1242,7 +1242,13 @@ class MailPersistenceStore {
       return true;
     }
 
-    const result = this.queueSettings.deliver(started.input);
+    let result: QueueDeliveryResult | Promise<QueueDeliveryResult>;
+    try {
+      result = this.queueSettings.deliver(started.input);
+    } catch (error) {
+      result = deliveryExceptionResult(error);
+    }
+
     if (result instanceof Promise) {
       // Only reachable with a custom hook; the job stays claimed and returns to the queue when its lease runs out.
       void result.catch(() => undefined);
@@ -1264,7 +1270,14 @@ class MailPersistenceStore {
       return true;
     }
 
-    this.recordDelivery(started, await this.queueSettings.deliver(started.input));
+    let result: QueueDeliveryResult;
+    try {
+      result = await this.queueSettings.deliver(started.input);
+    } catch (error) {
+      result = deliveryExceptionResult(error);
+    }
+
+    this.recordDelivery(started, result);
     return true;
   }
 
@@ -2566,6 +2579,33 @@ function resolveProviderAdapterName(option: QueueProviderAdapterName | undefined
   }
 
   return raw;
+}
+
+/**
+ * A delivery hook or adapter that throws or rejects failed this attempt without saying whether it is final.
+ * Treat it as a temporary failure: deferred with a class, so the job is retried with backoff until its
+ * attempts run out. Only the class is kept, never the error text (it can carry addresses or hostnames).
+ */
+function deliveryExceptionResult(error: unknown): QueueDeliveryResult {
+  const code = typeof (error as { code?: unknown } | null)?.code === "string" ? (error as { code: string }).code : "";
+  const name = typeof (error as { name?: unknown } | null)?.name === "string" ? (error as { name: string }).name : "";
+  const message = error instanceof Error ? error.message : "";
+  let errorClass = "unknown_error";
+  if (code === "ETIMEDOUT" || code === "ESOCKETTIMEDOUT" || name === "AbortError" || name === "TimeoutError" || /timed? ?out/iu.test(message)) {
+    errorClass = "timeout";
+  } else if (
+    ["ECONNRESET", "ECONNREFUSED", "ECONNABORTED", "EPIPE", "ENOTFOUND", "EAI_AGAIN", "EHOSTUNREACH", "ENETUNREACH"].includes(code) ||
+    /socket hang up|network/iu.test(message)
+  ) {
+    errorClass = "network_error";
+  }
+
+  return {
+    errorClass,
+    eventType: "deferred",
+    providerResponseCode: "0",
+    providerResponseMessage: `delivery_exception:${errorClass}`
+  };
 }
 
 /** No provider configured: a routed message can only be deferred and, in the end, failed. */
