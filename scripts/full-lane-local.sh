@@ -22,15 +22,16 @@
 # - The allowlist is a JSON file kept OUTSIDE the repository: {"skip":["exact test title",...],"todo":[...]}.
 #   This script and the repository contain no test names.
 # - The tested commit (including dependency install scripts) runs under env -i with only PATH, TMPDIR, LANG,
-#   LC_ALL, REQUIRE_DOCS_FIXTURES and a throw-away HOME inside the work directory, so tokens and dotfiles of
-#   your shell are not passed on. This is NOT a sandbox: network and filesystem access are unchanged.
+#   LC_ALL, REQUIRE_DOCS_FIXTURES, the proxy/CA settings (HTTP(S)_PROXY, NO_PROXY, SSL_CERT_FILE,
+#   NODE_EXTRA_CA_CERTS; only if set) and a throw-away HOME inside the work directory, so tokens and dotfiles
+#   of your shell are not passed on. This is NOT a sandbox: network and filesystem access are unchanged.
 # - No Cloudflare, PayOS or mail credentials are used (the Workers suite runs wrangler dev --local).
 # - Test output can quote fixture content. Full logs stay in the throw-away directory (deleted on exit); only
 #   counts and the names of failing or violating tests are printed.
 # - The receipt is JSON on stdout (and --receipt FILE). It is evidence, not source: do not commit it.
 set -euo pipefail
 
-usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 die() { echo "full-lane-local: $*" >&2; exit 1; }
 
 ref="" docs="" docs_sha="" cios="" cios_sha="" subdir="." receipt="" allowlist="" diagnostic=0
@@ -151,8 +152,13 @@ NODE
 cd "$clone"
 mkdir -p "$work/home" "$work/tmp"
 run_scrubbed() { # command words run with a minimal environment
+  local -a keep=() # network settings only, so installs still work behind a proxy
+  local v
+  for v in HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy SSL_CERT_FILE NODE_EXTRA_CA_CERTS; do
+    [ -z "${!v:-}" ] || keep+=("$v=${!v}")
+  done
   env -i PATH="$PATH" HOME="$work/home" TMPDIR="$work/tmp" LANG="${LANG:-C.UTF-8}" LC_ALL="${LC_ALL:-C.UTF-8}" \
-    ${REQUIRE_DOCS_FIXTURES:+REQUIRE_DOCS_FIXTURES="$REQUIRE_DOCS_FIXTURES"} "$@"
+    ${REQUIRE_DOCS_FIXTURES:+REQUIRE_DOCS_FIXTURES="$REQUIRE_DOCS_FIXTURES"} ${keep[@]+"${keep[@]}"} "$@"
 }
 run_scrubbed pnpm install --frozen-lockfile >"$work/install.log" 2>&1 || die "pnpm install failed (logs stay on this machine and are deleted on exit)"
 
