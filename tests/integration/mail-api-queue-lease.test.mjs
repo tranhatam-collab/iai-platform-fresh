@@ -5,9 +5,11 @@
 
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
 import { rmSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
+import { promisify } from "node:util";
 
 import { createFlowApiRequestHandler } from "../../apps/mail-api/dist/server.js";
 import { createSmtpInternalBackend } from "../../apps/mail-api/dist/smtp-internal.js";
@@ -291,6 +293,48 @@ test("claiming reads the queue through the status and next-attempt index, not a 
         .map((row) => row.detail);
       assert.ok(plan.every((detail) => !/^SCAN smtp_queue_jobs\b/u.test(detail)), plan.join(" | "));
       assert.ok(plan.some((detail) => /USING (COVERING )?INDEX idx_smtp_queue_jobs/u.test(detail)), plan.join(" | "));
+    });
+  } finally {
+    cleanup();
+  }
+});
+
+const run = promisify(execFile);
+const CLAIMER = new URL("./support/queue-claimer.mjs", import.meta.url).pathname;
+
+test("separate processes claiming from one table never claim a job twice", async () => {
+  const { cleanup, dbPath, url } = tempDb();
+  const backend = openBackend(url);
+  const JOBS = 1000;
+  try {
+    const template = await queuedJob(backend, dbPath, "idem-many");
+    backend.close();
+    withDb(dbPath, (db) => {
+      db.prepare(
+        `
+          WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ?)
+          INSERT INTO smtp_queue_jobs (id, message_id, workspace_id, payload_json, status, attempts, max_attempts, created_at, updated_at)
+          SELECT 'job_many_' || printf('%05d', i), message_id, workspace_id, payload_json, 'queued', 0, max_attempts,
+                 '2026-10-09T08:00:00.000Z', '2026-10-09T08:00:00.000Z'
+          FROM n, (SELECT message_id, workspace_id, payload_json, max_attempts FROM smtp_queue_jobs WHERE id = ?);
+        `
+      ).run(JOBS, template);
+      db.prepare("DELETE FROM smtp_queue_jobs WHERE id = ?;").run(template);
+    });
+
+    const startAt = String(Date.now() + 1500);
+    const results = await Promise.all(
+      [1, 2, 3].map(async () => JSON.parse((await run(process.execPath, [CLAIMER, url, startAt], { maxBuffer: 1024 * 1024 })).stdout))
+    );
+
+    const ids = results.flat().map((claim) => claim.id);
+    assert.equal(ids.length, JOBS, "every job is claimed");
+    assert.equal(new Set(ids).size, JOBS, "no job is claimed by two processes");
+    assert.ok(results.every((won) => won.every((claim) => claim.attempts === 1)), "every claim is the job's first");
+    assert.ok(results.filter((won) => won.length > 0).length >= 2, "the processes really overlapped");
+    withDb(dbPath, (db) => {
+      const rows = db.prepare("SELECT COUNT(*) AS jobs, MIN(attempts) AS lowest, MAX(attempts) AS highest FROM smtp_queue_jobs;").get();
+      assert.deepEqual({ ...rows }, { highest: 1, jobs: JOBS, lowest: 1 });
     });
   } finally {
     cleanup();
