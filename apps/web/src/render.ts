@@ -288,11 +288,7 @@ export function renderFeedbackForm(
     )
     .join("");
 
-  return page(
-    "/feedback",
-    locale,
-    `
-      ${header(locale, "feedback")}
+  const content = `
       ${hero(locale, "web.feedback.eyebrow", t(locale, "web.feedback.title"), t(locale, "web.feedback.body"), "#form", buildLocalizedPath("/", locale))}
       <section class="content-band" id="form"><div>
         <div class="eyebrow">${escapeHtml(t(locale, "web.feedback.form_eyebrow"))}</div>
@@ -317,6 +313,14 @@ export function renderFeedbackForm(
           <button type="submit">${escapeHtml(t(locale, "web.feedback.submit"))}</button>
         </form>
       </div></section>
+    `;
+
+  return page(
+    "/feedback",
+    locale,
+    `
+      ${header(locale, "feedback")}
+      <main>${content}</main>
       <footer><div class="footer-inner"><p>${escapeHtml(t(locale, "web.feedback.footer"))}</p><p>${escapeHtml(t(locale, "footer.trust"))}</p></div></footer>
     `
   );
@@ -326,11 +330,7 @@ export function renderFeedbackSubmitted(
   { category, ackId }: { category: FeedbackCategory; ackId: string },
   locale: Locale = defaultLocale
 ): string {
-  return page(
-    "/feedback",
-    locale,
-    `
-      ${header(locale, "feedback")}
+  const content = `
       ${hero(locale, "web.feedback.eyebrow", t(locale, "web.feedback.submitted.title"), t(locale, "web.feedback.submitted.body"), buildLocalizedPath("/", locale), buildLocalizedPath("/feedback", locale))}
       <section class="content-band"><div>
         <div class="eyebrow">${escapeHtml(t(locale, "web.feedback.submitted.eyebrow"))}</div>
@@ -340,6 +340,14 @@ export function renderFeedbackSubmitted(
         </div>
         <div class="cta-row"><a class="primary-cta" href="${escapeHtml(buildLocalizedPath("/", locale))}">${escapeHtml(t(locale, "btn.continue"))}</a><a class="secondary-cta" href="${escapeHtml(buildLocalizedPath("/feedback", locale))}">${escapeHtml(t(locale, "web.feedback.submitted.again"))}</a></div>
       </div></section>
+    `;
+
+  return page(
+    "/feedback",
+    locale,
+    `
+      ${header(locale, "feedback")}
+      <main>${content}</main>
       <footer><div class="footer-inner"><p>${escapeHtml(t(locale, "web.feedback.footer"))}</p><p>${escapeHtml(t(locale, "footer.trust"))}</p></div></footer>
     `
   );
