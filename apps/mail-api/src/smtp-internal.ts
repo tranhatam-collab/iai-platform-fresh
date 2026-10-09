@@ -23,6 +23,7 @@ import {
   type MailSuppressionRecord,
   type MailSuppressionSourceSnapshot
 } from "@iai/mail-core";
+import { applyMigrations } from "./migrations.js";
 
 const SUPPORTED_STREAMS = new Set(["transactional", "system", "marketing", "alerts"]);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
@@ -288,7 +289,7 @@ class MailPersistenceStore {
     this.db = new DatabaseSync(resolveSqliteDatabasePath(databaseUrl));
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA busy_timeout = 2000;");
-    this.ensureSchema();
+    applyMigrations(this.db);
     if (seed) {
       this.ensureSeed(seed);
     }
@@ -1344,149 +1345,6 @@ class MailPersistenceStore {
         `
       )
       .run(message.slice(0, 500), new Date().toISOString(), jobId);
-  }
-
-  private ensureSchema() {
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS smtp_credentials (
-        credential_id TEXT PRIMARY KEY,
-        workspace_id TEXT NOT NULL,
-        username TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        principal TEXT NOT NULL,
-        default_stream TEXT NOT NULL,
-        allowed_streams_json TEXT NOT NULL,
-        sender_identity_id TEXT,
-        status TEXT NOT NULL DEFAULT 'active',
-        created_at TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS domains (
-        id TEXT PRIMARY KEY,
-        workspace_id TEXT NOT NULL,
-        domain TEXT NOT NULL,
-        verification_status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        UNIQUE(workspace_id, domain)
-      );
-
-      CREATE TABLE IF NOT EXISTS sender_identities (
-        id TEXT PRIMARY KEY,
-        workspace_id TEXT NOT NULL,
-        domain_id TEXT,
-        email TEXT NOT NULL,
-        allowed_streams_json TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'active',
-        created_at TEXT NOT NULL,
-        UNIQUE(workspace_id, email)
-      );
-
-      CREATE TABLE IF NOT EXISTS suppressions (
-        id TEXT PRIMARY KEY,
-        workspace_id TEXT NOT NULL,
-        email TEXT NOT NULL,
-        stream TEXT,
-        reason TEXT,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS provider_routes (
-        route_id TEXT PRIMARY KEY,
-        workspace_id TEXT,
-        stream TEXT NOT NULL,
-        provider_type TEXT NOT NULL,
-        priority INTEGER NOT NULL DEFAULT 100,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS messages (
-        id TEXT PRIMARY KEY,
-        workspace_id TEXT NOT NULL,
-        message_idempotency_key TEXT NOT NULL,
-        stream TEXT NOT NULL,
-        sender_identity_id TEXT,
-        from_email TEXT NOT NULL,
-        from_name TEXT,
-        reply_to_email TEXT,
-        reply_to_name TEXT,
-        subject TEXT,
-        html_body TEXT,
-        text_body TEXT,
-        status TEXT NOT NULL,
-        provider_route_id TEXT,
-        metadata_json TEXT,
-        tags_json TEXT,
-        headers_json TEXT,
-        queued_at TEXT,
-        sent_at TEXT,
-        last_event_at TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS message_events (
-        id TEXT PRIMARY KEY,
-        message_id TEXT NOT NULL,
-        workspace_id TEXT NOT NULL,
-        event_type TEXT NOT NULL,
-        occurred_at TEXT NOT NULL,
-        payload_json TEXT NOT NULL,
-        provider_message_id TEXT,
-        provider_type TEXT,
-        source TEXT NOT NULL,
-        trace_id TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS delivery_attempts (
-        id TEXT PRIMARY KEY,
-        message_id TEXT NOT NULL,
-        attempt_number INTEGER NOT NULL,
-        status TEXT NOT NULL,
-        provider_route_id TEXT NOT NULL,
-        provider_type TEXT NOT NULL,
-        provider_message_id TEXT,
-        provider_response_code TEXT,
-        provider_response_message TEXT,
-        error_class TEXT,
-        raw_response_json TEXT,
-        started_at TEXT NOT NULL,
-        finished_at TEXT NOT NULL,
-        next_retry_at TEXT,
-        trace_id TEXT NOT NULL,
-        workspace_id TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS smtp_queue_jobs (
-        id TEXT PRIMARY KEY,
-        message_id TEXT NOT NULL,
-        workspace_id TEXT NOT NULL,
-        payload_json TEXT NOT NULL,
-        status TEXT NOT NULL,
-        attempts INTEGER NOT NULL DEFAULT 0,
-        last_error TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS audit_logs (
-        id TEXT PRIMARY KEY,
-        workspace_id TEXT NOT NULL,
-        action TEXT NOT NULL,
-        actor_type TEXT NOT NULL,
-        actor_identifier TEXT,
-        target_type TEXT,
-        target_id TEXT,
-        metadata_json TEXT,
-        created_at TEXT NOT NULL
-      );
-
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_workspace_idempotency
-      ON messages (workspace_id, message_idempotency_key);
-    `);
   }
 
   private ensureSeed(seed: ResolvedSeedConfig) {
