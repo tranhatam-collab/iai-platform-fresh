@@ -14,15 +14,21 @@ test("root health route exposes constitutional shell wiring", async () => {
   assert.equal(response.headers.get("content-language"), "vi");
   assert.equal(payload.ok, true);
   assert.equal(payload.data.service, "iai-root");
-  assert.equal(payload.data.portal_url, "https://home.iai.one");
-  assert.equal(payload.data.oauth[0].provider, "google");
-  assert.equal(payload.data.oauth[0].redirectUri, "https://iai.one/auth/google/callback");
-  assert.equal(payload.data.oauth[0].configured, false);
-  assert.equal(payload.data.oauth[1].provider, "apple");
-  assert.equal(payload.data.oauth[1].redirectUri, "https://iai.one/auth/apple/callback");
-  assert.equal(payload.data.oauth[1].configured, false);
+  // The health payload carries status only: no URLs of any kind.
+  assert.deepEqual(Object.keys(payload.data).sort(), ["oauth", "service", "status", "web_surface_enabled"]);
+  assert.doesNotMatch(JSON.stringify(payload), /https?:\/\//u);
+  assert.deepEqual(
+    payload.data.oauth.map(({ configured, provider, startPath }) => ({ configured, provider, startPath })),
+    [
+      { configured: false, provider: "google", startPath: "/auth/google/start" },
+      { configured: false, provider: "apple", startPath: "/auth/apple/start" }
+    ]
+  );
+  for (const entry of payload.data.oauth) {
+    assert.equal("redirectUri" in entry, false);
+  }
   assert.equal(payload.data.web_surface_enabled, false);
-  assert.equal(payload.data.web_url, null);
+  assert.equal("web_url" in payload.data, false);
 });
 
 test("root landing page stays constitutional and locale-aware", async () => {

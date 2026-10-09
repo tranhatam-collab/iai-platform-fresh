@@ -198,18 +198,15 @@ async function handleRequest(
         {
           ok: true,
           data: {
-            app_url: config.appUrl,
-            dash_url: config.dashUrl,
-            developer_url: config.developerUrl,
-            docs_url: config.docsUrl,
-            flow_url: config.flowUrl,
-            nft_url: config.nftUrl,
-            oauth: authProviderStatuses,
-            portal_url: config.portalUrl,
+            oauth: authProviderStatuses.map(({ configured, label, provider, startPath }) => ({
+              configured,
+              label,
+              provider,
+              startPath
+            })),
             service: "iai-root",
             status: "ok",
-            web_surface_enabled: config.webSurfaceEnabled,
-            web_url: config.webSurfaceEnabled ? config.webUrl : null
+            web_surface_enabled: config.webSurfaceEnabled
           }
         },
         locale
@@ -233,13 +230,13 @@ async function handleRequest(
       const ogLocale = lang?.startsWith("vi") ? "vi" : "en";
       const svg = renderSurfaceSocialImageSvg({
         description:
-          url.searchParams.get("description") ??
+          limitSocialImageText(url.searchParams.get("description"), OG_DESCRIPTION_MAX_LENGTH) ??
           (ogLocale === "vi"
             ? "Lop giao dien song ngu duoc khoa metadata va ranh gioi truoc khi live."
             : "Bilingual surface with locked metadata, copy, and trust boundaries."),
         locale: ogLocale,
-        surface: url.searchParams.get("surface") ?? "iai.one",
-        title: url.searchParams.get("title") ?? "IAI.ONE"
+        surface: normalizeSocialImageSurface(url.searchParams.get("surface")),
+        title: limitSocialImageText(url.searchParams.get("title"), OG_TITLE_MAX_LENGTH) ?? "IAI.ONE"
       });
       respondSvg(response, 200, svg, ogLocale);
       return;
@@ -259,7 +256,7 @@ async function handleRequest(
         ok: false,
         error: {
           code: "ROOT_SERVER_ERROR",
-          message: error instanceof Error ? error.message : t(locale, "root.error.server")
+          message: t(locale, "root.error.server")
         }
       },
       locale
@@ -430,6 +427,19 @@ function respondPayloadTooLarge(response: ServerResponse, locale: Locale): void 
     },
     locale
   );
+}
+
+const OG_TITLE_MAX_LENGTH = 110;
+const OG_DESCRIPTION_MAX_LENGTH = 180;
+const OG_SURFACE_PATTERN = /^[a-z0-9][a-z0-9.-]{0,23}$/iu;
+
+function limitSocialImageText(value: string | null, maxLength: number): string | null {
+  const normalized = value?.replace(/\s+/gu, " ").trim();
+  return normalized ? Array.from(normalized).slice(0, maxLength).join("") : null;
+}
+
+function normalizeSocialImageSurface(value: string | null): string {
+  return value && OG_SURFACE_PATTERN.test(value) ? value : "iai.one";
 }
 
 function respondUnhandledError(response: ServerResponse, error: unknown): void {
