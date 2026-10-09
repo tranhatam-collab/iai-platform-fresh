@@ -17,7 +17,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { after, before, describe, test } from "node:test";
 
-import { builtEntryAvailable, repoRoot, request, startMailApi } from "./support/harness.mjs";
+import { builtEntryAvailable, repoRoot, request, skipUnlessBuilt, startMailApi } from "./support/harness.mjs";
 import {
   DEV_SENDER,
   DEV_WORKSPACE,
@@ -41,7 +41,7 @@ const smtpBuilt = builtEntryAvailable("apps/mail-smtp/dist/index.js");
 
 const STACK_TRACE = /(\/home\/|\/Users\/|node_modules|at [\w.<>]+ \(.*:\d+:\d+\)|ENOENT)/;
 
-describe("mail-api: /v1/send", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-api: /v1/send", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   let api;
 
   before(async () => {
@@ -335,7 +335,7 @@ describe("mail-api: /v1/send", { skip: apiBuilt ? false : "apps/mail-api not bui
   });
 });
 
-describe("mail-api: key configuration fails closed", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-api: key configuration fails closed", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   test("without MAIL_API_KEY /v1/send answers 503 and never queues", async () => {
     const api = await startMailApi({ env: { MAIL_API_KEY: "" } });
     try {
@@ -352,7 +352,7 @@ describe("mail-api: key configuration fails closed", { skip: apiBuilt ? false : 
   });
 });
 
-describe("mail-api: internal SMTP control routes", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-api: internal SMTP control routes", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   let api;
   const operations = ["auth", "mail-from", "recipient", "normalize", "queue", "audit"];
 
@@ -473,7 +473,7 @@ describe("mail-api: internal SMTP control routes", { skip: apiBuilt ? false : "a
   });
 });
 
-describe("mail-api: inbound webhook", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-api: inbound webhook", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   let api;
   const secret = () => api.credentials.webhookSecret;
 
@@ -626,7 +626,7 @@ describe("mail-api: inbound webhook", { skip: apiBuilt ? false : "apps/mail-api 
   });
 });
 
-const smtpSkip = !apiBuilt || !smtpBuilt
+const smtpSkip = skipUnlessBuilt(apiBuilt && smtpBuilt, "apps/mail-api or apps/mail-smtp not built")
   ? "apps/mail-api or apps/mail-smtp not built"
   : !opensslAvailable()
     ? "the openssl CLI is needed to generate a throwaway STARTTLS certificate"
@@ -910,7 +910,7 @@ describe("mail-smtp (remote mode) against a real mail-api", { skip: smtpSkip }, 
   });
 });
 
-describe("mail-worker", { skip: apiBuilt ? false : "apps/mail-api not built" }, () => {
+describe("mail-worker", { skip: skipUnlessBuilt(apiBuilt, "apps/mail-api not built") }, () => {
   let dir;
   let dbPath;
   let api;

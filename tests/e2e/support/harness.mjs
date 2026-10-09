@@ -91,6 +91,15 @@ export function builtEntryAvailable(entry) {
   return existsSync(path.join(repoRoot, entry));
 }
 
+/**
+ * Value for a describe's `skip` option: false when what it needs is built. When it is not built the
+ * suite is skipped, unless E2E_REQUIRE_BUILT=1, which lets the missing build fail the suite instead
+ * (for lanes that run the files directly and must not report green with suites skipped).
+ */
+export function skipUnlessBuilt(built, message) {
+  return built || process.env.E2E_REQUIRE_BUILT === "1" ? false : message;
+}
+
 export async function getFreePort() {
   return await new Promise((resolve, reject) => {
     const probe = net.createServer();

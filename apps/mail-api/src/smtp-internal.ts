@@ -1234,8 +1234,12 @@ class MailPersistenceStore {
   /** Claims and delivers one job with a synchronous delivery hook. Returns whether a job was claimed. */
   processNextQueuedJob(): boolean {
     const started = this.beginQueuedJob();
-    if (!started) {
+    if (started === undefined) {
       return false;
+    }
+
+    if (started === "unreadable") {
+      return true;
     }
 
     const result = this.queueSettings.deliver(started.input);
@@ -1252,15 +1256,23 @@ class MailPersistenceStore {
   /** Claims and delivers one job; the delivery may be asynchronous. Returns whether a job was claimed. */
   async processNextQueuedJobAsync(): Promise<boolean> {
     const started = this.beginQueuedJob();
-    if (!started) {
+    if (started === undefined) {
       return false;
+    }
+
+    if (started === "unreadable") {
+      return true;
     }
 
     this.recordDelivery(started, await this.queueSettings.deliver(started.input));
     return true;
   }
 
-  /** Claims the next due job and works out what the delivery needs to know about it. */
+  /**
+   * Claims the next due job and works out what the delivery needs to know about it. Returns undefined when
+   * no job was claimed, and "unreadable" when one was claimed but its payload could not be parsed: that job is
+   * already failed, and counts as a claim so a worker moves straight on to the next one.
+   */
   private beginQueuedJob() {
     const claimedJob = this.claimNextJob();
     if (!claimedJob) {
@@ -1272,8 +1284,7 @@ class MailPersistenceStore {
       payload = JSON.parse(claimedJob.payloadJson) as SmtpQueueRequest;
     } catch (error) {
       this.markJobFailed(claimedJob.id, `Unable to parse queued payload: ${String(error)}`);
-      // The job is finished (failed); report it as handled so a worker moves straight on.
-      return undefined;
+      return "unreadable" as const;
     }
 
     const route = this.selectProviderRoute(payload.workspaceId, payload.stream);
@@ -1290,7 +1301,7 @@ class MailPersistenceStore {
 
   /** Writes the attempt, event, message and job rows for one finished delivery (all or nothing). */
   private recordDelivery(
-    started: NonNullable<ReturnType<MailPersistenceStore["beginQueuedJob"]>>,
+    started: Exclude<ReturnType<MailPersistenceStore["beginQueuedJob"]>, "unreadable" | undefined>,
     result: QueueDeliveryResult
   ) {
     const { claimedJob, payload, route, startedAt } = started;
