@@ -203,31 +203,31 @@ async function handleRequest(
 
     if (flowRoute?.resource === "detail") {
       const flowDetail = await apiClient.loadFlowDetail(flowRoute.flowId, requestId);
-      respondHtml(response, 200, renderFlowDetailPage(session, flowDetail, locale), locale);
+      respondHtml(response, resolveFlowStatus(flowDetail), renderFlowDetailPage(session, flowDetail, locale), locale);
       return;
     }
 
     if (flowRoute?.resource === "builder") {
       const flowDetail = await apiClient.loadFlowDetail(flowRoute.flowId, requestId);
-      respondHtml(response, 200, renderFlowBuilderPage(session, flowDetail, locale, actionFeedback), locale);
+      respondHtml(response, resolveFlowStatus(flowDetail), renderFlowBuilderPage(session, flowDetail, locale, actionFeedback), locale);
       return;
     }
 
     if (flowRoute?.resource === "versions") {
       const versions = await apiClient.loadFlowVersions(flowRoute.flowId, requestId);
-      respondHtml(response, 200, renderFlowVersionsPage(session, versions, locale), locale);
+      respondHtml(response, resolveFlowStatus(versions), renderFlowVersionsPage(session, versions, locale), locale);
       return;
     }
 
     if (flowRoute?.resource === "drafts") {
       const drafts = await apiClient.loadFlowDrafts(flowRoute.flowId, requestId);
-      respondHtml(response, 200, renderFlowDraftsPage(session, drafts, locale), locale);
+      respondHtml(response, resolveFlowStatus(drafts), renderFlowDraftsPage(session, drafts, locale), locale);
       return;
     }
 
     if (flowRoute?.resource === "publish") {
       const readiness = await apiClient.loadFlowPublishReadiness(flowRoute.flowId, requestId);
-      respondHtml(response, 200, renderFlowPublishPage(session, readiness, locale, actionFeedback), locale);
+      respondHtml(response, resolveFlowStatus(readiness), renderFlowPublishPage(session, readiness, locale, actionFeedback), locale);
       return;
     }
 
@@ -334,6 +334,11 @@ function respondUnhandledError(response: ServerResponse, error: unknown): void {
   } catch {
     // The socket is already gone, so there is nothing left to send.
   }
+}
+
+// A flow that the API reports as missing is a 404; the page body still explains it.
+function resolveFlowStatus(result: { ok: boolean; statusCode?: number }): number {
+  return !result.ok && result.statusCode === 404 ? 404 : 200;
 }
 
 function respondHtml(response: ServerResponse, statusCode: number, html: string, locale: Locale): void {

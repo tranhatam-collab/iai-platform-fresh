@@ -383,7 +383,7 @@ describe("pay with a real mail-api", { skip: built ? false : "apps/pay or apps/m
       }
     });
 
-    test("a body above the documented 64 KiB limit is refused with 413", { todo: "known gap, tracked on the team board" }, async () => {
+    test("a body above the documented 64 KiB limit is refused with 413", async () => {
       const response = await post(pay.baseUrl, "/internal/payment-email/send", JSON.stringify(emailInput({ customerName: "x".repeat(100 * 1024) })));
       assert.equal(response.status, 413, response.text);
     });

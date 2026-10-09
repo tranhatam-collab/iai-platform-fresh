@@ -867,6 +867,16 @@ async function handleRequest(
 
     respondHtml(response, 404, renderPayNotFound(locale, pathname), locale);
   } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      respondJson(
+        response,
+        413,
+        { ok: false, error: { code: "PAYLOAD_TOO_LARGE", message: "Request body exceeds the 64 KiB limit." } },
+        locale
+      );
+      return;
+    }
+
     respondJson(
       response,
       500,
@@ -1620,6 +1630,13 @@ function assertInternalPaymentAdapterAuthorized(
   return true;
 }
 
+class PayloadTooLargeError extends Error {
+  constructor() {
+    super("Request body exceeded the 64kb payload limit.");
+    this.name = "PayloadTooLargeError";
+  }
+}
+
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   let byteLength = 0;
@@ -1630,7 +1647,7 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
     byteLength += buffer.byteLength;
 
     if (byteLength > maxBytes) {
-      throw new Error("Request body exceeded the 64kb payment email payload limit.");
+      throw new PayloadTooLargeError();
     }
 
     chunks.push(buffer);

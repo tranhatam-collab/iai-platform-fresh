@@ -583,6 +583,20 @@ function readJsonFile<T>(...segments: string[]): T {
   return JSON.parse(readFileSync(filePath, "utf8")) as T;
 }
 
+/**
+ * True when the catalog and pricing documents that every page is rendered from can be read
+ * and parsed. `root` is the docs directory (defaults to the repository's `docs/noos`).
+ */
+export function isCommerceDataReadable(root: string = docsRoot): boolean {
+  try {
+    readJsonFile(root, "NOOS_COMMERCE_FIXTURES_v0.1", "catalog", "product_definitions_all_v1.json");
+    readJsonFile(root, "NOOS_COMMERCE_SCHEMA_PACK_v0.1.json");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function slugFromRoute(route: string): string {
   return route.split("/").filter(Boolean).at(-1) ?? "";
 }

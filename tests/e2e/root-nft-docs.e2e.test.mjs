@@ -603,7 +603,7 @@ describe("developer: pages, sitemap and links", { skip: skipUnless("apps/develop
     }
   });
 
-  test("every sitemap route is reachable by following links from the home page", { todo: "known gap, tracked on the team board" }, async () => {
+  test("every sitemap route is reachable by following links from the home page", async () => {
     const result = await crawlSurface(developer.baseUrl, "developer.iai.one", { start: ["/"], maxDepth: 2 });
     const reached = new Set([...result.pages.keys()].map((path) => path.split("?")[0]));
     const unreachable = routes.filter((route) => !reached.has(route));
