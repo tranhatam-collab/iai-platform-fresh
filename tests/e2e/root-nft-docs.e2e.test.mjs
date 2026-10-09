@@ -74,6 +74,10 @@ describe("root: sign-in providers", { skip: skipUnless("apps/root/dist/index.js"
     assert.equal(providers.google.configured, true);
     assert.equal(providers.apple.configured, true);
     assert.equal(providers.google.startPath, "/auth/google/start");
+    assert.equal(providers.apple.startPath, "/auth/apple/start");
+    assert.equal("redirectUri" in providers.google, false);
+    assert.equal("redirectUri" in providers.apple, false);
+    assert.doesNotMatch(response.text, /https?:\/\//u);
     assert.doesNotMatch(response.text, new RegExp(GOOGLE_CLIENT));
     assert.doesNotMatch(response.text, new RegExp(APPLE_CLIENT));
 

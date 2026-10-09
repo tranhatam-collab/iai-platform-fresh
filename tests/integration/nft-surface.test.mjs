@@ -14,7 +14,9 @@ test("nft health route exposes public trust shell wiring", async () => {
   assert.equal(response.headers.get("content-language"), "vi");
   assert.equal(payload.ok, true);
   assert.equal(payload.data.service, "iai-nft");
-  assert.equal(payload.data.flow_url, "https://flow.iai.one");
+  // The health payload carries status only: no URLs of any kind.
+  assert.deepEqual(payload.data, { service: "iai-nft", status: "ok" });
+  assert.doesNotMatch(JSON.stringify(payload), /https?:\/\//u);
 });
 
 test("nft landing page stays a trust shell and keeps canonical metadata", async () => {

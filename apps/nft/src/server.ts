@@ -93,12 +93,6 @@ async function handleRequest(
         {
           ok: true,
           data: {
-            app_url: config.appUrl,
-            dash_url: config.dashUrl,
-            developer_url: config.developerUrl,
-            flow_url: config.flowUrl,
-            home_url: config.homeUrl,
-            root_url: config.rootUrl,
             service: "iai-nft",
             status: "ok"
           }
@@ -139,7 +133,7 @@ async function handleRequest(
         ok: false,
         error: {
           code: "NFT_SERVER_ERROR",
-          message: error instanceof Error ? error.message : t(locale, "nft.error.server")
+          message: t(locale, "nft.error.server")
         }
       },
       locale
