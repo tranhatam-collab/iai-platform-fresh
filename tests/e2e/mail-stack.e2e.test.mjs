@@ -1012,6 +1012,32 @@ describe("mail-worker", { skip: apiBuilt ? false : "apps/mail-api not built" }, 
     assert.deepEqual(rows("SELECT DISTINCT attempts FROM smtp_queue_jobs;"), [{ attempts: 1 }]);
   });
 
+  test("without a provider a message is retried and finally failed as no_provider_configured", async () => {
+    const ids = await sendQueued(1);
+    // The limit is stored on the job when mail-api queues it; give this one two attempts.
+    const db = new DatabaseSync(dbPath);
+    try {
+      db.prepare("UPDATE smtp_queue_jobs SET max_attempts = 2 WHERE message_id = ?;").run(ids[0]);
+    } finally {
+      db.close();
+    }
+    const worker = await startWorker({
+      MAIL_PROVIDER_ADAPTER: "none",
+      MAIL_QUEUE_BACKOFF_BASE_SECONDS: "1",
+      MAIL_QUEUE_BACKOFF_CAP_SECONDS: "10"
+    });
+    await waitFor(allHave(ids, "failed"), { timeoutMs: 20000, description: "the message to run out of attempts" });
+    assert.equal((await worker.stop()).code, 0);
+    assert.deepEqual(rows(`SELECT attempt_number, status, error_class FROM delivery_attempts WHERE message_id = '${ids[0]}' ORDER BY attempt_number;`), [
+      { attempt_number: 1, error_class: "no_provider_configured", status: "deferred" },
+      { attempt_number: 2, error_class: "no_provider_configured", status: "failed" }
+    ]);
+    assert.deepEqual(rows(`SELECT status, last_error, last_error_class FROM smtp_queue_jobs WHERE message_id = '${ids[0]}';`), [
+      { last_error: "max_attempts_exceeded", last_error_class: "no_provider_configured", status: "failed" }
+    ]);
+    assert.equal(rows(`SELECT COUNT(*) AS n FROM message_events WHERE message_id = '${ids[0]}' AND event_type = 'provider_accepted';`)[0].n, 0);
+  });
+
   test("without a provider the worker defers instead of accepting", async () => {
     const ids = await sendQueued(1);
     const worker = await startWorker({ MAIL_PROVIDER_ADAPTER: "none" });
