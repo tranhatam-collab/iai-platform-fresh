@@ -331,3 +331,31 @@ test("a worker that finishes after its lease expired and the job was claimed aga
     cleanup();
   }
 });
+
+test("a worker that finishes after its lease expired but before anyone claimed the job again records nothing", async () => {
+  const { cleanup, dbPath, url } = tempDb();
+  const time = clock();
+  let jobId;
+  let armed = false;
+  const slow = () => {
+    if (armed) {
+      // The lease ran out and the job went back to the queue; nobody has claimed it again yet.
+      withDb(dbPath, (db) => db.prepare("UPDATE smtp_queue_jobs SET status = 'queued' WHERE id = ?;").run(jobId));
+    }
+    return ACCEPTED;
+  };
+  const backend = openBackend(url, { deliver: slow, now: time.now });
+  try {
+    jobId = await queuedJob(backend, dbPath, "idem-window");
+    armed = true;
+    const attemptsBefore = attempts(dbPath).length;
+    backend.queue.processNext();
+    const row = jobRow(dbPath, jobId);
+    assert.equal(row.status, "queued", "the job stays in the queue for the next claim");
+    assert.equal(attempts(dbPath).length, attemptsBefore, "the late worker wrote no attempt");
+    assert.deepEqual(backend.queue.claimNextJob(), { attempts: 2, id: jobId });
+  } finally {
+    backend.close();
+    cleanup();
+  }
+});
