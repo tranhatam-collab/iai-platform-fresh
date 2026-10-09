@@ -6,7 +6,7 @@
 
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { rmSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
@@ -226,6 +226,63 @@ test("/v1/send answers 503 with Retry-After when the database stays busy, and wo
     assert.equal(retry.status, 202, "the same request succeeds once the database is free");
   } finally {
     holder.close();
+    backend.close();
+    cleanup();
+  }
+});
+
+test("only the error class is stored, never the error text", async () => {
+  const { cleanup, dbPath, url } = tempDb();
+  const backend = createSmtpInternalBackend({
+    apiKey: API_KEY,
+    databaseUrl: url,
+    queue: {
+      deliver: () => {
+        throw withCode("connect ETIMEDOUT secret-relay.internal.example:25 for rcpt customer.private@example.org", "ETIMEDOUT");
+      }
+    },
+    seed: SEED
+  });
+  try {
+    await send(backend, "idem-no-error-text");
+    for (const suffix of ["", "-wal"]) {
+      const file = `${dbPath}${suffix}`;
+      if (existsSync(file)) {
+        const bytes = readFileSync(file).toString("latin1");
+        assert.ok(!bytes.includes("secret-relay.internal.example"), `hostname stored in ${suffix || "db"}`);
+        assert.ok(!bytes.includes("customer.private@example.org"), `address stored in ${suffix || "db"}`);
+      }
+    }
+    assert.deepEqual(query(dbPath, "SELECT provider_response_message AS m, error_class AS c FROM delivery_attempts;"), [{ c: "timeout", m: "delivery_exception:timeout" }]);
+  } finally {
+    backend.close();
+    cleanup();
+  }
+});
+
+test("an asynchronous hook is refused together with inline delivery; a Promise-returning hook on that path leaves the job to its lease", async () => {
+  const { cleanup, dbPath, url } = tempDb();
+  assert.throws(
+    () => createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { deliver: async () => ({}) }, seed: SEED }),
+    /asynchronous delivery hook needs queue\.inline = false/u
+  );
+
+  // A function that merely returns a Promise cannot be told apart at startup. On the inline path it is not
+  // awaited: the send answers 500 and the job stays claimed until its lease runs out, then it is retried.
+  const time = clock();
+  const backend = createSmtpInternalBackend({
+    apiKey: API_KEY,
+    databaseUrl: url,
+    queue: { deliver: () => Promise.reject(new Error("late")), leaseSeconds: 60, now: time.now },
+    seed: SEED
+  });
+  try {
+    const { status } = await send(backend, "idem-promise-inline");
+    assert.equal(status, 500);
+    assert.deepEqual(query(dbPath, "SELECT status, attempts FROM smtp_queue_jobs;"), [{ attempts: 1, status: "processing" }]);
+    time.advance(61);
+    assert.equal(backend.queue.claimNextJob()?.attempts, 2, "the job is claimed again once the lease has run out");
+  } finally {
     backend.close();
     cleanup();
   }

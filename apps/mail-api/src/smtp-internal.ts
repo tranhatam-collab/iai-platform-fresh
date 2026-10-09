@@ -2031,7 +2031,13 @@ export function createSmtpInternalBackend(
   const maxBodyBytes = resolveMaxBodyBytes(options.maxBodyBytes);
   const seed = resolveSeed(options.seed, process.env.NODE_ENV);
   const databaseUrl = options.databaseUrl ?? process.env.MAIL_DB_URL ?? "sqlite:/tmp/iai-mail.db";
-  const store = new MailPersistenceStore(databaseUrl, seed, resolveQueueSettings(options.queue));
+  const queueSettings = resolveQueueSettings(options.queue);
+  if (queueSettings.inline && queueSettings.deliver.constructor.name === "AsyncFunction") {
+    // The send path delivers synchronously; an asynchronous hook would leave the job claimed until its lease ends.
+    throw new Error("An asynchronous delivery hook needs queue.inline = false (MAIL_QUEUE_INLINE=0) and a worker process.");
+  }
+
+  const store = new MailPersistenceStore(databaseUrl, seed, queueSettings);
 
   reportInternalAuthPosture(internalAuth);
   if (process.env.NODE_ENV === "production" && store.hasDefaultDevCredential()) {
