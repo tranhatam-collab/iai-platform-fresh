@@ -122,16 +122,53 @@ async function waitUntilReady(baseUrl, readyPath, child, timeoutMs) {
   throw new Error(`not ready within ${timeoutMs}ms: ${lastError?.message ?? "no response"}`);
 }
 
+/** How many times startService picks a new port after the child exits because its port was taken. */
+export const PORT_IN_USE_RETRIES = 3;
+
+class EarlyExitError extends Error {
+  constructor(message, output) {
+    super(message);
+    this.output = output;
+  }
+}
+
 /**
  * Spawn a built service as a real child process and wait until it answers HTTP.
  * Returns { baseUrl, port, logs(), stop() } where stop() resolves to the exit
  * result so tests can assert on graceful shutdown.
+ *
+ * The port is chosen by binding port 0 and closing it, so another process can take it before the
+ * child binds. When the child exits early with EADDRINUSE, a new port is chosen and the child is
+ * started again (at most PORT_IN_USE_RETRIES times). Any other failure, including any other early
+ * exit and a readiness timeout, fails at once. `getPort` replaces the port picker (tests).
  */
-export async function startService({ name, entry, env = {}, portEnv, hostEnv, readyPath = "/health", readyTimeoutMs = 20000 }) {
+export async function startService({
+  name,
+  entry,
+  env = {},
+  portEnv,
+  hostEnv,
+  readyPath = "/health",
+  readyTimeoutMs = 20000,
+  getPort = getFreePort
+}) {
   if (!builtEntryAvailable(entry)) {
     throw new Error(`${entry} is missing; build it first (pnpm --filter ... build)`);
   }
-  const port = await getFreePort();
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await startServiceOnce({ name, entry, env, portEnv, hostEnv, readyPath, readyTimeoutMs, port: await getPort() });
+    } catch (error) {
+      const portTaken = error instanceof EarlyExitError && /EADDRINUSE/u.test(error.output);
+      if (!portTaken || attempt >= PORT_IN_USE_RETRIES) {
+        throw error;
+      }
+    }
+  }
+}
+
+async function startServiceOnce({ name, entry, env, portEnv, hostEnv, readyPath, readyTimeoutMs, port }) {
   const childEnv = { ...process.env, ...env, [portEnv]: String(port) };
   if (hostEnv) {
     childEnv[hostEnv] = "127.0.0.1";
@@ -151,8 +188,15 @@ export async function startService({ name, entry, env = {}, portEnv, hostEnv, re
   try {
     await waitUntilReady(baseUrl, readyPath, child, readyTimeoutMs);
   } catch (error) {
+    const earlyExit = child.exitCode !== null;
     child.kill("SIGKILL");
-    throw new Error(`[${name}] ${error.message}\n--- process output ---\n${output}`);
+    if (earlyExit) {
+      // Let the output streams drain so the exit reason is complete.
+      await exited;
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    const failure = `[${name}] ${error.message}\n--- process output ---\n${output}`;
+    throw earlyExit ? new EarlyExitError(failure, output) : new Error(failure);
   }
 
   return {
