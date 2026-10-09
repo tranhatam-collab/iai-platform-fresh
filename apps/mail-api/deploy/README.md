@@ -93,16 +93,20 @@ sudo install -d -o 1000 -g 1000 -m 0750 /var/lib/iai-mail-api   # host path of t
 
 Both services run with `user: 1000:1000`, `cap_drop: [ALL]`,
 `no-new-privileges`, a read-only root filesystem and `/tmp` as a tmpfs, and
-the image is pinned by digest. Consequences for the host:
+the image is pinned by digest.
 
-- The data directories mounted at `/data` (`MAIL_API_DATA_ROOT`,
-  `MAIL_SMTP_DATA_ROOT`) must be owned by uid 1000 (`install -d -o 1000 -g 1000`).
-- The TLS key and certificate mounted at `/certs` (`MAIL_TLS_CERTS_PATH`) must be
-  readable by uid 1000, for example `chown 1000:1000 key.pem cert.pem && chmod 0400 key.pem`
-  (or a group-readable mode with a group that uid 1000 belongs to). The mount is read-only
-  inside the container, so ownership is set on the host.
-- The repository checkout mounted at `/workspace` must be readable by uid 1000.
-- Nothing in the images writes outside `/data` and `/tmp`.
+The compose services use the stock image and their own `command`, so they do
+not run `docker-entrypoint.sh`: a data directory with the wrong owner shows up
+as a database open error, not as `evidence_dir_not_writable`. Complete these
+host preparation steps **before** `docker compose up`:
+
+1. Create each data directory mounted at `/data` (`MAIL_API_DATA_ROOT`,
+   `MAIL_SMTP_DATA_ROOT`) owned by uid 1000 (`install -d -o 1000 -g 1000`).
+2. Make every secret or certificate mount readable by uid 1000, with the
+   permissions set on the host (these mounts are read-only inside the container).
+3. Make the repository checkout mounted at `/workspace` readable by uid 1000.
+
+Nothing in the images writes outside `/data` and `/tmp`.
 
 Files inside:
 

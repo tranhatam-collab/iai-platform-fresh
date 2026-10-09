@@ -108,12 +108,21 @@ test("compose: the only writable mounts are the data directories", () => {
   assert.deepEqual(writableBinds, ["/data", "/data"]);
 });
 
-test("README tells the operator how to prepare data and TLS key permissions for uid 1000", () => {
+test("README lists the host preparation for uid 1000 as numbered steps before compose up", () => {
   assert.match(readme, /install -d -o 1000 -g 1000/u);
   assert.match(readme, /evidence_dir_not_writable/u);
-  assert.match(readme, /`\/certs`/u);
-  assert.match(readme, /key\.pem/u);
-  assert.match(readme, /readable by uid 1000/u);
+  const section = readme.slice(readme.indexOf("## Compose deployment"));
+  const steps = [...section.matchAll(/^(\d+)\. (.+(?:\n   .+)*)/gmu)].map((match) => ({ number: Number(match[1]), text: match[2] }));
+  assert.deepEqual(steps.map((step) => step.number), [1, 2, 3]);
+  assert.match(steps[0].text, /data directory/u);
+  assert.match(steps[1].text, /secret or certificate mount readable by uid 1000/u);
+  assert.match(steps[1].text, /permissions set on the host/u);
+  assert.match(steps[2].text, /repository checkout/u);
+  const stepsAt = section.search(/^1\. /mu);
+  assert.match(section.slice(0, stepsAt), /before\*\* `docker compose up`|\*\*before\*\* `docker compose up`/u);
+  assert.match(section, /do\s+not run `docker-entrypoint\.sh`/u);
+  // the generic wording replaces file names and permission recipes for secret mounts
+  assert.doesNotMatch(section, /key\.pem|cert\.pem|\/certs|\bchmod\b|chown 1000/u);
   assert.doesNotMatch(readme, /su-exec/u);
   assert.doesNotMatch(readme, /chowns it to `node:node`/u);
 });
