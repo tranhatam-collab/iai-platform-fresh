@@ -46,6 +46,13 @@ function respondPayloadTooLarge(req: IncomingMessage, res: ServerResponse): void
   req.resume();
 }
 
+// Pages are rendered from string templates with no executable scripts. `style-src 'unsafe-inline'`
+// stays because the templates inline their stylesheet and style attributes. Product images come
+// from the placeholder image host.
+const CONTENT_SECURITY_POLICY =
+  "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; " +
+  "img-src 'self' data: https://picsum.photos; style-src 'unsafe-inline'; script-src 'none'";
+
 function parseRequestUrl(requestUrl: string, port: number): URL | null {
   try {
     return new URL(requestUrl, `http://127.0.0.1:${port}`);
@@ -144,7 +151,9 @@ async function handleRequest(
       "content-type": response.contentType,
       "referrer-policy": "strict-origin-when-cross-origin",
       "x-content-type-options": "nosniff",
-      ...(response.contentType.startsWith("text/html") ? { "x-frame-options": "DENY" } : {}),
+      ...(response.contentType.startsWith("text/html")
+        ? { "content-security-policy": CONTENT_SECURITY_POLICY, "x-frame-options": "DENY" }
+        : {}),
       "x-noos-commerce-source": getCommerceSourceMode(),
       ...response.headers
     });

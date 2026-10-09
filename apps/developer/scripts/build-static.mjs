@@ -48,9 +48,24 @@ for (const route of policyRoutes) {
 }
 writeFileSync(resolve(outputDir, "404.html"), renderDeveloperNotFound("vi", "/404"), "utf8");
 
+// Static pages carry no executable scripts. `style-src 'unsafe-inline'` stays because the pages
+// inline their stylesheet and style attributes.
+const contentSecurityPolicy =
+  "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'none'";
+
 writeFileSync(
   resolve(outputDir, "_headers"),
-  ["/", "  Cache-Control: no-store", "", "/health", "  Cache-Control: no-store", ""].join("\n"),
+  [
+    "/*",
+    `  Content-Security-Policy: ${contentSecurityPolicy}`,
+    "",
+    "/",
+    "  Cache-Control: no-store",
+    "",
+    "/health",
+    "  Cache-Control: no-store",
+    ""
+  ].join("\n"),
   "utf8"
 );
 

@@ -7,6 +7,7 @@
  *
  * Needs: `pnpm build` (plus @iai/noos-web). Runs with `pnpm test:e2e`.
  */
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 
@@ -177,6 +178,26 @@ for (const surface of SURFACES) {
       for (const response of [page, health]) {
         assert.equal(response.headers.get("x-content-type-options"), "nosniff");
       }
+    });
+
+    test("HTML carries a content security policy that allows only the page's own scripts, by hash", async () => {
+      const page = await getPage();
+      const policy = page.headers.get("content-security-policy") ?? "";
+      assert.ok(policy, "missing content-security-policy");
+      for (const directive of ["default-src 'none'", "base-uri 'none'", "frame-ancestors 'none'", "form-action 'self'"]) {
+        assert.ok(policy.includes(directive), `policy lacks ${directive}`);
+      }
+      const scriptSources = /(?:^|;)\s*script-src ([^;]+)/.exec(policy)?.[1].trim().split(/\s+/) ?? [];
+      const executable = [...page.text.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].filter(
+        ([, attributes]) => !/type="application\/ld\+json"/.test(attributes)
+      );
+      if (executable.length === 0) {
+        assert.deepEqual(scriptSources, ["'none'"]);
+      } else {
+        const hashes = executable.map(([, , code]) => `'sha256-${createHash("sha256").update(code, "utf8").digest("base64")}'`);
+        assert.deepEqual([...scriptSources].sort(), [...new Set(hashes)].sort());
+      }
+      assert.doesNotMatch(page.text, /\son[a-z]+\s*=\s*["']/i, "inline event handler attribute");
     });
 
     if (surface.sitemap) {
