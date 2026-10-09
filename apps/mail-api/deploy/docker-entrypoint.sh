@@ -1,26 +1,16 @@
 #!/bin/sh
-# docker-entrypoint.sh — fix volume ownership before dropping to node user.
+# docker-entrypoint.sh — check that the persistence directory is writable, then run the command.
 #
-# When the host bind-mount /var/lib/iai-mail-api is owned by root:root
-# (typical fresh deploy), the in-container `node` user (uid 1000) cannot
-# write the evidence NDJSON, causing FileEvidenceSink#recordEvidence to
-# throw EACCES on every inbound POST.
-#
-# This entrypoint runs as root, chowns the persistence dir to node:node,
-# then exec's the application as node via `su-exec`.
-#
-# Side effect: the container ENTRYPOINT runs as root briefly, but the
-# main process drops to uid 1000 immediately. Net security posture is
-# the same as if the deploy operator had pre-chowned the host dir, just
-# self-healing.
+# The container runs as the unprivileged `node` user (uid 1000) and never changes ownership of a
+# mounted directory. If the evidence directory is not writable by that user, every inbound POST
+# would fail later with EACCES, so refuse to start instead and say what to fix.
 set -e
 
 EVIDENCE_DIR="${PATH_B_EVIDENCE_DIR:-/var/lib/iai-mail-api}"
 
-if [ -d "$EVIDENCE_DIR" ]; then
-  chown -R node:node "$EVIDENCE_DIR" 2>/dev/null || \
-    echo "{\"level\":\"warn\",\"msg\":\"chown_evidence_dir_failed\",\"path\":\"$EVIDENCE_DIR\"}"
+if [ ! -d "$EVIDENCE_DIR" ] || [ ! -w "$EVIDENCE_DIR" ]; then
+  echo "{\"level\":\"error\",\"msg\":\"evidence_dir_not_writable\",\"path\":\"$EVIDENCE_DIR\",\"uid\":\"$(id -u)\",\"hint\":\"make the host directory writable by uid 1000\"}" >&2
+  exit 1
 fi
 
-# su-exec is in node:22-alpine via the apk add below. Drop to node user.
-exec su-exec node:node "$@"
+exec "$@"

@@ -8,8 +8,8 @@ the legacy outbound `iai-mail-api` on `mail.iai.one`.
 
 | File | Purpose |
 |---|---|
-| `Dockerfile` | `node:22-alpine` + su-exec entrypoint pattern |
-| `docker-entrypoint.sh` | Chowns volume dir then drops to `node` (uid 1000) |
+| `Dockerfile` | `node:22-alpine` pinned by digest, runs as `node` (uid 1000), `HEALTHCHECK` on `/health` |
+| `docker-entrypoint.sh` | Checks that the evidence dir is writable (exits non-zero if not), then runs the command |
 | `bootstrap.mjs` | Boots `createFlowApiServer({ inboundWebhook: { evidenceSink } })` and listens on `PATH_B_PORT` (default 3001) |
 
 ## Architecture context
@@ -80,9 +80,29 @@ ssh root@mail.iai.one '
 
 ## Volume contract
 
-`/var/lib/iai-mail-api/` must be a writable directory. The entrypoint
-chowns it to `node:node` (uid 1000) automatically — host-side directory
-ownership does NOT need to be pre-set.
+`/var/lib/iai-mail-api/` must be a writable directory for uid 1000 (`node`).
+The container never changes ownership of a mount and does not run as root:
+if the directory is not writable the entrypoint exits non-zero and logs
+`evidence_dir_not_writable`. Prepare a host bind mount once, before the first start:
+
+```bash
+sudo install -d -o 1000 -g 1000 -m 0750 /var/lib/iai-mail-api   # host path of the mount
+```
+
+## Compose deployment (`ops/mail-internal-first/docker-compose.prod.yml`)
+
+Both services run with `user: 1000:1000`, `cap_drop: [ALL]`,
+`no-new-privileges`, a read-only root filesystem and `/tmp` as a tmpfs, and
+the image is pinned by digest. Consequences for the host:
+
+- The data directories mounted at `/data` (`MAIL_API_DATA_ROOT`,
+  `MAIL_SMTP_DATA_ROOT`) must be owned by uid 1000 (`install -d -o 1000 -g 1000`).
+- The TLS key and certificate mounted at `/certs` (`MAIL_TLS_CERTS_PATH`) must be
+  readable by uid 1000, for example `chown 1000:1000 key.pem cert.pem && chmod 0400 key.pem`
+  (or a group-readable mode with a group that uid 1000 belongs to). The mount is read-only
+  inside the container, so ownership is set on the host.
+- The repository checkout mounted at `/workspace` must be readable by uid 1000.
+- Nothing in the images writes outside `/data` and `/tmp`.
 
 Files inside:
 

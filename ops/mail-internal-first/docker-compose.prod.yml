@@ -3,7 +3,16 @@ name: iai-mail-internal-first
 services:
   mail-api:
     container_name: iai-mail-api-internal
-    image: node:22-alpine
+    image: node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+    # Unprivileged, no extra capabilities, read-only root filesystem; /tmp is the only scratch space.
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
     working_dir: /workspace
     # dist/index.js only re-exports the library API and exits immediately;
     # dist/bootstrap.js is the entrypoint that reads PORT / API_FLOW_BIND_ADDRESS and listens.
@@ -48,7 +57,16 @@ services:
 
   mail-smtp:
     container_name: iai-mail-smtp-internal
-    image: node:22-alpine
+    image: node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+    # Unprivileged, no extra capabilities, read-only root filesystem; /tmp is the only scratch space.
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
     working_dir: /workspace
     command: ["node", "apps/mail-smtp/dist/index.js"]
     restart: unless-stopped
