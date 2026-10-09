@@ -189,6 +189,11 @@ export interface SmtpInternalBackendOptions {
   allowUnauthenticatedInternal?: boolean;
   apiKey?: string;
   databaseUrl?: string;
+  /**
+   * Queued jobs above which the queue counts as unhealthy for /health
+   * (default: MAIL_API_HEALTH_MAX_QUEUE_DEPTH, then 1000).
+   */
+  healthMaxQueueDepth?: number;
   /** Request-body cap in bytes (default: MAIL_API_MAX_BODY_BYTES, then 64 MiB). */
   maxBodyBytes?: number;
   remoteToken?: string;
@@ -212,8 +217,24 @@ export interface SmtpInternalBackendOptions {
   };
 }
 
+export interface BackendHealthComponent {
+  name: "database" | "queue";
+  ok: boolean;
+}
+
+export interface BackendHealthReport {
+  components: BackendHealthComponent[];
+  ok: boolean;
+}
+
 export interface SmtpInternalBackend {
   close(): void;
+  /**
+   * Live health of the components this service depends on. Never throws and
+   * carries only component names and a pass/fail flag, so it is safe to expose
+   * on an unauthenticated health route.
+   */
+  checkHealth?(): BackendHealthReport;
   handleRequest(
     request: IncomingMessage,
     response: ServerResponse,
@@ -277,6 +298,35 @@ class MailPersistenceStore {
   checkConnectivity() {
     const row = this.db.prepare("SELECT 1 AS ok;").get() as { ok?: number } | undefined;
     return row?.ok === 1;
+  }
+
+  /**
+   * `database` passes when SQLite answers; `queue` passes when the queued-job
+   * count can be read and does not exceed `maxQueueDepth`. If the database
+   * fails, the queue cannot be read either and is reported as failed too.
+   */
+  checkHealth(maxQueueDepth: number): BackendHealthReport {
+    let database = false;
+    try {
+      database = this.checkConnectivity();
+    } catch {
+      database = false;
+    }
+
+    let queue = false;
+    if (database) {
+      try {
+        queue = this.countQueuedJobs() <= maxQueueDepth;
+      } catch {
+        queue = false;
+      }
+    }
+
+    const components: BackendHealthComponent[] = [
+      { name: "database", ok: database },
+      { name: "queue", ok: queue }
+    ];
+    return { components, ok: components.every((component) => component.ok) };
   }
 
   countQueuedJobs() {
@@ -1527,6 +1577,7 @@ export function createSmtpInternalBackend(
   const expectedApiKey = normalizeSecret(options.apiKey ?? process.env.MAIL_API_KEY);
   const internalAuth = resolveSmtpInternalAuth(options);
   const maxBodyBytes = resolveMaxBodyBytes(options.maxBodyBytes);
+  const healthMaxQueueDepth = resolveHealthMaxQueueDepth(options.healthMaxQueueDepth);
   const seed = resolveSeed(options.seed, process.env.NODE_ENV);
   const databaseUrl = options.databaseUrl ?? process.env.MAIL_DB_URL ?? "sqlite:/tmp/iai-mail.db";
   const store = new MailPersistenceStore(databaseUrl, seed);
@@ -1548,10 +1599,14 @@ export function createSmtpInternalBackend(
     close() {
       store.close();
     },
+    checkHealth() {
+      return store.checkHealth(healthMaxQueueDepth);
+    },
     async handleRequest(request, response, requestId, url, method) {
       if (method === "GET" && url.pathname === "/v1/health/dependencies") {
-        const queuedJobs = store.countQueuedJobs();
-        const databaseOk = store.checkConnectivity();
+        const health = store.checkHealth(healthMaxQueueDepth);
+        const databaseOk = health.components.find((item) => item.name === "database")?.ok === true;
+        const queueOk = health.components.find((item) => item.name === "queue")?.ok === true;
         const checks = [
           {
             detail: databaseOk ? "sqlite connected" : "sqlite unreachable",
@@ -1559,9 +1614,9 @@ export function createSmtpInternalBackend(
             ok: databaseOk
           },
           {
-            detail: `queued_jobs=${queuedJobs}`,
+            detail: queueOk ? "queue readable and within depth limit" : "queue unreadable or over depth limit",
             name: "queue_transport",
-            ok: true
+            ok: queueOk
           },
           {
             detail: "worker consumes smtp_queue_jobs and writes message timeline artifacts",
@@ -2667,6 +2722,32 @@ function resolveMaxBodyBytes(option: number | undefined) {
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new Error(
       `MAIL_API_MAX_BODY_BYTES must be a positive integer if set, got: ${JSON.stringify(raw)}`
+    );
+  }
+
+  return parsed;
+}
+
+const DEFAULT_HEALTH_MAX_QUEUE_DEPTH = 1000;
+
+function resolveHealthMaxQueueDepth(option: number | undefined) {
+  if (option !== undefined) {
+    if (!Number.isInteger(option) || option < 0) {
+      throw new Error(`createSmtpInternalBackend: healthMaxQueueDepth must be a non-negative integer, got: ${option}`);
+    }
+
+    return option;
+  }
+
+  const raw = process.env.MAIL_API_HEALTH_MAX_QUEUE_DEPTH?.trim();
+  if (!raw) {
+    return DEFAULT_HEALTH_MAX_QUEUE_DEPTH;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(
+      `MAIL_API_HEALTH_MAX_QUEUE_DEPTH must be a non-negative integer if set, got: ${JSON.stringify(raw)}`
     );
   }
 
