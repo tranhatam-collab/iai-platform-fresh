@@ -192,3 +192,41 @@ test("an asynchronous delivery that rejects is handled the same way and does not
     cleanup();
   }
 });
+
+test("/v1/send answers 503 with Retry-After when the database stays busy, and works once it is free", async () => {
+  const { cleanup, dbPath, url } = tempDb();
+  const backend = createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { providerAdapter: "fake" }, seed: SEED });
+  const handler = createFlowApiRequestHandler({ smtpInternalBackend: backend });
+  const request = () =>
+    dispatchToHandler(handler, {
+      body: JSON.stringify({
+        from: { email: "ops@hookerr.example" },
+        message_idempotency_key: "idem-busy",
+        stream: "transactional",
+        text: "hello",
+        to: [{ email: "customer@example.com" }]
+      }),
+      headers: { authorization: `Bearer ${API_KEY}`, "x-workspace-id": WORKSPACE },
+      method: "POST",
+      url: "/v1/send"
+    });
+  const holder = new DatabaseSync(dbPath);
+  try {
+    holder.exec("BEGIN IMMEDIATE;"); // another writer holds the database
+    const busy = await request();
+    assert.equal(busy.status, 503);
+    assert.match(busy.headers.get("retry-after") ?? "", /^\d+$/u);
+    const body = await busy.json();
+    assert.equal(body.ok, false);
+    assert.equal(body.error.code, "SERVICE_BUSY");
+    assert.doesNotMatch(JSON.stringify(body), /locked|sqlite/iu, "no database detail in the answer");
+
+    holder.exec("COMMIT;");
+    const retry = await request();
+    assert.equal(retry.status, 202, "the same request succeeds once the database is free");
+  } finally {
+    holder.close();
+    backend.close();
+    cleanup();
+  }
+});

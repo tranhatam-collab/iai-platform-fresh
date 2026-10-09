@@ -2147,6 +2147,14 @@ export function createSmtpInternalBackend(
             return true;
           }
 
+          if (isDatabaseBusyError(error)) {
+            // Another writer held the database for longer than the busy timeout: ask the caller to retry.
+            // The send is idempotent on its key, so retrying the same request is safe.
+            response.setHeader("retry-after", String(DATABASE_BUSY_RETRY_AFTER_SECONDS));
+            writeErrorEnvelope(response, requestId, 503, "SERVICE_BUSY", "The service is busy. Retry shortly.");
+            return true;
+          }
+
           writeErrorEnvelope(response, requestId, 500, "INTERNAL_ERROR", "Unhandled SMTP backend error.");
           return true;
         }
@@ -3503,6 +3511,18 @@ function parseJsonRecord(value: string | null | undefined) {
   }
 
   return undefined;
+}
+
+const DATABASE_BUSY_RETRY_AFTER_SECONDS = 2;
+
+/** SQLITE_BUSY / SQLITE_LOCKED: the database was held by another writer past the busy timeout. */
+function isDatabaseBusyError(error: unknown): boolean {
+  const candidate = error as { code?: unknown; errcode?: unknown; message?: unknown } | null;
+  if (!candidate || candidate.code !== "ERR_SQLITE_ERROR") {
+    return false;
+  }
+
+  return candidate.errcode === 5 || candidate.errcode === 6 || /database (table )?is locked/iu.test(String(candidate.message ?? ""));
 }
 
 function writeRawJson(response: ServerResponse, statusCode: number, payload: unknown) {
