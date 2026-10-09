@@ -123,6 +123,16 @@ function parseJsonArrayFromWrangler(output) {
   return null;
 }
 
+function classifyD1Failure(failure) {
+  if (failure === "timeout") {
+    return "d1_timeout";
+  }
+  if (failure === "spawn_error:ENOENT") {
+    return "wrangler_missing";
+  }
+  return "d1_unreachable";
+}
+
 function queryD1(command) {
   const result = run(
     "wrangler",
@@ -132,9 +142,11 @@ function queryD1(command) {
   const combined = `${result.stdout}\n${result.stderr}`;
 
   if (!result.ok) {
-    const detail = stripAnsi(combined).trim();
+    // Only a fixed error class and the exit code are reported; wrangler's own
+    // output is never copied into the report.
     return {
-      error: detail ? `${result.failure}: ${detail}` : String(result.failure),
+      error: classifyD1Failure(result.failure),
+      exit_code: result.status,
       ok: false,
       rows: []
     };
@@ -142,7 +154,7 @@ function queryD1(command) {
 
   const parsed = parseJsonArrayFromWrangler(result.stdout) ?? parseJsonArrayFromWrangler(combined);
   return {
-    error: parsed ? null : "Could not parse wrangler D1 JSON output.",
+    error: parsed ? null : "d1_unparsable_output",
     ok: Boolean(parsed?.[0]?.success),
     rows: parsed?.[0]?.results ?? []
   };

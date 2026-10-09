@@ -18,6 +18,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -54,7 +55,8 @@ const mode = process.env.FAKE_WRANGLER_MODE;
 if (mode === "hang") {
   setTimeout(() => {}, 600000);
 } else if (mode === "exit") {
-  process.stderr.write("fake wrangler failure\\n");
+  process.stderr.write("FAKE-WRANGLER-STDERR-MARKER\\n");
+  process.stdout.write("FAKE-WRANGLER-STDOUT-MARKER\\n");
   process.exit(3);
 } else {
   process.stdout.write(JSON.stringify([{ results: ${JSON.stringify(rows)}, success: true }]));
@@ -122,7 +124,7 @@ test("without wrangler the audit fails (exit 1), reports d1=FAIL and missing_d1=
     assert.match(stdout, /missing_d1=not_evaluated/u);
     const snapshot = latest(ctx.out);
     assert.equal(snapshot.d1.ok, false);
-    assert.match(snapshot.d1.error, /spawn_error:ENOENT/u);
+    assert.match(snapshot.d1.error, /^wrangler_missing$/u);
   } finally {
     ctx.cleanup();
   }
@@ -150,7 +152,7 @@ test("a hanging D1 query is killed at the timeout and the audit fails (exit 1)",
     assert.ok(elapsedMs < 30_000, `the hung command was not killed in time (${elapsedMs} ms)`);
     assert.match(stdout, /d1=FAIL/u);
     assert.match(stdout, /missing_d1=not_evaluated/u);
-    assert.match(latest(ctx.out).d1.error, /timeout/u);
+    assert.match(latest(ctx.out).d1.error, /^d1_timeout$/u);
   } finally {
     ctx.cleanup();
   }
@@ -163,7 +165,15 @@ test("a D1 command that exits non-zero fails the audit (exit 1)", () => {
     assert.equal(result.status, 1, `${stdout}\n${result.stderr}`);
     assert.match(stdout, /d1=FAIL/u);
     assert.match(stdout, /missing_d1=not_evaluated/u);
-    assert.match(latest(ctx.out).d1.error, /exit:3/u);
+    const { d1 } = latest(ctx.out);
+    assert.equal(d1.error, "d1_unreachable");
+    assert.equal(d1.exit_code, 3);
+    // Neither the report nor the archived copy carries the tool's own output.
+    for (const name of readdirSync(ctx.out)) {
+      const content = readFileSync(join(ctx.out, name), "utf8");
+      assert.doesNotMatch(content, /FAKE-WRANGLER-(STDOUT|STDERR)-MARKER/u, name);
+    }
+    assert.doesNotMatch(stdout, /FAKE-WRANGLER-(STDOUT|STDERR)-MARKER/u);
   } finally {
     ctx.cleanup();
   }
