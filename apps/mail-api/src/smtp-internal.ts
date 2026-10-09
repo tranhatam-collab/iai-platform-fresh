@@ -184,6 +184,11 @@ export interface QueueSettingsInput {
   providerAdapter?: QueueProviderAdapterName;
   /** Clock used for claims and leases (tests). */
   now?: () => Date;
+  /**
+   * Whether the send path delivers a job itself right after queueing it (default MAIL_QUEUE_INLINE, then
+   * true). With false a separate worker process takes the jobs and a send answers `queued`.
+   */
+  inline?: boolean;
   /** Source of the retry jitter, a number in [0, 1) (tests pass a fixed one). */
   random?: () => number;
 }
@@ -194,6 +199,7 @@ interface QueueSettings {
   backoffBaseSeconds: number;
   backoffCapSeconds: number;
   deliver: QueueDeliveryHook;
+  inline: boolean;
   leaseSeconds: number;
   maxAttempts: number;
   now: () => Date;
@@ -243,7 +249,7 @@ export interface QueueDeliveryResult {
   providerResponseMessage: string;
 }
 
-export type QueueDeliveryHook = (input: QueueDeliveryInput) => QueueDeliveryResult;
+export type QueueDeliveryHook = (input: QueueDeliveryInput) => QueueDeliveryResult | Promise<QueueDeliveryResult>;
 
 export const DEFAULT_QUEUE_MAX_ATTEMPTS = 5;
 export const DEFAULT_QUEUE_LEASE_SECONDS = 300;
@@ -337,6 +343,8 @@ export interface SmtpInternalBackend {
   queue?: {
     claimNextJob(): ClaimedQueueJob | undefined;
     processNext(): void;
+    /** Like processNext, but the delivery may be asynchronous. Resolves to whether a job was claimed. */
+    processNextAsync(): Promise<boolean>;
   };
   /**
    * Read-only views over the SQLite data that /v1/send writes and that send-time
@@ -1216,10 +1224,47 @@ class MailPersistenceStore {
     }
   }
 
-  processNextQueuedJob() {
+  /** Runs the send path's own delivery when the queue is processed inline (MAIL_QUEUE_INLINE, default on). */
+  processInline() {
+    if (this.queueSettings.inline) {
+      this.processNextQueuedJob();
+    }
+  }
+
+  /** Claims and delivers one job with a synchronous delivery hook. Returns whether a job was claimed. */
+  processNextQueuedJob(): boolean {
+    const started = this.beginQueuedJob();
+    if (!started) {
+      return false;
+    }
+
+    const result = this.queueSettings.deliver(started.input);
+    if (result instanceof Promise) {
+      // Only reachable with a custom hook; the job stays claimed and returns to the queue when its lease runs out.
+      void result.catch(() => undefined);
+      throw new Error("processNext needs a synchronous delivery hook; use processNextAsync.");
+    }
+
+    this.recordDelivery(started, result);
+    return true;
+  }
+
+  /** Claims and delivers one job; the delivery may be asynchronous. Returns whether a job was claimed. */
+  async processNextQueuedJobAsync(): Promise<boolean> {
+    const started = this.beginQueuedJob();
+    if (!started) {
+      return false;
+    }
+
+    this.recordDelivery(started, await this.queueSettings.deliver(started.input));
+    return true;
+  }
+
+  /** Claims the next due job and works out what the delivery needs to know about it. */
+  private beginQueuedJob() {
     const claimedJob = this.claimNextJob();
     if (!claimedJob) {
-      return;
+      return undefined;
     }
 
     let payload: SmtpQueueRequest;
@@ -1227,23 +1272,30 @@ class MailPersistenceStore {
       payload = JSON.parse(claimedJob.payloadJson) as SmtpQueueRequest;
     } catch (error) {
       this.markJobFailed(claimedJob.id, `Unable to parse queued payload: ${String(error)}`);
-      return;
+      // The job is finished (failed); report it as handled so a worker moves straight on.
+      return undefined;
     }
 
     const route = this.selectProviderRoute(payload.workspaceId, payload.stream);
-    const attemptId = `att_${randomUUID()}`;
     const startedAt = this.queueSettings.now().toISOString();
-    const outcome = this.finalizeOutcome(
-      this.queueSettings.deliver({
-        attempt: claimedJob.attempts,
-        messageId: payload.messageId,
-        routeMatched: Boolean(route),
-        stream: payload.stream,
-        workspaceId: payload.workspaceId
-      }),
-      claimedJob.attempts,
-      claimedJob.maxAttempts
-    );
+    const input: QueueDeliveryInput = {
+      attempt: claimedJob.attempts,
+      messageId: payload.messageId,
+      routeMatched: Boolean(route),
+      stream: payload.stream,
+      workspaceId: payload.workspaceId
+    };
+    return { claimedJob, input, payload, route, startedAt };
+  }
+
+  /** Writes the attempt, event, message and job rows for one finished delivery (all or nothing). */
+  private recordDelivery(
+    started: NonNullable<ReturnType<MailPersistenceStore["beginQueuedJob"]>>,
+    result: QueueDeliveryResult
+  ) {
+    const { claimedJob, payload, route, startedAt } = started;
+    const attemptId = `att_${randomUUID()}`;
+    const outcome = this.finalizeOutcome(result, claimedJob.attempts, claimedJob.maxAttempts);
     const finishedAt = this.queueSettings.now().toISOString();
     const providerRouteId = route?.routeId ?? "unrouted";
     const providerType = route?.providerType ?? "selfhosted";
@@ -1866,6 +1918,36 @@ export function resolveSmtpInternalAuth(
 
 let reportedInternalAuthMode: SmtpInternalAuthMode | undefined;
 
+type QueueApi = NonNullable<SmtpInternalBackend["queue"]>;
+
+function buildQueueApi(store: MailPersistenceStore): QueueApi {
+  return {
+    claimNextJob: () => {
+      const job = store.claimNextJob();
+      return job ? { attempts: job.attempts, id: job.id } : undefined;
+    },
+    processNext: () => {
+      store.processNextQueuedJob();
+    },
+    processNextAsync: () => store.processNextQueuedJobAsync()
+  };
+}
+
+export interface MailQueueHandle {
+  close(): void;
+  queue: QueueApi;
+}
+
+/**
+ * Opens only the delivery queue on the mail database, for a worker process that runs next to
+ * mail-api. It applies pending migrations but seeds nothing and serves no routes.
+ */
+export function openMailQueue(options: { databaseUrl?: string; queue?: QueueSettingsInput } = {}): MailQueueHandle {
+  const databaseUrl = options.databaseUrl ?? process.env.MAIL_DB_URL ?? "sqlite:/tmp/iai-mail.db";
+  const store = new MailPersistenceStore(databaseUrl, undefined, resolveQueueSettings(options.queue));
+  return { close: () => store.close(), queue: buildQueueApi(store) };
+}
+
 export function createSmtpInternalBackend(
   options: SmtpInternalBackendOptions = {}
 ): SmtpInternalBackend {
@@ -1910,13 +1992,7 @@ export function createSmtpInternalBackend(
     close() {
       store.close();
     },
-    queue: {
-      claimNextJob: () => {
-        const job = store.claimNextJob();
-        return job ? { attempts: job.attempts, id: job.id } : undefined;
-      },
-      processNext: () => store.processNextQueuedJob()
-    },
+    queue: buildQueueApi(store),
     persistedSources,
     checkPersistedReadAuthorization(request) {
       try {
@@ -2286,7 +2362,7 @@ function handleQueueOperation(store: MailPersistenceStore, payload: SmtpQueueReq
     providerRouteId: providerRoute,
     queuedAt
   });
-  store.processNextQueuedJob();
+  store.processInline();
 
   return {
     messageEventId,
@@ -2385,7 +2461,7 @@ function handleSendOperation(
       queuedAt
     }
   );
-  store.processNextQueuedJob();
+  store.processInline();
 
   const deliveryState = store.getMessageDeliveryState(queuePayload.messageId) ?? {
     deliveryStatus: "queued",
@@ -2394,6 +2470,27 @@ function handleSendOperation(
   };
 
   return buildSendResponse(deliveryState, queuePayload.recipients.length, queuePayload.stream);
+}
+
+function resolveInlineFlag(option: boolean | undefined, env: NodeJS.ProcessEnv): boolean {
+  if (option !== undefined) {
+    return option;
+  }
+
+  const raw = env.MAIL_QUEUE_INLINE?.trim().toLowerCase();
+  if (raw === undefined || raw === "") {
+    return true;
+  }
+
+  if (raw === "1" || raw === "true") {
+    return true;
+  }
+
+  if (raw === "0" || raw === "false") {
+    return false;
+  }
+
+  throw new Error(`MAIL_QUEUE_INLINE must be 1, 0, true or false, got: ${JSON.stringify(raw)}`);
 }
 
 function resolveProviderAdapterName(option: QueueProviderAdapterName | undefined, env: NodeJS.ProcessEnv): QueueProviderAdapterName {
@@ -3152,6 +3249,7 @@ export function resolveQueueSettings(
     backoffBaseSeconds,
     backoffCapSeconds: Math.max(backoffCapSeconds, backoffBaseSeconds),
     deliver: input.deliver ?? (providerAdapter === "fake" ? fakeQueueDelivery : noProviderQueueDelivery),
+    inline: resolveInlineFlag(input.inline, env),
     leaseSeconds: resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env),
     maxAttempts: resolveBoundedInteger(input.maxAttempts, "MAIL_QUEUE_MAX_ATTEMPTS", DEFAULT_QUEUE_MAX_ATTEMPTS, 1, 10, env),
     now: input.now ?? (() => new Date()),
