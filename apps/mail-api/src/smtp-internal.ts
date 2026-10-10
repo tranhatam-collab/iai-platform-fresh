@@ -1224,10 +1224,14 @@ class MailPersistenceStore {
     }
   }
 
-  /** Runs the send path's own delivery when the queue is processed inline (MAIL_QUEUE_INLINE, default on). */
-  processInline() {
+  /**
+   * Runs the send path's own delivery when the queue is processed inline (MAIL_QUEUE_INLINE, default on).
+   * The delivery is awaited, so a hook may be asynchronous: a resolved result is recorded and a rejection is a
+   * temporary failure, exactly as on the worker path.
+   */
+  async processInline(): Promise<void> {
     if (this.queueSettings.inline) {
-      this.processNextQueuedJob();
+      await this.processNextQueuedJobAsync();
     }
   }
 
@@ -1242,11 +1246,22 @@ class MailPersistenceStore {
       return true;
     }
 
-    const result = this.queueSettings.deliver(started.input);
+    let result: QueueDeliveryResult | Promise<QueueDeliveryResult>;
+    try {
+      result = this.queueSettings.deliver(started.input);
+    } catch (error) {
+      result = deliveryExceptionResult(error);
+    }
+
     if (result instanceof Promise) {
-      // Only reachable with a custom hook; the job stays claimed and returns to the queue when its lease runs out.
-      void result.catch(() => undefined);
-      throw new Error("processNext needs a synchronous delivery hook; use processNextAsync.");
+      // A custom hook returned a Promise to the synchronous caller, which cannot wait for it. The job is not left
+      // claimed: the result is recorded whenever the Promise settles (a rejection is a temporary failure). Inline
+      // delivery and workers use processNextAsync(), which awaits the hook instead.
+      void result.then(
+        (settled) => this.recordDeliverySafely(started, settled),
+        (error: unknown) => this.recordDeliverySafely(started, deliveryExceptionResult(error))
+      );
+      return true;
     }
 
     this.recordDelivery(started, result);
@@ -1264,7 +1279,14 @@ class MailPersistenceStore {
       return true;
     }
 
-    this.recordDelivery(started, await this.queueSettings.deliver(started.input));
+    let result: QueueDeliveryResult;
+    try {
+      result = await this.queueSettings.deliver(started.input);
+    } catch (error) {
+      result = deliveryExceptionResult(error);
+    }
+
+    this.recordDelivery(started, result);
     return true;
   }
 
@@ -1297,6 +1319,24 @@ class MailPersistenceStore {
       workspaceId: payload.workspaceId
     };
     return { claimedJob, input, payload, route, startedAt };
+  }
+
+  /**
+   * recordDelivery for a result that arrives after the caller has moved on. The database may be closed or busy by
+   * then; that must not become an unhandled rejection. Only the error class is logged, never its text, and the
+   * job is left to its lease.
+   */
+  private recordDeliverySafely(
+    started: Exclude<ReturnType<MailPersistenceStore["beginQueuedJob"]>, "unreadable" | undefined>,
+    result: QueueDeliveryResult
+  ) {
+    try {
+      this.recordDelivery(started, result);
+    } catch (error) {
+      const errorClass = isDatabaseBusyError(error) ? "database_busy" : "record_failed";
+      // eslint-disable-next-line no-console
+      console.error(JSON.stringify({ errorClass, jobId: started.claimedJob.id, level: "error", msg: "mail_queue_late_result_not_recorded", ts: new Date().toISOString() }));
+    }
   }
 
   /** Writes the attempt, event, message and job rows for one finished delivery (all or nothing). */
@@ -2114,7 +2154,7 @@ export function createSmtpInternalBackend(
           const workspaceId = requireWorkspaceId(request, url);
           const body = await readRequestBody(request, maxBodyBytes);
           const payload = asRecord(body) as MailApiSendRequest;
-          const result = handleSendOperation(store, payload, {
+          const result = await handleSendOperation(store, payload, {
             requestId,
             workspaceId
           });
@@ -2131,6 +2171,14 @@ export function createSmtpInternalBackend(
               error.message,
               error.details
             );
+            return true;
+          }
+
+          if (isDatabaseBusyError(error)) {
+            // Another writer held the database for longer than the busy timeout: ask the caller to retry.
+            // The send is idempotent on its key, so retrying the same request is safe.
+            response.setHeader("retry-after", String(DATABASE_BUSY_RETRY_AFTER_SECONDS));
+            writeErrorEnvelope(response, requestId, 503, "SERVICE_BUSY", "The service is busy. Retry shortly.");
             return true;
           }
 
@@ -2230,7 +2278,7 @@ export function createSmtpInternalBackend(
           }
           case "queue": {
             const payload = asRecord(body) as unknown as SmtpQueueRequest;
-            const result = handleQueueOperation(store, payload);
+            const result = await handleQueueOperation(store, payload);
             writeRawJson(response, 200, result);
             return true;
           }
@@ -2412,7 +2460,7 @@ function handleNormalizeOperation(store: MailPersistenceStore, payload: SmtpNorm
   };
 }
 
-function handleQueueOperation(store: MailPersistenceStore, payload: SmtpQueueRequest) {
+async function handleQueueOperation(store: MailPersistenceStore, payload: SmtpQueueRequest) {
   const queuePayload = validateQueuePayload(payload);
   const selectedRoute = store.selectProviderRoute(queuePayload.workspaceId, queuePayload.stream);
   const providerRoute = selectedRoute?.routeId;
@@ -2424,7 +2472,7 @@ function handleQueueOperation(store: MailPersistenceStore, payload: SmtpQueueReq
     providerRouteId: providerRoute,
     queuedAt
   });
-  store.processInline();
+  await store.processInline();
 
   return {
     messageEventId,
@@ -2460,7 +2508,7 @@ function handleAuditOperation(store: MailPersistenceStore, payload: SmtpAuditReq
   };
 }
 
-function handleSendOperation(
+async function handleSendOperation(
   store: MailPersistenceStore,
   payload: MailApiSendRequest,
   input: {
@@ -2523,7 +2571,7 @@ function handleSendOperation(
       queuedAt
     }
   );
-  store.processInline();
+  await store.processInline();
 
   const deliveryState = store.getMessageDeliveryState(queuePayload.messageId) ?? {
     deliveryStatus: "queued",
@@ -2566,6 +2614,33 @@ function resolveProviderAdapterName(option: QueueProviderAdapterName | undefined
   }
 
   return raw;
+}
+
+/**
+ * A delivery hook or adapter that throws or rejects failed this attempt without saying whether it is final.
+ * Treat it as a temporary failure: deferred with a class, so the job is retried with backoff until its
+ * attempts run out. Only the class is kept, never the error text (it can carry addresses or hostnames).
+ */
+function deliveryExceptionResult(error: unknown): QueueDeliveryResult {
+  const code = typeof (error as { code?: unknown } | null)?.code === "string" ? (error as { code: string }).code : "";
+  const name = typeof (error as { name?: unknown } | null)?.name === "string" ? (error as { name: string }).name : "";
+  const message = error instanceof Error ? error.message : "";
+  let errorClass = "unknown_error";
+  if (code === "ETIMEDOUT" || code === "ESOCKETTIMEDOUT" || name === "AbortError" || name === "TimeoutError" || /timed? ?out/iu.test(message)) {
+    errorClass = "timeout";
+  } else if (
+    ["ECONNRESET", "ECONNREFUSED", "ECONNABORTED", "EPIPE", "ENOTFOUND", "EAI_AGAIN", "EHOSTUNREACH", "ENETUNREACH"].includes(code) ||
+    /socket hang up|network/iu.test(message)
+  ) {
+    errorClass = "network_error";
+  }
+
+  return {
+    errorClass,
+    eventType: "deferred",
+    providerResponseCode: "0",
+    providerResponseMessage: `delivery_exception:${errorClass}`
+  };
 }
 
 /** No provider configured: a routed message can only be deferred and, in the end, failed. */
@@ -3463,6 +3538,18 @@ function parseJsonRecord(value: string | null | undefined) {
   }
 
   return undefined;
+}
+
+const DATABASE_BUSY_RETRY_AFTER_SECONDS = 2;
+
+/** SQLITE_BUSY / SQLITE_LOCKED: the database was held by another writer past the busy timeout. */
+function isDatabaseBusyError(error: unknown): boolean {
+  const candidate = error as { code?: unknown; errcode?: unknown; message?: unknown } | null;
+  if (!candidate || candidate.code !== "ERR_SQLITE_ERROR") {
+    return false;
+  }
+
+  return candidate.errcode === 5 || candidate.errcode === 6 || /database (table )?is locked/iu.test(String(candidate.message ?? ""));
 }
 
 function writeRawJson(response: ServerResponse, statusCode: number, payload: unknown) {

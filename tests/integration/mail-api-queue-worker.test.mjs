@@ -108,13 +108,22 @@ test("inline processing stays the default and the flag is validated", () => {
   assert.throws(() => resolveQueueSettings({}, { MAIL_QUEUE_INLINE: "maybe" }), /MAIL_QUEUE_INLINE must be 1, 0, true or false/u);
 });
 
-test("a synchronous processNext refuses an asynchronous hook instead of dropping its result", async () => {
-  const { cleanup, url } = tempDb();
+test("a synchronous processNext does not drop the result of an asynchronous hook", async () => {
+  // Changed from "refuses an asynchronous hook": the call still cannot wait for the Promise, but the result is now
+  // recorded when it settles instead of the job being left claimed. The assertion's point, that the result is not
+  // dropped, is kept and now checked on the stored rows.
+  const { cleanup, dbPath, url } = tempDb();
   const handle = openMailQueue({ databaseUrl: url, queue: { deliver: async () => ACCEPTED } });
   const backend = createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { inline: false }, seed: SEED });
   try {
     await send(backend, "idem-async-sync");
-    assert.throws(() => handle.queue.processNext(), /use processNextAsync/u);
+    handle.queue.processNext();
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline && query(dbPath, "SELECT status FROM smtp_queue_jobs;")[0].status === "processing") {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.deepEqual(query(dbPath, "SELECT status FROM messages;"), [{ status: "provider_accepted" }]);
+    assert.deepEqual(query(dbPath, "SELECT status FROM smtp_queue_jobs;"), [{ status: "completed" }]);
   } finally {
     handle.close();
     backend.close();
