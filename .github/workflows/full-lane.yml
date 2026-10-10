@@ -1,0 +1,166 @@
+name: Full lane (pinned private fixtures)
+
+# Runs the whole suite with the private docs pack and the CIOS sibling checkout present and
+# REQUIRE_DOCS_FIXTURES=1, so a missing fixture is a failure instead of a skip.
+#
+# Not triggered by pull_request on purpose: secrets must never reach fork code. To validate a pull
+# request head, run this workflow manually (Actions -> Full lane -> Run workflow) with the head SHA
+# in "ref". It also runs on main and nightly.
+#
+# Configuration (repository settings, nothing is stored in the repo):
+#   variables: DOCS_PACK_REPO, DOCS_PACK_SHA, CIOS_REPO, CIOS_SHA   (the SHAs must be full 40-hex commit ids)
+#   optional variable: DOCS_PACK_SUBDIR (folder inside the docs pack repo that holds the docs tree, default ".")
+#   secret: DOCS_PACK_TOKEN (read-only token for the two private repositories), stored as a secret of the
+#   "full-lane" environment, not as a repository secret. Restrict that environment to the main branch (and
+#   optionally require a reviewer) so a workflow edited on another branch cannot read the token.
+# A missing variable, secret or fixture makes this workflow fail on purpose.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit SHA or branch of this repository to test (default is the triggering commit)
+        required: false
+        type: string
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 19 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-lane-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  full-lane:
+    name: Full suite with pinned private fixtures
+    runs-on: ubuntu-latest
+    environment: full-lane
+    timeout-minutes: 45
+    env:
+      DOCS_PACK_REPO: ${{ vars.DOCS_PACK_REPO }}
+      DOCS_PACK_SHA: ${{ vars.DOCS_PACK_SHA }}
+      CIOS_REPO: ${{ vars.CIOS_REPO }}
+      CIOS_SHA: ${{ vars.CIOS_SHA }}
+      DOCS_PACK_SUBDIR: ${{ vars.DOCS_PACK_SUBDIR }}
+      HAS_TOKEN: ${{ secrets.DOCS_PACK_TOKEN != '' }}
+    steps:
+      - name: Preflight (configuration must be complete and pinned)
+        run: |
+          # Keep private repository names out of the public log (the checkout action prints them).
+          for name in DOCS_PACK_REPO CIOS_REPO; do
+            if [ -n "${!name}" ]; then echo "::add-mask::${!name}"; fi
+          done
+          missing=""
+          for name in DOCS_PACK_REPO DOCS_PACK_SHA CIOS_REPO CIOS_SHA; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ "$HAS_TOKEN" != "true" ]; then missing="$missing DOCS_PACK_TOKEN(secret)"; fi
+          if [ -n "$missing" ]; then
+            echo "::error::Full lane is not configured. Missing:$missing"
+            exit 1
+          fi
+          for name in DOCS_PACK_SHA CIOS_SHA; do
+            if ! printf '%s' "${!name}" | grep -Eq '^[0-9a-f]{40}$'; then
+              echo "::error::$name must be a full 40-character commit SHA, not a branch or tag"
+              exit 1
+            fi
+          done
+          case "${DOCS_PACK_SUBDIR:-.}" in
+            /* | *..*)
+              echo "::error::DOCS_PACK_SUBDIR must be a relative path without '..'"
+              exit 1
+              ;;
+          esac
+
+      - name: Checkout this repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Checkout private docs pack (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ vars.DOCS_PACK_REPO }}
+          ref: ${{ vars.DOCS_PACK_SHA }}
+          token: ${{ secrets.DOCS_PACK_TOKEN }}
+          path: _docs-pack
+          persist-credentials: false
+
+      - name: Checkout CIOS sibling (pinned)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ vars.CIOS_REPO }}
+          ref: ${{ vars.CIOS_SHA }}
+          token: ${{ secrets.DOCS_PACK_TOKEN }}
+          path: _cios-src
+          persist-credentials: false
+
+      - name: Place fixtures where the suites expect them
+        run: |
+          set -euo pipefail
+          sub="${DOCS_PACK_SUBDIR:-.}"
+          mkdir -p docs
+          cp -R "_docs-pack/${sub}/." docs/
+          rm -rf docs/.git
+          sibling="$(dirname "$GITHUB_WORKSPACE")/cios.iai.one"
+          rm -rf "$sibling"
+          cp -R _cios-src "$sibling"
+          rm -rf "$sibling/.git" _docs-pack _cios-src
+          for required in \
+            docs/README.md \
+            docs/PAY_IAI_ONE_SITE_PAYMENT_ACTIVATION_INTAKE_BOARD_2026.md \
+            docs/noos/NOOS_COMMERCE_FIXTURES_v0.1/catalog/product_definitions_all_v1.json \
+            "$sibling/package.json"; do
+            if [ ! -e "$required" ]; then
+              echo "::error::Required fixture is missing after checkout: ${required#"$GITHUB_WORKSPACE"/}"
+              exit 1
+            fi
+          done
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Test output can quote fixture content, and this repository's logs are public. The full output is kept on the
+      # runner and only counts and failing test names are printed; reproduce locally with the same pinned SHAs.
+      - name: Quality gate
+        run: pnpm quality:gate > "$RUNNER_TEMP/gate.log" 2>&1 || { echo "::error::quality gate failed"; grep -E '^(FAIL|Quality Gate)' "$RUNNER_TEMP/gate.log" || true; exit 1; }
+
+      - name: Unit and integration tests with fixtures required
+        env:
+          REQUIRE_DOCS_FIXTURES: "1"
+        run: |
+          pnpm test > "$RUNNER_TEMP/test.log" 2>&1 && status=0 || status=$?
+          grep -E '^# (tests|pass|fail|skipped|todo) ' "$RUNNER_TEMP/test.log" | sort | uniq -c || true
+          grep -E '^\s*not ok ' "$RUNNER_TEMP/test.log" | head -50 || true
+          exit $status
+
+      - name: Node end-to-end with fixtures required
+        env:
+          REQUIRE_DOCS_FIXTURES: "1"
+        run: |
+          pnpm test:e2e > "$RUNNER_TEMP/e2e.log" 2>&1 && status=0 || status=$?
+          grep -E '^# (tests|pass|fail|skipped|todo) ' "$RUNNER_TEMP/e2e.log" || true
+          grep -E '^\s*not ok ' "$RUNNER_TEMP/e2e.log" | head -50 || true
+          exit $status
+
+      # Local emulation only (wrangler dev --local); no Cloudflare credentials.
+      - name: Workers end-to-end
+        run: |
+          pnpm test:e2e:workers > "$RUNNER_TEMP/workers.log" 2>&1 && status=0 || status=$?
+          grep -E '^# (tests|pass|fail|skipped|todo) ' "$RUNNER_TEMP/workers.log" || true
+          grep -E '^\s*not ok ' "$RUNNER_TEMP/workers.log" | head -50 || true
+          exit $status
