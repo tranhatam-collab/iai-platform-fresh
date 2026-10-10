@@ -11,6 +11,6 @@
   },
   "dependencies": {
     "@iai/config": "workspace:*",
-    "smtp-server": "^3.14.0"
+    "smtp-server": "^3.19.18"
   }
 }
