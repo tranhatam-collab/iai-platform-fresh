@@ -45,8 +45,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/config
       smtp-server:
-        specifier: ^3.14.0
-        version: 3.18.4
+        specifier: ^3.19.18
+        version: 3.19.18
 
   apps/mail-web:
     dependencies:
@@ -271,9 +271,9 @@ packages:
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
 
-  smtp-server@3.18.4:
-    resolution: {integrity: sha512-9EnXPG4Tv+2P/TSEUdFTduYn9IxtxNRsOq/ryVj8ZlT+6MU2um9gn2Td2hHlgH1n+saagMWtici3hn5J5PhU+g==}
-    engines: {node: '>=18.18.0'}
+  smtp-server@3.19.18:
+    resolution: {integrity: sha512-wEkfCcY7VepMUr6mT/7HwLtgJz88yE/612yrMgXiNN9L33iZxPdblVIHjUfpKBXzh1WwdHIVfdqMyJSnszhGUw==}
+    engines: {node: '>=20.0.0'}
 
   tsx@4.21.0:
     resolution: {integrity: sha512-5C1sg4USs1lfG0GFb2RLXsdpXqBSEhAaA/0kPL01wxzpMqLILNxIxIOKiILz+cdg/pLnOUxFYOR5yhHU666wbw==}
@@ -418,7 +418,7 @@ snapshots:
 
   resolve-pkg-maps@1.0.0: {}
 
-  smtp-server@3.18.4:
+  smtp-server@3.19.18:
     dependencies:
       ipv6-normalize: 1.0.1
       nodemailer: 10.0.16
