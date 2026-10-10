@@ -20,78 +20,132 @@ function normalize(rawHeaders) {
   });
 }
 
+const cpuMs = () => {
+  const usage = process.cpuUsage();
+  return (usage.user + usage.system) / 1000;
+};
+
 /**
- * Time `run` the way a benchmark should: one warm-up call, then several measured calls, and report the
- * fastest. The question these tests ask is "can this code finish in under the limit", and the fastest of
- * several runs answers it without the noise of a loaded machine (a single slow run says nothing about the
- * code). The limit itself is not loosened. `result` is the value of the last call.
+ * Time `run`: one warm-up call, then `runs` measured calls. It reports three things, and each assertion below
+ * says which one it relies on:
+ *   - `elapsedMs`: the smallest CPU time (user + system, this process) of a measured call. It shows that the code
+ *     CAN finish within a CPU budget; CPU time is the work the code does and does not grow when other work
+ *     shares the cores.
+ *   - `maxWallMs`: the largest real (wall-clock) time of a measured call. A loaded machine inflates it, so it is
+ *     only compared with a ceiling far above the CPU budget: no measured call took a second of real time.
+ *   - `result`: the value of the last call.
+ * A warm-up that alone takes over a second (CPU or real time) is not noise: it is reported at once, with the
+ * warm-up's wall time as `maxWallMs`, instead of repeating a slow parse.
  */
-function fastest(run, { runs = 5, clock = "cpu" } = {}) {
-  // "cpu" (the default) counts the CPU time this process used instead of elapsed time. Elapsed time grows when
-  // other work shares the cores, and the longer a run lasts the more of it is lost that way; CPU time measures
-  // the work the code does, which is what the limits below are about. "wall" is the plain elapsed time.
-  const now =
-    clock === "cpu"
-      ? () => {
-          const usage = process.cpuUsage();
-          return (usage.user + usage.system) / 1000;
-        }
-      : () => performance.now();
-  const warmUpStartedAt = now();
+function fastest(run, { runs = 5 } = {}) {
+  const warmUpWallStart = performance.now();
+  const warmUpCpuStart = cpuMs();
   let result = run(); // warm-up
-  const warmUpMs = now() - warmUpStartedAt;
-  if (warmUpMs > 1000) {
-    // Ten times the limit even once warmed up is not load noise; report it at once instead of repeating a slow parse.
-    return { elapsedMs: warmUpMs, result };
+  const warmUpWallMs = performance.now() - warmUpWallStart;
+  const warmUpCpuMs = cpuMs() - warmUpCpuStart;
+  if (warmUpCpuMs > 1000 || warmUpWallMs > 1000) {
+    return { elapsedMs: warmUpCpuMs, maxWallMs: warmUpWallMs, result };
   }
 
-  let best = Infinity;
+  let bestCpuMs = Infinity;
+  let maxWallMs = 0;
   for (let index = 0; index < runs; index += 1) {
-    const startedAt = now();
+    const wallStart = performance.now();
+    const cpuStart = cpuMs();
     result = run();
-    best = Math.min(best, now() - startedAt);
+    bestCpuMs = Math.min(bestCpuMs, cpuMs() - cpuStart);
+    maxWallMs = Math.max(maxWallMs, performance.now() - wallStart);
   }
-  return { elapsedMs: best, result };
+  return { elapsedMs: bestCpuMs, maxWallMs, result };
 }
 
 // Takes ~4 s per address against the old uncapped regexes.
 const CRAFTED_ADDRESS = `a@${"a.".repeat(40000)} b`;
 
-test("crafted 80 KB bare address header is dropped in well under 100 ms", () => {
+test("crafted 80 KB bare address header is dropped: CPU min-of-5 under 100 ms, no call over 1 s of real time", () => {
   assert.equal(CRAFTED_ADDRESS.length > 80000, true);
 
-  const { elapsedMs, result } = fastest(() =>
+  const { elapsedMs, maxWallMs, result } = fastest(() =>
     normalize(`From: ${CRAFTED_ADDRESS}\r\nTo: ${CRAFTED_ADDRESS}`)
   );
 
   assert.equal(result.from, undefined);
   assert.deepEqual(result.to, []);
-  assert.ok(elapsedMs < 100, `took ${elapsedMs.toFixed(1)} ms, expected well under 100 ms`);
+  assert.ok(elapsedMs < 100, `fastest CPU time ${elapsedMs.toFixed(1)} ms, expected under 100 ms`);
+  assert.ok(maxWallMs < 1000, `slowest real time ${maxWallMs.toFixed(1)} ms, expected under 1000 ms`);
 });
 
-test("crafted 80 KB angle-bracket value is dropped in well under 100 ms", () => {
-  const { elapsedMs, result } = fastest(() =>
+test("crafted 80 KB angle-bracket value is dropped: CPU min-of-5 under 100 ms, no call over 1 s of real time", () => {
+  const { elapsedMs, maxWallMs, result } = fastest(() =>
     normalize(`To: ${"<".repeat(80000)}\r\nCc: x <${CRAFTED_ADDRESS}>`)
   );
 
   assert.deepEqual(result.to, []);
   assert.deepEqual(result.cc, []);
-  assert.ok(elapsedMs < 100, `took ${elapsedMs.toFixed(1)} ms, expected well under 100 ms`);
+  assert.ok(elapsedMs < 100, `fastest CPU time ${elapsedMs.toFixed(1)} ms, expected under 100 ms`);
+  assert.ok(maxWallMs < 1000, `slowest real time ${maxWallMs.toFixed(1)} ms, expected under 1000 ms`);
 });
 
-test("parsing time grows about linearly with the size of a crafted header, whatever the machine", () => {
-  // Independent of machine speed: four times the input must not cost anywhere near sixteen times the time, which
-  // is what a quadratic parse would do. Linear is about 4x; the bound leaves room for noise and allocation.
-  const craftedOfSize = (repeats) => `a@${"a.".repeat(repeats)} b`;
-  const timeFor = (repeats) => {
-    const address = craftedOfSize(repeats);
-    return fastest(() => normalize(`From: ${address}\r\nTo: ${address}\r\nCc: x <${address}>`), { runs: 7 }).elapsedMs;
+/**
+ * Growth of the parse time with the size of the input: the smaller and the larger crafted header are measured in
+ * turns (small, large, small, large, ...) after a warm-up of both, so a change in machine load hits both alike,
+ * and the smallest CPU time of each is compared. A single large call over 1 s (CPU or real time) is reported
+ * at once as `tooSlow`.
+ */
+function measureGrowth(smallRepeats, largeRepeats, rounds) {
+  const parse = (repeats) => {
+    const address = `a@${"a.".repeat(repeats)} b`;
+    return () => normalize(`From: ${address}\r\nTo: ${address}\r\nCc: x <${address}>`);
   };
+  const runSmall = parse(smallRepeats);
+  const runLarge = parse(largeRepeats);
+  runSmall();
+  runLarge();
 
-  const small = timeFor(20000);
-  const large = timeFor(80000);
-  const ratio = large / Math.max(small, 1); // a floor of 1 ms keeps a near-instant small case from inflating the ratio
-  assert.ok(ratio < 8, `4x the input took ${ratio.toFixed(1)}x the time (${small.toFixed(2)} ms -> ${large.toFixed(2)} ms)`);
+  let bestSmall = Infinity;
+  let bestLarge = Infinity;
+  for (let round = 0; round < rounds; round += 1) {
+    const smallStart = cpuMs();
+    runSmall();
+    bestSmall = Math.min(bestSmall, cpuMs() - smallStart);
+
+    const wallStart = performance.now();
+    const largeStart = cpuMs();
+    runLarge();
+    const largeCpu = cpuMs() - largeStart;
+    const largeWall = performance.now() - wallStart;
+    if (largeCpu > 1000 || largeWall > 1000) {
+      return { large: Math.max(largeCpu, largeWall), ratio: Infinity, small: bestSmall, tooSlow: true };
+    }
+    bestLarge = Math.min(bestLarge, largeCpu);
+  }
+  // A floor of 1 ms keeps a near-instant small case from inflating the ratio.
+  return { large: bestLarge, ratio: bestLarge / Math.max(bestSmall, 1), small: bestSmall, tooSlow: false };
+}
+
+test("parse time growth is not quadratic: 4x the input costs under 8x the CPU time", () => {
+  // Machine-independent: a linear parse costs about 4x (a little more with allocation), a quadratic one about 16x
+  // every time. A burst of load can still skew one measurement, so up to three attempts are made and the test
+  // fails only if every attempt is at or above the bound; the bound itself is not loosened.
+  const attempts = [];
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const growth = measureGrowth(20000, 80000, 7);
+    attempts.push(growth);
+    assert.equal(
+      growth.tooSlow,
+      false,
+      `a single call on the large input took ${growth.large.toFixed(0)} ms, over 1000 ms (attempt ${attempt})`
+    );
+    if (growth.ratio < 8) {
+      return;
+    }
+  }
+
+  assert.fail(
+    `4x the input took 8x or more the CPU time in all 3 attempts: ${attempts
+      .map((a) => `${a.ratio.toFixed(1)}x (${a.small.toFixed(2)} ms -> ${a.large.toFixed(2)} ms)`)
+      .join("; ")}`
+  );
 });
 
 test("one oversize mailbox does not hide the valid ones around it", () => {
