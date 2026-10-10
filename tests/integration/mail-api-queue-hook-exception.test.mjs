@@ -285,6 +285,49 @@ test("inline delivery awaits an asynchronous hook: a resolved result is recorded
   }
 });
 
+test("inline delivery waits for a hook that awaits a real timer before it resolves or rejects", async () => {
+  // The hooks above settle at once, so even an inline path that does not wait would look right a moment later. These
+  // wait 20 ms on a real timer: /v1/send must not answer, and the job must not be left, before the hook is done.
+  const pause = () => new Promise((resolve) => setTimeout(resolve, 20));
+  const cases = [
+    [
+      "resolves accepted after the timer",
+      async () => {
+        await pause();
+        return ACCEPTED;
+      },
+      "provider_accepted",
+      "completed",
+      "accepted"
+    ],
+    [
+      "rejects with a timeout after the timer",
+      async () => {
+        await pause();
+        throw withCode("connect ETIMEDOUT", "ETIMEDOUT");
+      },
+      "deferred",
+      "queued",
+      "deferred"
+    ]
+  ];
+  for (const [name, deliver, deliveryStatus, jobStatus, attemptStatus] of cases) {
+    const { cleanup, dbPath, url } = tempDb();
+    const backend = createSmtpInternalBackend({ apiKey: API_KEY, databaseUrl: url, queue: { deliver }, seed: SEED });
+    try {
+      const { body, status } = await send(backend, `idem-timer-${attemptStatus}`);
+      assert.equal(status, 202, name);
+      assert.equal(body.data.delivery_status, deliveryStatus, name);
+      assert.deepEqual(query(dbPath, "SELECT status FROM smtp_queue_jobs;"), [{ status: jobStatus }], name);
+      assert.deepEqual(query(dbPath, "SELECT status FROM delivery_attempts;"), [{ status: attemptStatus }], name);
+      assert.deepEqual(query(dbPath, "SELECT status FROM messages;"), [{ status: deliveryStatus }], name);
+    } finally {
+      backend.close();
+      cleanup();
+    }
+  }
+});
+
 test("the synchronous processNext records a Promise-returning hook when it settles, without an unhandled rejection", async () => {
   const unhandled = [];
   const listener = (reason) => unhandled.push(reason);
