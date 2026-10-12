@@ -21,8 +21,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const CONFIGS = ["apps/verify-runtime/wrangler.toml", "trust-iai-one-starter/wrangler.toml"];
 // Configs that are not covered by this check, and why.
 const EXCLUDED = {
-  "apps/developer/wrangler.jsonc": "Cloudflare Pages project (pages_build_output_dir): workers_dev and preview_urls are Worker settings and do not apply to it; see B-56",
-  "pay.iai.one/wrangler.jsonc": "pay.iai.one is handled separately (B-14, PR 8)"
+  "apps/developer/wrangler.jsonc": "Pages project (pages_build_output_dir): the Worker settings do not apply to it",
+  "pay.iai.one/wrangler.jsonc": "covered by a separate change"
 };
 const SKIPPED_DIRECTORIES = new Set([".git", ".wrangler", "dist", "node_modules"]);
 
