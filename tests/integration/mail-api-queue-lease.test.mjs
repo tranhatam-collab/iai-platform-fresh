@@ -339,7 +339,7 @@ test("separate processes claiming from one table never claim a job twice", async
     assert.equal(ids.length, JOBS, "every job is claimed");
     assert.equal(new Set(ids).size, JOBS, "no job is claimed by two processes");
     assert.ok(results.every((won) => won.every((claim) => claim.attempts === 1)), "every claim is the job's first");
-    assert.ok(results.filter((won) => won.length > 0).length >= 2, "the processes really overlapped");
+    assert.ok(results.every((won) => won.length > 0), "every process won jobs, so the processes really overlapped");
     withDb(dbPath, (db) => {
       const rows = db.prepare("SELECT COUNT(*) AS jobs, MIN(attempts) AS lowest, MAX(attempts) AS highest FROM smtp_queue_jobs;").get();
       assert.deepEqual({ ...rows }, { highest: 1, jobs: JOBS, lowest: 1 });

@@ -3,9 +3,13 @@
  * that it is ready, waits until every claimer is ready, then claims jobs until none is due and prints
  * what it won as JSON.
  *
- * The start barrier is a directory: each claimer writes one file into it once its backend is open and
- * starts claiming only when <count> files exist, so a slow start (module load, migrations on a busy
- * machine) delays everybody instead of letting one process finish before the others begin.
+ * Two barriers, both in one directory, make the overlap deterministic instead of depending on timing:
+ *  1. each claimer writes a "ready" file once its backend is open and starts claiming only when <count>
+ *     of them exist, so a slow start (module load, migrations on a busy machine) delays everybody;
+ *  2. each claimer then claims ONE job, writes a "claimed" file, and goes on only when <count> of
+ *     those exist. On a loaded machine one process can otherwise take its whole time slice and claim
+ *     every job before the others run; with the second barrier every claimer holds a job from the
+ *     contested first round and the rest of the queue is then raced for by all of them.
  *
  * Usage: node queue-claimer.mjs <sqlite url> <barrier directory> <number of claimers>
  */
@@ -30,13 +34,17 @@ const backend = createSmtpInternalBackend({
   }
 });
 
-writeFileSync(path.join(barrierDirectory, `ready-${process.pid}`), "");
-const barrierDeadline = Date.now() + 60_000;
-while (readdirSync(barrierDirectory).length < Number(claimerCount)) {
-  if (Date.now() > barrierDeadline) {
-    throw new Error("queue-claimer: the other claimers did not become ready within 60 seconds");
+function waitForClaimers(prefix) {
+  writeFileSync(path.join(barrierDirectory, `${prefix}-${process.pid}`), "");
+  const barrierDeadline = Date.now() + 60_000;
+  while (readdirSync(barrierDirectory).filter((name) => name.startsWith(`${prefix}-`)).length < Number(claimerCount)) {
+    if (Date.now() > barrierDeadline) {
+      throw new Error(`queue-claimer: the other claimers did not reach the "${prefix}" barrier within 60 seconds`);
+    }
   }
 }
+
+waitForClaimers("ready");
 
 // A claim that loses a race returns nothing, exactly like an empty queue, so keep going until no
 // job is left queued.
@@ -48,21 +56,39 @@ const queued = () => reader.prepare("SELECT COUNT(*) AS count FROM smtp_queue_jo
 // after a while so a broken build cannot hang the test.
 const won = [];
 const deadline = Date.now() + 60_000;
-while (queued() > 0) {
+
+/** One claim attempt: the claim, or undefined when none was won (a lost race, or a lock that timed out). */
+function tryClaim() {
   if (Date.now() > deadline) {
     throw new Error("queue-claimer: jobs are still queued after 60 seconds");
   }
 
-  let claim;
   try {
-    claim = backend.queue.claimNextJob();
+    return backend.queue.claimNextJob();
   } catch (error) {
     if (/database is locked|database table is locked/u.test(error instanceof Error ? error.message : "")) {
-      continue;
+      return undefined;
     }
     throw error;
   }
+}
 
+// Round one: win a first job (a lost race just means trying again; there are far more jobs than claimers).
+while (won.length === 0) {
+  if (queued() === 0) {
+    throw new Error("queue-claimer: the queue ran empty before this claimer won a job");
+  }
+
+  const claim = tryClaim();
+  if (claim) {
+    won.push(claim);
+  }
+}
+waitForClaimers("claimed");
+
+// Round two: everybody races for the rest.
+while (queued() > 0) {
+  const claim = tryClaim();
   if (claim) {
     won.push(claim);
   }
