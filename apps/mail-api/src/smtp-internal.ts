@@ -9,6 +9,10 @@ import {
   buildMailMessageListItem,
   isSuppressionActive,
   matchesMessageListFilter,
+  type FlowActionOutcome,
+  type FlowAuditAction,
+  type FlowAuditEvent,
+  type FlowAuditFilter,
   type MailDeliveryAttemptRecord,
   type MailMessageDetail,
   type MailMessageEventRecord,
@@ -355,6 +359,8 @@ export interface SmtpInternalBackend {
   persistedSources?: {
     messages: MailMessageReadSource;
     suppressions: MailSuppressionReadSource;
+    /** Flow audit trail read from audit_logs; rows whose action is not a flow action are not listed. */
+    audit: { listAuditEvents(filter?: FlowAuditFilter): FlowAuditEvent[] };
   };
   checkPersistedReadAuthorization?(request: IncomingMessage): PersistedReadRefusal | undefined;
   handleRequest(
@@ -365,6 +371,9 @@ export interface SmtpInternalBackend {
     method: string
   ): Promise<boolean>;
 }
+
+/** The audit_logs actions that belong to the flow audit trail (see FlowAuditAction). */
+const PERSISTED_FLOW_AUDIT_ACTIONS: string[] = ["builder.save", "builder.validate", "publish.preview", "publish.confirm"];
 
 /** Largest page the persisted message list serves (callers asking for more are refused earlier). */
 export const MAX_PERSISTED_PAGE_SIZE = 100;
@@ -798,6 +807,89 @@ class MailPersistenceStore {
       .all(...params, ...(paging ? [paging.limit, paging.offset] : [])) as Array<{ id?: string }>;
 
     return rows.map((row) => row.id).filter((id): id is string => Boolean(id));
+  }
+
+  listPersistedFlowAuditEvents(filter: FlowAuditFilter = {}): FlowAuditEvent[] {
+    const clauses = ["target_type = 'flow'", `action IN (${PERSISTED_FLOW_AUDIT_ACTIONS.map(() => "?").join(", ")})`];
+    const params: Array<string | number> = [...PERSISTED_FLOW_AUDIT_ACTIONS];
+    if (filter.workspaceId) {
+      clauses.push("workspace_id = ?");
+      params.push(filter.workspaceId);
+    }
+    if (filter.flowId) {
+      clauses.push("target_id = ?");
+      params.push(filter.flowId);
+    }
+    if (filter.actions && filter.actions.length > 0) {
+      clauses.push(`action IN (${filter.actions.map(() => "?").join(", ")})`);
+      params.push(...filter.actions);
+    }
+    const limit =
+      typeof filter.limit === "number" && Number.isFinite(filter.limit) && filter.limit > 0
+        ? Math.min(Math.floor(filter.limit), MAX_PERSISTED_PAGE_SIZE)
+        : MAX_PERSISTED_PAGE_SIZE;
+    // The outcome lives in the metadata, so that filter is applied after the read; without it the query is bounded.
+    const hasOutcomeFilter = Boolean(filter.outcomes && filter.outcomes.length > 0);
+    const rows = this.db
+      .prepare(
+        `
+          SELECT id, workspace_id, action, actor_identifier, target_id, metadata_json, created_at
+          FROM audit_logs
+          WHERE ${clauses.join(" AND ")}
+          ORDER BY created_at DESC, id ASC
+          ${hasOutcomeFilter ? "" : "LIMIT ?"};
+        `
+      )
+      .all(...params, ...(hasOutcomeFilter ? [] : [limit])) as Array<{
+      action: string;
+      actor_identifier: string | null;
+      created_at: string;
+      id: string;
+      metadata_json: string | null;
+      target_id: string | null;
+      workspace_id: string;
+    }>;
+
+    const events: FlowAuditEvent[] = [];
+    for (const row of rows) {
+      let metadata: { details?: unknown; outcome?: unknown } = {};
+      let unreadable = false;
+      try {
+        const parsed = JSON.parse(row.metadata_json ?? "{}") as unknown;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          metadata = parsed as typeof metadata;
+        } else {
+          unreadable = true;
+        }
+      } catch {
+        unreadable = true;
+      }
+      // Convention: metadata without an `outcome` means the action succeeded. Anything else that is not
+      // exactly "succeeded" or "failed" (a different string, a number, null) cannot be trusted, so a row
+      // with such a value or with metadata that cannot be read is reported as failed, never as a success.
+      const recorded = metadata.outcome;
+      if (recorded !== undefined && recorded !== "succeeded" && recorded !== "failed") {
+        unreadable = true;
+      }
+      const outcome: FlowActionOutcome = unreadable || recorded === "failed" ? "failed" : "succeeded";
+      if (filter.outcomes && filter.outcomes.length > 0 && !filter.outcomes.includes(outcome)) {
+        continue;
+      }
+      events.push({
+        action: row.action as FlowAuditAction,
+        actor: row.actor_identifier ?? "unknown",
+        createdAt: row.created_at,
+        details: unreadable ? "audit metadata unreadable" : typeof metadata.details === "string" ? metadata.details : "",
+        eventId: row.id,
+        flowId: row.target_id ?? "",
+        outcome,
+        workspaceId: row.workspace_id
+      });
+      if (events.length >= limit) {
+        break;
+      }
+    }
+    return events;
   }
 
   /**
@@ -2080,6 +2172,7 @@ export function createSmtpInternalBackend(
       listMessages: (filter) => store.listPersistedMessages(filter),
       snapshot: (workspaceId) => store.snapshotPersistedMessages(workspaceId)
     },
+    audit: { listAuditEvents: (filter) => store.listPersistedFlowAuditEvents(filter) },
     suppressions: {
       listSuppressions: (filter) => store.listPersistedSuppressions(filter),
       snapshot: (workspaceId): MailSuppressionSourceSnapshot => ({

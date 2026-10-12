@@ -216,7 +216,11 @@ export function createFlowApiRequestHandler(options: FlowApiServerOptions = {}) 
   const smtpInternalBackend = options.smtpInternalBackend ?? createSmtpInternalBackend();
   const suppressionSource =
     options.suppressionSource ?? (demoData ? createMailSuppressionSource() : undefined);
-  const source = options.source ?? createFlowSourceOfTruth();
+  // Sample flow data is a demo opt-in. By default the flow tables are empty rather than sample rows.
+  const source =
+    options.source ?? (demoData ? createFlowSourceOfTruth() : createFlowSourceOfTruth(EMPTY_FLOW_SEED));
+  const flowDataSource: FlowDataSource = options.source ? "configured" : demoData ? "demo" : "empty";
+  const useAuditPersistence = !options.source && !demoData;
   const webContractConfig = resolveWebOnboardingContractConfig(options.webContractConfig);
   const webContractWording = resolveWebOnboardingWordingContract(options.webContractWording);
   const inboundWebhookHandler = createInboundWebhookHandler(options.inboundWebhook);
@@ -226,6 +230,7 @@ export function createFlowApiRequestHandler(options: FlowApiServerOptions = {}) 
       request,
       response,
       source,
+      { audit: useAuditPersistence, label: flowDataSource },
       domainDnsHealthSource,
       messageSource,
       providerRouteSource,
@@ -242,6 +247,7 @@ async function handleRequest(
   request: IncomingMessage,
   response: ServerResponse,
   source: FlowSourceOfTruth,
+  flowData: { audit: boolean; label: FlowDataSource },
   domainDnsHealthSource: MailDomainDnsHealthSource,
   configuredMessageSource: MailMessageReadSource | undefined,
   providerRouteSource: MailProviderRouteSource,
@@ -445,6 +451,7 @@ async function handleRequest(
       const summary = buildFlowSourceSummary(snapshot, summaryNow);
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         snapshot,
         summary
       });
@@ -452,12 +459,10 @@ async function handleRequest(
     }
 
     if (url.pathname === "/v1/flow/web-onboarding-contract") {
-      respondSuccess(
-        response,
-        200,
-        requestId,
-        buildWebOnboardingContractPayload(source, workspaceId, webContractConfig, webContractWording)
-      );
+      respondSuccess(response, 200, requestId, {
+        ...buildWebOnboardingContractPayload(source, workspaceId, webContractConfig, webContractWording),
+        dataSource: "static" satisfies FlowDataSource
+      });
       return;
     }
 
@@ -469,6 +474,7 @@ async function handleRequest(
       });
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         items,
         total: items.length
       });
@@ -485,6 +491,7 @@ async function handleRequest(
 
       respondSuccess(response, 200, requestId, {
         flowId: flowChildRoute.flowId,
+        dataSource: flowData.label,
         items,
         total: items.length
       });
@@ -501,6 +508,7 @@ async function handleRequest(
 
       respondSuccess(response, 200, requestId, {
         flowId: flowChildRoute.flowId,
+        dataSource: flowData.label,
         items,
         total: items.length
       });
@@ -516,6 +524,7 @@ async function handleRequest(
       }
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         flowId: flowChildRoute.flowId,
         readiness
       });
@@ -536,6 +545,7 @@ async function handleRequest(
       });
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         flow,
         recentExecutions
       });
@@ -555,6 +565,7 @@ async function handleRequest(
       });
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         items,
         total: items.length
       });
@@ -572,6 +583,7 @@ async function handleRequest(
       });
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         items,
         total: items.length
       });
@@ -590,6 +602,7 @@ async function handleRequest(
       });
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         items,
         total: items.length
       });
@@ -597,15 +610,25 @@ async function handleRequest(
     }
 
     if (url.pathname === "/v1/flow/audit") {
-      const items = source.listAuditEvents({
+      const auditFilter = {
         actions: parseEnumList(url.searchParams.get("action"), FLOW_AUDIT_ACTIONS, "action"),
         flowId: normalizeString(url.searchParams.get("flow_id")),
         limit: parsePositiveInteger(url.searchParams.get("limit"), "limit"),
         outcomes: parseEnumList(url.searchParams.get("outcome"), FLOW_ACTION_OUTCOMES, "outcome"),
         workspaceId
-      });
+      };
+      let items;
+      let auditDataSource: FlowDataSource = flowData.label;
+      if (flowData.audit && smtpInternalBackend.persistedSources) {
+        assertPersistedReadAllowed(smtpInternalBackend, request);
+        items = smtpInternalBackend.persistedSources.audit.listAuditEvents(auditFilter);
+        auditDataSource = "persisted";
+      } else {
+        items = source.listAuditEvents(auditFilter);
+      }
 
       respondSuccess(response, 200, requestId, {
+        dataSource: auditDataSource,
         items,
         total: items.length
       });
@@ -626,6 +649,7 @@ async function handleRequest(
       });
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         items,
         total: items.length
       });
@@ -641,6 +665,7 @@ async function handleRequest(
       });
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         items,
         total: items.length
       });
@@ -656,6 +681,7 @@ async function handleRequest(
       }
 
       respondSuccess(response, 200, requestId, {
+        dataSource: flowData.label,
         execution
       });
       return;
@@ -742,6 +768,18 @@ const EMPTY_MESSAGE_SOURCE = createMailMessageSource({
   events: [],
   projections: []
 });
+/** Where a /v1/flow response comes from: sample rows, no rows, stored rows or the fixed contract. */
+type FlowDataSource = "configured" | "demo" | "empty" | "persisted" | "static";
+
+const EMPTY_FLOW_SEED = {
+  alerts: [],
+  approvals: [],
+  auditEvents: [],
+  billing: [],
+  flows: [],
+  proofs: [],
+  runtimeExecutions: []
+};
 const EMPTY_SUPPRESSION_SOURCE = createMailSuppressionSource({ items: [] });
 
 function assertPersistedReadAllowed(backend: SmtpInternalBackend, request: IncomingMessage) {

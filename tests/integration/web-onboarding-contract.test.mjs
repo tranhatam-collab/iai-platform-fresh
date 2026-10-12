@@ -50,6 +50,7 @@ test("web onboarding reads shared Team 2 contracts and redirects to shared auth"
   const flowApiBase = "http://internal.flow.test";
   const contractRequests = [];
   const apiHandler = createFlowApiRequestHandler({
+    demoData: true,
     webContractConfig: {
       sharedAuthUrl: "https://app-preview.iai.one/auth/entry",
       sharedBillingUrl: "https://dash-preview.iai.one/billing-center",
