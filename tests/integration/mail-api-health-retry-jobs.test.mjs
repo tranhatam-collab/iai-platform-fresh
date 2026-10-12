@@ -23,7 +23,11 @@ function setup(maxDepth) {
   const backend = createSmtpInternalBackend({ apiKey: "health-test-key", databaseUrl: `sqlite:${dbPath}`, healthMaxQueueDepth: maxDepth });
   const handler = createFlowApiRequestHandler({ smtpInternalBackend: backend });
   const db = new DatabaseSync(dbPath);
-  db.exec("ALTER TABLE smtp_queue_jobs ADD COLUMN next_attempt_at TEXT;");
+  // Branches that already create the retry column must not get a second one; branches without it get it here.
+  const hasRetryColumn = db.prepare("PRAGMA table_info(smtp_queue_jobs);").all().some((column) => column.name === "next_attempt_at");
+  if (!hasRetryColumn) {
+    db.exec("ALTER TABLE smtp_queue_jobs ADD COLUMN next_attempt_at TEXT;");
+  }
   const cleanup = () => {
     db.close();
     backend.close();
