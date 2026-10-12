@@ -34,7 +34,7 @@ describe("flow, dash and web against a real mail-api", { skip: skipUnlessBuilt(b
   let flow;
 
   before(async () => {
-    api = await startMailApi();
+    api = await startMailApi({ env: { MAIL_API_DEMO_DATA: "1" } });
     [dash, web, flow] = await startAll([
       () =>
         startService({

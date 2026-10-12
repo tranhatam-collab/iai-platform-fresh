@@ -80,7 +80,7 @@ test("dash keeps locale when redirecting an unauthenticated english session", as
 test("dash dashboard reads runtime truth through api.flow with explicit workspace identity", async () => {
   const flowApiBase = "http://internal.flow.test";
   const flowRequests = [];
-  const apiHandler = createFlowApiRequestHandler();
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
   const dashHandler = createDashRequestHandler({
     fetchImpl: createHandlerFetch(flowApiBase, apiHandler, flowRequests),
     flowApiBase
@@ -112,7 +112,7 @@ test("dash dashboard reads runtime truth through api.flow with explicit workspac
 test("dash flow inventory reads flow contracts through api.flow", async () => {
   const flowApiBase = "http://internal.flow.test";
   const flowRequests = [];
-  const apiHandler = createFlowApiRequestHandler();
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
   const dashHandler = createDashRequestHandler({
     fetchImpl: createHandlerFetch(flowApiBase, apiHandler, flowRequests),
     flowApiBase
@@ -139,7 +139,7 @@ test("dash flow inventory reads flow contracts through api.flow", async () => {
 test("dash flow detail and builder pages expose runtime-linked flow state", async () => {
   const flowApiBase = "http://internal.flow.test";
   const flowRequests = [];
-  const apiHandler = createFlowApiRequestHandler();
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
   const dashHandler = createDashRequestHandler({
     fetchImpl: createHandlerFetch(flowApiBase, apiHandler, flowRequests),
     flowApiBase
@@ -182,7 +182,7 @@ test("dash flow detail and builder pages expose runtime-linked flow state", asyn
 test("dash flow versions, drafts, and publish routes expose release-lane truth", async () => {
   const flowApiBase = "http://internal.flow.test";
   const flowRequests = [];
-  const apiHandler = createFlowApiRequestHandler();
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
   const dashHandler = createDashRequestHandler({
     fetchImpl: createHandlerFetch(flowApiBase, apiHandler, flowRequests),
     flowApiBase
@@ -241,7 +241,7 @@ test("dash flow versions, drafts, and publish routes expose release-lane truth",
 test("dash builder and publish action routes execute commands and expose audit timeline", async () => {
   const flowApiBase = "http://internal.flow.test";
   const flowRequests = [];
-  const apiHandler = createFlowApiRequestHandler();
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
   const dashHandler = createDashRequestHandler({
     fetchImpl: createHandlerFetch(flowApiBase, apiHandler, flowRequests),
     flowApiBase
@@ -352,7 +352,7 @@ test("dash builder and publish action routes execute commands and expose audit t
 test("dash runtime execution routes expose execution truth from api.flow", async () => {
   const flowApiBase = "http://internal.flow.test";
   const flowRequests = [];
-  const apiHandler = createFlowApiRequestHandler();
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
   const dashHandler = createDashRequestHandler({
     fetchImpl: createHandlerFetch(flowApiBase, apiHandler, flowRequests),
     flowApiBase
