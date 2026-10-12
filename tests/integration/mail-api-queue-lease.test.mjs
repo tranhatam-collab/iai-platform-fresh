@@ -324,7 +324,7 @@ test("separate processes claiming from one table never claim a job twice", async
       db.prepare("DELETE FROM smtp_queue_jobs WHERE id = ?;").run(template);
     });
 
-    // Every claimer starts claiming only once all of them are ready (a file barrier), not at a fixed time.
+    // Every claimer wins one job and then waits until all of them have one (a file barrier); there is no fixed start time.
     const barrier = mkdtempSync(path.join(tmpdir(), "iai-claimer-barrier-"));
     let results;
     try {
@@ -339,7 +339,10 @@ test("separate processes claiming from one table never claim a job twice", async
     assert.equal(ids.length, JOBS, "every job is claimed");
     assert.equal(new Set(ids).size, JOBS, "no job is claimed by two processes");
     assert.ok(results.every((won) => won.every((claim) => claim.attempts === 1)), "every claim is the job's first");
-    assert.ok(results.every((won) => won.length > 0), "every process won jobs, so the processes really overlapped");
+    // Every claimer won at least one job (the barrier after round one guarantees it, however late a process
+    // started), so all of them took part in the contest. How the rest of the queue splits between them is NOT
+    // asserted: on a loaded machine one process can take most of it, and asserting a split fails at random.
+    assert.ok(results.every((won) => won.length > 0), "every process won at least one job");
     withDb(dbPath, (db) => {
       const rows = db.prepare("SELECT COUNT(*) AS jobs, MIN(attempts) AS lowest, MAX(attempts) AS highest FROM smtp_queue_jobs;").get();
       assert.deepEqual({ ...rows }, { highest: 1, jobs: JOBS, lowest: 1 });

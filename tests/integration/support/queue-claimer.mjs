@@ -3,13 +3,11 @@
  * that it is ready, waits until every claimer is ready, then claims jobs until none is due and prints
  * what it won as JSON.
  *
- * Two barriers, both in one directory, make the overlap deterministic instead of depending on timing:
- *  1. each claimer writes a "ready" file once its backend is open and starts claiming only when <count>
- *     of them exist, so a slow start (module load, migrations on a busy machine) delays everybody;
- *  2. each claimer then claims ONE job, writes a "claimed" file, and goes on only when <count> of
- *     those exist. On a loaded machine one process can otherwise take its whole time slice and claim
- *     every job before the others run; with the second barrier every claimer holds a job from the
- *     contested first round and the rest of the queue is then raced for by all of them.
+ * One barrier makes the overlap deterministic instead of dependent on timing: each claimer first wins ONE
+ * job in a contested first round, writes a "claimed" file, and goes on only when <count> of those files
+ * exist. On a loaded machine one process can otherwise take its whole time slice and claim every job
+ * before the others run; with the barrier every claimer holds a job from the first round, however late it
+ * started, and the rest of the queue is then raced for by all of them in round two.
  *
  * Usage: node queue-claimer.mjs <sqlite url> <barrier directory> <number of claimers>
  */
@@ -43,8 +41,6 @@ function waitForClaimers(prefix) {
     }
   }
 }
-
-waitForClaimers("ready");
 
 // A claim that loses a race returns nothing, exactly like an empty queue, so keep going until no
 // job is left queued.
