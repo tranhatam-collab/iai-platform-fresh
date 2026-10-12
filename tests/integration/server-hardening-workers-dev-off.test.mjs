@@ -26,6 +26,11 @@ const EXCLUDED = {
 };
 const SKIPPED_DIRECTORIES = new Set([".git", ".wrangler", "dist", "node_modules"]);
 
+/** wrangler.toml, wrangler.jsonc, wrangler.json and variants such as wrangler.staging.toml. */
+export function isWranglerConfigName(name) {
+  return /^wrangler(\.[\w-]+)*\.(toml|jsonc?)$/u.test(name);
+}
+
 export function findWranglerConfigs(directory, prefix = "") {
   const found = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -33,7 +38,7 @@ export function findWranglerConfigs(directory, prefix = "") {
       if (!SKIPPED_DIRECTORIES.has(entry.name)) {
         found.push(...findWranglerConfigs(path.join(directory, entry.name), `${prefix}${entry.name}/`));
       }
-    } else if (/^wrangler\.(toml|jsonc?)$/u.test(entry.name)) {
+    } else if (isWranglerConfigName(entry.name)) {
       found.push(`${prefix}${entry.name}`);
     }
   }
@@ -79,6 +84,15 @@ test("every wrangler config in the repository is checked here or excluded with a
   assert.deepEqual(findWranglerConfigs(root).filter((file) => !known.has(file)), []);
   for (const file of Object.keys(EXCLUDED)) {
     assert.ok(findWranglerConfigs(root).includes(file), `${file} is excluded but does not exist`);
+  }
+});
+
+test("config files are recognised by name, including variants", () => {
+  for (const name of ["wrangler.toml", "wrangler.jsonc", "wrangler.json", "wrangler.staging.toml", "wrangler.prod-eu.jsonc"]) {
+    assert.equal(isWranglerConfigName(name), true, name);
+  }
+  for (const name of ["wrangler.md", "wrangler", "mywrangler.toml", "wrangler.toml.bak", "package.json"]) {
+    assert.equal(isWranglerConfigName(name), false, name);
   }
 });
 
