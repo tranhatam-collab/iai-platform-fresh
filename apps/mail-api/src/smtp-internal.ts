@@ -418,8 +418,10 @@ class MailPersistenceStore {
     private readonly queueSettings: QueueSettings = resolveQueueSettings()
   ) {
     this.db = new DatabaseSync(resolveSqliteDatabasePath(databaseUrl));
-    this.db.exec("PRAGMA journal_mode = WAL;");
+    // The wait comes first: switching the journal mode needs a lock too, and several processes that start
+    // together would otherwise fail at once instead of waiting for each other.
     this.db.exec("PRAGMA busy_timeout = 2000;");
+    this.db.exec("PRAGMA journal_mode = WAL;");
     applyMigrations(this.db);
     if (seed) {
       this.ensureSeed(seed);
