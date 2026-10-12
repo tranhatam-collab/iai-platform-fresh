@@ -329,10 +329,24 @@ class MailPersistenceStore {
     return { components, ok: components.every((component) => component.ok) };
   }
 
+  /**
+   * Jobs waiting to be delivered. A job that failed temporarily and is waiting for its retry time is queued too, but it
+   * is not work that is due, so it does not count towards the depth while it waits: a provider outage with hundreds of
+   * jobs backing off would otherwise make the service report itself unready although nothing is due. Due means the
+   * same as for a claim (no retry time, or one that has passed). A database without the retry column counts every
+   * queued job.
+   */
   countQueuedJobs() {
-    const row = this.db
-      .prepare("SELECT COUNT(*) AS count FROM smtp_queue_jobs WHERE status = 'queued';")
-      .get() as { count?: number } | undefined;
+    const hasRetryTime = (this.db.prepare("PRAGMA table_info(smtp_queue_jobs);").all() as Array<{ name?: string }>).some(
+      (column) => column.name === "next_attempt_at"
+    );
+    const row = (
+      hasRetryTime
+        ? this.db
+            .prepare("SELECT COUNT(*) AS count FROM smtp_queue_jobs WHERE status = 'queued' AND (next_attempt_at IS NULL OR next_attempt_at <= ?);")
+            .get(new Date().toISOString())
+        : this.db.prepare("SELECT COUNT(*) AS count FROM smtp_queue_jobs WHERE status = 'queued';").get()
+    ) as { count?: number } | undefined;
     return Number(row?.count ?? 0);
   }
 
