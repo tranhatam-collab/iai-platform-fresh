@@ -10,6 +10,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
@@ -17,6 +19,16 @@ import { buildServerOptionsFromEnv } from "../../apps/mail-api/dist/bootstrap.js
 import { createFlowApiRequestHandler } from "../../apps/mail-api/dist/server.js";
 import { createSmtpInternalBackend } from "../../apps/mail-api/dist/smtp-internal.js";
 import { dispatchToHandler } from "../support/http-handler.mjs";
+
+// Handlers built without a backend open the default database file, which parallel test files share;
+// this file keeps to its own so it cannot lock them out.
+const DEFAULT_DB = path.join(tmpdir(), `iai-flow-data-default-${randomUUID()}.sqlite`);
+process.env.MAIL_DB_URL = `sqlite:${DEFAULT_DB}`;
+test.after(() => {
+  for (const suffix of ["", "-wal", "-shm"]) {
+    rmSync(`${DEFAULT_DB}${suffix}`, { force: true });
+  }
+});
 
 const API_KEY = "mail-api-key-for-flow-data-tests";
 const WORKSPACE = "ws_flow_data";
