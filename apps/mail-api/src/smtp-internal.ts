@@ -828,16 +828,19 @@ class MailPersistenceStore {
       typeof filter.limit === "number" && Number.isFinite(filter.limit) && filter.limit > 0
         ? Math.min(Math.floor(filter.limit), MAX_PERSISTED_PAGE_SIZE)
         : MAX_PERSISTED_PAGE_SIZE;
+    // The outcome lives in the metadata, so that filter is applied after the read; without it the query is bounded.
+    const hasOutcomeFilter = Boolean(filter.outcomes && filter.outcomes.length > 0);
     const rows = this.db
       .prepare(
         `
           SELECT id, workspace_id, action, actor_identifier, target_id, metadata_json, created_at
           FROM audit_logs
           WHERE ${clauses.join(" AND ")}
-          ORDER BY created_at DESC, id ASC;
+          ORDER BY created_at DESC, id ASC
+          ${hasOutcomeFilter ? "" : "LIMIT ?"};
         `
       )
-      .all(...params) as Array<{
+      .all(...params, ...(hasOutcomeFilter ? [] : [limit])) as Array<{
       action: string;
       actor_identifier: string | null;
       created_at: string;

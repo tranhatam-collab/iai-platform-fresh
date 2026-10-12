@@ -169,6 +169,32 @@ test("the audit trail reads audit_logs for the requested workspace only", async 
   }
 });
 
+test("the audit trail lists only flow-targeted flow actions and caps the page size", async () => {
+  const { cleanup, handler, insert } = setupPersisted();
+  try {
+    const auth = { authorization: `Bearer ${API_KEY}` };
+    insert({ action: "publish.confirm", createdAt: "2026-10-02T10:00:00.000Z", id: "audit_flow", targetId: "flow_a", workspaceId: WORKSPACE });
+    // A flow action recorded against another kind of target is not part of the flow trail.
+    insert({ action: "publish.confirm", createdAt: "2026-10-02T11:00:00.000Z", id: "audit_other_target", targetId: "msg_1", targetType: "message", workspaceId: WORKSPACE });
+    // A mail action is not part of the flow trail even when its target is typed "flow".
+    insert({ action: "message.queued", createdAt: "2026-10-02T12:00:00.000Z", id: "audit_mail_action", targetId: "flow_a", targetType: "flow", workspaceId: WORKSPACE });
+    const listed = await (await get(handler, "/v1/flow/audit", WORKSPACE, auth)).json();
+    assert.deepEqual(listed.data.items.map((item) => item.eventId), ["audit_flow"]);
+
+    for (let index = 0; index < 105; index += 1) {
+      insert({ action: "builder.save", createdAt: `2026-10-03T10:${String(index % 60).padStart(2, "0")}:00.000Z`, id: `audit_bulk_${String(index).padStart(3, "0")}`, targetId: "flow_bulk", workspaceId: OTHER_WORKSPACE });
+    }
+    const capped = await (await get(handler, "/v1/flow/audit?limit=1000", OTHER_WORKSPACE, auth)).json();
+    assert.equal(capped.data.items.length, 100);
+    const defaulted = await (await get(handler, "/v1/flow/audit", OTHER_WORKSPACE, auth)).json();
+    assert.equal(defaulted.data.items.length, 100);
+    const filtered = await (await get(handler, "/v1/flow/audit?outcome=succeeded&limit=1000", OTHER_WORKSPACE, auth)).json();
+    assert.equal(filtered.data.items.length, 100);
+  } finally {
+    cleanup();
+  }
+});
+
 test("the persisted audit read needs the API key like the other persisted reads", async () => {
   const { cleanup, handler } = setupPersisted();
   try {
