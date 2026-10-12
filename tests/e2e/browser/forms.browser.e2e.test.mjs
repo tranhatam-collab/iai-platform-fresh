@@ -50,7 +50,8 @@ before(async () => {
     skipReason = "mail-api, dash or web is not built";
     return;
   }
-  mailApi = await startMailApi();
+  // The publish-readiness form belongs to a sample flow, which mail-api only serves when the demo flag is set.
+  mailApi = await startMailApi({ env: { MAIL_API_DEMO_DATA: "1" } });
   [dash, web] = await Promise.all([
     startService({
       name: "dash",
