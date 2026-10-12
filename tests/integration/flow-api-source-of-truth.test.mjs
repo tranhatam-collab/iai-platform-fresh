@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 
 import { createFlowApiRequestHandler } from "../../apps/mail-api/dist/server.js";
 import { dispatchToHandler } from "../support/http-handler.mjs";
+import { useTempMailDatabase } from "../support/temp-mail-db.mjs";
+
+useTempMailDatabase();
 
 test("api.flow exposes source-of-truth summary and domain slices", async () => {
   const handler = createFlowApiRequestHandler();

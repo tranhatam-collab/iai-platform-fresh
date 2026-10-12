@@ -4,6 +4,9 @@ import test from "node:test";
 import { createFlowApiRequestHandler } from "../../apps/mail-api/dist/server.js";
 import { createDashRequestHandler } from "../../apps/dash/dist/server.js";
 import { dispatchToHandler } from "../support/http-handler.mjs";
+import { useTempMailDatabase } from "../support/temp-mail-db.mjs";
+
+useTempMailDatabase();
 
 function normalizeHeaders(headers) {
   if (!headers) {
