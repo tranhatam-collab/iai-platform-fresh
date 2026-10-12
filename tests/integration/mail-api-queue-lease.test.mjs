@@ -6,7 +6,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { promisify } from "node:util";
@@ -322,10 +324,16 @@ test("separate processes claiming from one table never claim a job twice", async
       db.prepare("DELETE FROM smtp_queue_jobs WHERE id = ?;").run(template);
     });
 
-    const startAt = String(Date.now() + 1500);
-    const results = await Promise.all(
-      [1, 2, 3].map(async () => JSON.parse((await run(process.execPath, [CLAIMER, url, startAt], { maxBuffer: 1024 * 1024 })).stdout))
-    );
+    // Every claimer starts claiming only once all of them are ready (a file barrier), not at a fixed time.
+    const barrier = mkdtempSync(path.join(tmpdir(), "iai-claimer-barrier-"));
+    let results;
+    try {
+      results = await Promise.all(
+        [1, 2, 3].map(async () => JSON.parse((await run(process.execPath, [CLAIMER, url, barrier, "3"], { maxBuffer: 1024 * 1024 })).stdout))
+      );
+    } finally {
+      rmSync(barrier, { force: true, recursive: true });
+    }
 
     const ids = results.flat().map((claim) => claim.id);
     assert.equal(ids.length, JOBS, "every job is claimed");

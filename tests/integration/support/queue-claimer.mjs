@@ -1,14 +1,21 @@
 /**
- * Child process for the claim race test: opens the mail-api backend on a shared SQLite file, waits
- * for a common start time, then claims jobs until none is due and prints what it won as JSON.
+ * Child process for the claim race test: opens the mail-api backend on a shared SQLite file, signals
+ * that it is ready, waits until every claimer is ready, then claims jobs until none is due and prints
+ * what it won as JSON.
  *
- * Usage: node queue-claimer.mjs <sqlite url> <start time in epoch ms>
+ * The start barrier is a directory: each claimer writes one file into it once its backend is open and
+ * starts claiming only when <count> files exist, so a slow start (module load, migrations on a busy
+ * machine) delays everybody instead of letting one process finish before the others begin.
+ *
+ * Usage: node queue-claimer.mjs <sqlite url> <barrier directory> <number of claimers>
  */
+import { readdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { createSmtpInternalBackend } from "../../../apps/mail-api/dist/smtp-internal.js";
 
-const [url, startAt] = process.argv.slice(2);
+const [url, barrierDirectory, claimerCount] = process.argv.slice(2);
 
 const backend = createSmtpInternalBackend({
   apiKey: "mail-api-key-for-tests",
@@ -23,8 +30,12 @@ const backend = createSmtpInternalBackend({
   }
 });
 
-while (Date.now() < Number(startAt)) {
-  // busy wait: both processes start claiming at the same instant
+writeFileSync(path.join(barrierDirectory, `ready-${process.pid}`), "");
+const barrierDeadline = Date.now() + 60_000;
+while (readdirSync(barrierDirectory).length < Number(claimerCount)) {
+  if (Date.now() > barrierDeadline) {
+    throw new Error("queue-claimer: the other claimers did not become ready within 60 seconds");
+  }
 }
 
 // A claim that loses a race returns nothing, exactly like an empty queue, so keep going until no
