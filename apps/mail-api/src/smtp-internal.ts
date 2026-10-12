@@ -1667,7 +1667,7 @@ class MailPersistenceStore {
         // The claim was lost (lease expired and the job went to someone else): record nothing.
         this.db.exec("ROLLBACK;");
         // eslint-disable-next-line no-console
-        console.error(JSON.stringify({ errorClass: result.errorClass ?? result.eventType, jobId: claimedJob.id, level: "warn", msg: "mail_queue_late_result_dropped", ts: new Date().toISOString() }));
+        console.error(JSON.stringify({ errorClass: safeErrorClass(result.errorClass ?? result.eventType), jobId: claimedJob.id, level: "warn", msg: "mail_queue_late_result_dropped", ts: new Date().toISOString() }));
         return;
       }
 
@@ -2759,6 +2759,11 @@ function resolveProviderAdapterName(option: QueueProviderAdapterName | undefined
   return raw;
 }
 
+/** An error class as it may appear in a log line: short and made of lowercase letters, digits and underscores only. */
+function safeErrorClass(value: string): string {
+  return /^[a-z0-9_]{1,64}$/u.test(value) ? value : "unknown";
+}
+
 /**
  * A delivery hook or adapter that throws or rejects failed this attempt without saying whether it is final.
  * Treat it as a temporary failure: deferred with a class, so the job is retried with backoff until its
@@ -3517,11 +3522,14 @@ function resolveDeliveryTimeoutMs(option: number | undefined, leaseSeconds: numb
     throw new Error(`${label} must be a positive number of seconds, got: ${JSON.stringify(raw)}`);
   }
 
-  if (seconds >= leaseSeconds) {
+  // Compared in milliseconds, after rounding, so a value that rounds up to the lease is refused too; at least 1 ms
+  // so a tiny value cannot make every attempt time out before the hook has started.
+  const timeoutMs = Math.max(1, Math.round(seconds * 1000));
+  if (timeoutMs >= leaseSeconds * 1000) {
     throw new Error(`${label} (${seconds}) must be smaller than the lease (${leaseSeconds} seconds), so a slow delivery ends before its job can be claimed again`);
   }
 
-  return Math.round(seconds * 1000);
+  return timeoutMs;
 }
 
 export function resolveQueueSettings(

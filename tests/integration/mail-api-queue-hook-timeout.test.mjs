@@ -167,7 +167,13 @@ test("a hook that settles after its timeout is not recorded", async () => {
   }
 });
 
-test("a result that arrives after the lease expired and the job was claimed again is dropped and logged", async () => {
+const OLD_CLAIM_RESULTS = [
+  ["failed", { errorClass: "from_the_old_claim", eventType: "failed", providerResponseCode: "550", providerResponseMessage: "old" }],
+  ["deferred", { errorClass: "from_the_old_claim", eventType: "deferred", providerResponseCode: "451", providerResponseMessage: "old" }],
+  ["provider_accepted", { eventType: "provider_accepted", providerMessageId: "prov_old", providerResponseCode: "250", providerResponseMessage: "old" }]
+];
+
+async function lateResultAfterReclaim(oldResult, key) {
   const { cleanup, dbPath, url } = tempDb();
   const time = clock();
   const first = deferred();
@@ -190,24 +196,132 @@ test("a result that arrives after the lease expired and the job was claimed agai
   });
   const errors = captureErrors();
   try {
-    await send(backend, "idem-lease");
+    await send(backend, key);
     const firstRun = backend.queue.processNextAsync();
     await new Promise((resolve) => setTimeout(resolve, 10));
     time.advance(11);
     assert.equal(await backend.queue.processNextAsync(), true, "the expired claim is taken again");
     assert.deepEqual(query(dbPath, "SELECT status, attempts FROM smtp_queue_jobs;"), [{ attempts: 2, status: "completed" }]);
 
-    first.resolve({ eventType: "failed", errorClass: "from_the_old_claim", providerResponseCode: "550", providerResponseMessage: "old" });
+    first.resolve(oldResult);
     await within(firstRun, 3000, "first run");
-    assert.deepEqual(query(dbPath, "SELECT status FROM smtp_queue_jobs;"), [{ status: "completed" }], "the newer claim's outcome stands");
+    assert.deepEqual(query(dbPath, "SELECT status, attempts FROM smtp_queue_jobs;"), [{ attempts: 2, status: "completed" }], "the newer claim's outcome stands");
     assert.deepEqual(query(dbPath, "SELECT status, attempt_number FROM delivery_attempts;"), [{ attempt_number: 2, status: "accepted" }]);
     assert.deepEqual(query(dbPath, "SELECT status FROM messages;"), [{ status: "provider_accepted" }]);
-    const dropped = errors.lines.map((line) => JSON.parse(line)).filter((entry) => entry.msg === "mail_queue_late_result_dropped");
-    assert.equal(dropped.length, 1);
-    assert.equal(dropped[0].errorClass, "from_the_old_claim");
-    assert.deepEqual(Object.keys(dropped[0]).sort(), ["errorClass", "jobId", "level", "msg", "ts"]);
+    return errors.lines.map((line) => JSON.parse(line)).filter((entry) => entry.msg === "mail_queue_late_result_dropped");
   } finally {
     errors.restore();
+    backend.close();
+    cleanup();
+  }
+}
+
+for (const [kind, oldResult] of OLD_CLAIM_RESULTS) {
+  test(`a ${kind} result that arrives after the lease expired and the job was claimed again is dropped and logged`, async () => {
+    const dropped = await lateResultAfterReclaim(oldResult, `idem-lease-${kind}`);
+    assert.equal(dropped.length, 1);
+    assert.equal(dropped[0].errorClass, oldResult.errorClass ?? oldResult.eventType);
+    assert.deepEqual(Object.keys(dropped[0]).sort(), ["errorClass", "jobId", "level", "msg", "ts"]);
+  });
+}
+
+test("the logged error class of a dropped result is limited to a short safe pattern", async () => {
+  const text = "failed for customer@example.com";
+  const dropped = await lateResultAfterReclaim({ errorClass: text, eventType: "failed", providerResponseCode: "550", providerResponseMessage: text }, "idem-lease-text");
+  assert.equal(dropped.length, 1);
+  assert.equal(dropped[0].errorClass, "unknown");
+  assert.ok(!JSON.stringify(dropped[0]).includes("customer@example.com"));
+  const long = await lateResultAfterReclaim({ errorClass: "a".repeat(65), eventType: "failed", providerResponseCode: "550", providerResponseMessage: "x" }, "idem-lease-long");
+  assert.equal(long[0].errorClass, "unknown");
+  const edge = await lateResultAfterReclaim({ errorClass: "a".repeat(64), eventType: "failed", providerResponseCode: "550", providerResponseMessage: "x" }, "idem-lease-edge");
+  assert.equal(edge[0].errorClass, "a".repeat(64));
+});
+
+test("a hook that returns a Promise to the synchronous caller times out too", async () => {
+  const { cleanup, dbPath, url } = tempDb();
+  const time = clock();
+  const backend = createSmtpInternalBackend({
+    apiKey: API_KEY,
+    databaseUrl: url,
+    queue: { deliver: () => new Promise(() => {}), deliveryTimeoutSeconds: 0.05, inline: false, now: time.now, random: () => 0 },
+    seed: SEED
+  });
+  try {
+    await send(backend, "idem-sync-path");
+    backend.queue.processNext();
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && query(dbPath, "SELECT status FROM smtp_queue_jobs;")[0].status === "processing") {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const [job] = query(dbPath, "SELECT status, last_error_class FROM smtp_queue_jobs;");
+    assert.deepEqual({ ...job }, { last_error_class: "timeout", status: "queued" });
+    assert.deepEqual(query(dbPath, "SELECT status, error_class FROM delivery_attempts;"), [{ error_class: "timeout", status: "deferred" }]);
+  } finally {
+    backend.close();
+    cleanup();
+  }
+});
+
+test("a hook that rejects before or after its timeout leaves no unhandled rejection", async () => {
+  const unhandled = [];
+  const listener = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", listener);
+  const errors = captureErrors();
+  try {
+    for (const [name, rejectAfterTimeout] of [["early", false], ["late", true]]) {
+      const { cleanup, dbPath, url } = tempDb();
+      const time = clock();
+      const hook = deferred();
+      const backend = createSmtpInternalBackend({
+        apiKey: API_KEY,
+        databaseUrl: url,
+        queue: {
+          deliver: () => (rejectAfterTimeout ? hook.promise : Promise.reject(new Error("socket hang up for customer@example.com"))),
+          deliveryTimeoutSeconds: 0.05,
+          inline: false,
+          now: time.now,
+          random: () => 0
+        },
+        seed: SEED
+      });
+      try {
+        await send(backend, `idem-reject-${name}`);
+        await within(backend.queue.processNextAsync(), 3000, "processNextAsync");
+        if (rejectAfterTimeout) {
+          hook.reject(new Error("rejected after the timeout for customer@example.com"));
+        }
+        // Rejections are reported once the microtask queue and the next turn of the event loop have run.
+        await new Promise((resolve) => setImmediate(resolve));
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        assert.deepEqual(unhandled, [], `${name} rejection`);
+        assert.equal(query(dbPath, "SELECT COUNT(*) AS attempts FROM delivery_attempts;")[0].attempts, 1);
+      } finally {
+        backend.close();
+        cleanup();
+      }
+    }
+    assert.ok(!errors.lines.join("\n").includes("customer@example.com"), "no address reaches the log");
+  } finally {
+    errors.restore();
+    process.off("unhandledRejection", listener);
+  }
+});
+
+test("no timer is left running after a hook that settles within its timeout", async () => {
+  const { cleanup, url } = tempDb();
+  const backend = createSmtpInternalBackend({
+    apiKey: API_KEY,
+    databaseUrl: url,
+    queue: { deliver: async () => ACCEPTED, deliveryTimeoutSeconds: 30 },
+    seed: SEED
+  });
+  try {
+    const timers = () => process.getActiveResourcesInfo().filter((name) => name === "Timeout").length;
+    const before = timers();
+    await send(backend, "idem-timers");
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.ok(timers() <= before, `a 30 second delivery timer is still pending (${before} before, ${timers()} after)`);
+  } finally {
     backend.close();
     cleanup();
   }
@@ -244,4 +358,9 @@ test("the delivery timeout must be a positive number smaller than the lease", ()
     assert.throws(() => settings({}, { MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS: bad }), /MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS/, bad);
   }
   assert.throws(() => settings({ leaseSeconds: 20, deliveryTimeoutSeconds: 20 }), /smaller than the lease/);
+  // Edges: a tiny value is raised to 1 ms, and a value that rounds up to the lease is refused.
+  assert.equal(settings({ deliveryTimeoutSeconds: 0.0004 }).deliveryTimeoutMs, 1);
+  assert.equal(settings({}, { MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS: "0.0001" }).deliveryTimeoutMs, 1);
+  assert.equal(settings({ leaseSeconds: 10, deliveryTimeoutSeconds: 9.9994 }).deliveryTimeoutMs, 9999);
+  assert.throws(() => settings({ leaseSeconds: 10, deliveryTimeoutSeconds: 9.9996 }), /smaller than the lease/);
 });
