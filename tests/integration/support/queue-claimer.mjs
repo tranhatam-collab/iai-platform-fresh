@@ -32,9 +32,26 @@ while (Date.now() < Number(startAt)) {
 const reader = new DatabaseSync(new URL(url).pathname);
 const queued = () => reader.prepare("SELECT COUNT(*) AS count FROM smtp_queue_jobs WHERE status = 'queued';").get().count;
 
+// Under heavy load a claim can also run out of patience waiting for the write lock and throw "database is
+// locked". The worker loop treats that as a failed poll and tries again; so does this loop. It gives up
+// after a while so a broken build cannot hang the test.
 const won = [];
+const deadline = Date.now() + 60_000;
 while (queued() > 0) {
-  const claim = backend.queue.claimNextJob();
+  if (Date.now() > deadline) {
+    throw new Error("queue-claimer: jobs are still queued after 60 seconds");
+  }
+
+  let claim;
+  try {
+    claim = backend.queue.claimNextJob();
+  } catch (error) {
+    if (/database is locked|database table is locked/u.test(error instanceof Error ? error.message : "")) {
+      continue;
+    }
+    throw error;
+  }
+
   if (claim) {
     won.push(claim);
   }
