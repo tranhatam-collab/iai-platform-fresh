@@ -173,6 +173,12 @@ export interface QueueSettingsInput {
   maxAttempts?: number;
   /** Seconds after which a claimed job that was never finished returns to the queue (10..3600; default MAIL_QUEUE_LEASE_SECONDS, then 300). */
   leaseSeconds?: number;
+  /**
+   * Seconds a delivery may take before it counts as a temporary failure with class `timeout` (a positive
+   * number smaller than the lease; default MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS, then 60 or the lease minus one
+   * second if that is shorter). A hook that has not settled by then is no longer waited for.
+   */
+  deliveryTimeoutSeconds?: number;
   /** Seconds before the first retry (1..3600, clamped; default MAIL_QUEUE_BACKOFF_BASE_SECONDS, then 30). */
   backoffBaseSeconds?: number;
   /** Longest wait between attempts before jitter (10..86400, clamped; default MAIL_QUEUE_BACKOFF_CAP_SECONDS, then 3600). */
@@ -203,6 +209,7 @@ interface QueueSettings {
   backoffBaseSeconds: number;
   backoffCapSeconds: number;
   deliver: QueueDeliveryHook;
+  deliveryTimeoutMs: number;
   inline: boolean;
   leaseSeconds: number;
   maxAttempts: number;
@@ -257,6 +264,7 @@ export type QueueDeliveryHook = (input: QueueDeliveryInput) => QueueDeliveryResu
 
 export const DEFAULT_QUEUE_MAX_ATTEMPTS = 5;
 export const DEFAULT_QUEUE_LEASE_SECONDS = 300;
+export const DEFAULT_QUEUE_DELIVERY_TIMEOUT_SECONDS = 60;
 
 /** A claim on a queued job, as handed to whoever processes it. */
 export interface ClaimedQueueJob {
@@ -1347,9 +1355,10 @@ class MailPersistenceStore {
 
     if (result instanceof Promise) {
       // A custom hook returned a Promise to the synchronous caller, which cannot wait for it. The job is not left
-      // claimed: the result is recorded whenever the Promise settles (a rejection is a temporary failure). Inline
-      // delivery and workers use processNextAsync(), which awaits the hook instead.
-      void result.then(
+      // claimed: the result is recorded when the Promise settles, or as a timeout once the delivery timeout has
+      // passed (a rejection is a temporary failure). Inline delivery and workers use processNextAsync(), which
+      // awaits the hook instead.
+      void this.withDeliveryTimeout(started, result).then(
         (settled) => this.recordDeliverySafely(started, settled),
         (error: unknown) => this.recordDeliverySafely(started, deliveryExceptionResult(error))
       );
@@ -1373,13 +1382,40 @@ class MailPersistenceStore {
 
     let result: QueueDeliveryResult;
     try {
-      result = await this.queueSettings.deliver(started.input);
+      result = await this.withDeliveryTimeout(started, Promise.resolve().then(() => this.queueSettings.deliver(started.input)));
     } catch (error) {
       result = deliveryExceptionResult(error);
     }
 
     this.recordDelivery(started, result);
     return true;
+  }
+
+  /**
+   * Runs the delivery hook but stops waiting for it after the delivery timeout: the attempt then counts as a
+   * temporary failure with class `timeout`. A hook that settles after that is not recorded (the job has moved on,
+   * and may be claimed again); only the class and the job id are logged.
+   */
+  private withDeliveryTimeout(
+    started: Exclude<ReturnType<MailPersistenceStore["beginQueuedJob"]>, "unreadable" | undefined>,
+    hookResult: Promise<QueueDeliveryResult>
+  ): Promise<QueueDeliveryResult> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        reject(Object.assign(new Error("delivery timed out"), { name: "TimeoutError" }));
+      }, this.queueSettings.deliveryTimeoutMs);
+    });
+    const logLate = (settledAs: string) => {
+      if (timedOut) {
+        // eslint-disable-next-line no-console
+        console.error(JSON.stringify({ jobId: started.claimedJob.id, level: "warn", msg: "mail_queue_late_delivery_result_ignored", settledAs, ts: new Date().toISOString() }));
+      }
+    };
+    hookResult.then(() => logLate("result"), () => logLate("error"));
+    return Promise.race([hookResult, timeout]).finally(() => clearTimeout(timer));
   }
 
   /**
@@ -1628,6 +1664,8 @@ class MailPersistenceStore {
       if (Number(jobUpdate.changes) !== 1) {
         // The claim was lost (lease expired and the job went to someone else): record nothing.
         this.db.exec("ROLLBACK;");
+        // eslint-disable-next-line no-console
+        console.error(JSON.stringify({ errorClass: safeErrorClass(result.errorClass ?? result.eventType), jobId: claimedJob.id, level: "warn", msg: "mail_queue_late_result_dropped", ts: new Date().toISOString() }));
         return;
       }
 
@@ -2709,6 +2747,11 @@ function resolveProviderAdapterName(option: QueueProviderAdapterName | undefined
   return raw;
 }
 
+/** An error class as it may appear in a log line: short and made of lowercase letters, digits and underscores only. */
+function safeErrorClass(value: string): string {
+  return /^[a-z0-9_]{1,64}$/u.test(value) ? value : "unknown";
+}
+
 /**
  * A delivery hook or adapter that throws or rejects failed this attempt without saying whether it is final.
  * Treat it as a temporary failure: deferred with a class, so the job is retried with backoff until its
@@ -3454,6 +3497,29 @@ function resolveClampedInteger(
   return Math.min(Math.max(Number(raw), min), max);
 }
 
+/** The delivery timeout in milliseconds: a positive number of seconds that is shorter than the lease. */
+function resolveDeliveryTimeoutMs(option: number | undefined, leaseSeconds: number, env: NodeJS.ProcessEnv): number {
+  const raw = option !== undefined ? String(option) : env.MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS?.trim();
+  const label = option !== undefined ? "queue option deliveryTimeoutSeconds" : "MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS";
+  if (raw === undefined || raw === "") {
+    return Math.min(DEFAULT_QUEUE_DELIVERY_TIMEOUT_SECONDS, leaseSeconds - 1) * 1000;
+  }
+
+  const seconds = Number(raw);
+  if (!/^\d+(\.\d+)?$/u.test(raw) || !Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error(`${label} must be a positive number of seconds, got: ${JSON.stringify(raw)}`);
+  }
+
+  // Compared in milliseconds, after rounding, so a value that rounds up to the lease is refused too; at least 1 ms
+  // so a tiny value cannot make every attempt time out before the hook has started.
+  const timeoutMs = Math.max(1, Math.round(seconds * 1000));
+  if (timeoutMs >= leaseSeconds * 1000) {
+    throw new Error(`${label} (${seconds}) must be smaller than the lease (${leaseSeconds} seconds), so a slow delivery ends before its job can be claimed again`);
+  }
+
+  return timeoutMs;
+}
+
 export function resolveQueueSettings(
   input: QueueSettingsInput = {},
   env: NodeJS.ProcessEnv = process.env
@@ -3475,12 +3541,14 @@ export function resolveQueueSettings(
     env
   );
   const providerAdapter = resolveProviderAdapterName(input.providerAdapter, env);
+  const leaseSeconds = resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env);
   return {
     backoffBaseSeconds,
     backoffCapSeconds: Math.max(backoffCapSeconds, backoffBaseSeconds),
     deliver: input.deliver ?? (providerAdapter === "fake" ? fakeQueueDelivery : noProviderQueueDelivery),
+    deliveryTimeoutMs: resolveDeliveryTimeoutMs(input.deliveryTimeoutSeconds, leaseSeconds, env),
     inline: resolveInlineFlag(input.inline, env),
-    leaseSeconds: resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env),
+    leaseSeconds,
     maxAttempts: resolveBoundedInteger(input.maxAttempts, "MAIL_QUEUE_MAX_ATTEMPTS", DEFAULT_QUEUE_MAX_ATTEMPTS, 1, 10, env),
     now: input.now ?? (() => new Date()),
     random: input.random ?? Math.random
