@@ -235,6 +235,57 @@ test("a flow audit row with unreadable metadata is listed as failed, not as a su
   }
 });
 
+test("a flow audit row with an unrecognised outcome is listed as failed", async () => {
+  const { cleanup, handler, insert } = setupPersisted();
+  try {
+    insert({ action: "builder.save", createdAt: "2026-10-05T10:00:00.000Z", id: "audit_missing", metadata: {}, targetId: "flow_a", workspaceId: WORKSPACE });
+    insert({ action: "builder.save", createdAt: "2026-10-05T09:00:00.000Z", id: "audit_ok", metadata: { outcome: "succeeded" }, targetId: "flow_a", workspaceId: WORKSPACE });
+    insert({ action: "builder.save", createdAt: "2026-10-05T08:00:00.000Z", id: "audit_failed", metadata: { details: "Rejected", outcome: "failed" }, targetId: "flow_a", workspaceId: WORKSPACE });
+    const odd = { audit_error: "error", audit_upper: "FAILED", audit_true: true, audit_null: null, audit_zero: 0 };
+    let minute = 0;
+    for (const [id, outcome] of Object.entries(odd)) {
+      insert({ action: "builder.save", createdAt: `2026-10-05T07:0${minute}:00.000Z`, id, metadata: { details: "ignored", outcome }, targetId: "flow_a", workspaceId: WORKSPACE });
+      minute += 1;
+    }
+    const auth = { authorization: `Bearer ${API_KEY}` };
+    const all = await (await get(handler, "/v1/flow/audit", WORKSPACE, auth)).json();
+    const byId = Object.fromEntries(all.data.items.map((item) => [item.eventId, item]));
+    // A missing outcome means the action succeeded; "succeeded" and "failed" keep their meaning and details.
+    assert.equal(byId.audit_missing.outcome, "succeeded");
+    assert.equal(byId.audit_ok.outcome, "succeeded");
+    assert.equal(byId.audit_failed.outcome, "failed");
+    assert.equal(byId.audit_failed.details, "Rejected");
+    for (const id of Object.keys(odd)) {
+      assert.equal(byId[id].outcome, "failed", id);
+      assert.equal(byId[id].details, "audit metadata unreadable", id);
+    }
+    const succeeded = await (await get(handler, "/v1/flow/audit?outcome=succeeded", WORKSPACE, auth)).json();
+    assert.deepEqual(succeeded.data.items.map((item) => item.eventId), ["audit_missing", "audit_ok"]);
+  } finally {
+    cleanup();
+  }
+});
+
+test("an outcome filter returns older matching rows even when newer rows of the other outcome fill a page", async () => {
+  const { cleanup, handler, insert } = setupPersisted();
+  try {
+    const auth = { authorization: `Bearer ${API_KEY}` };
+    for (let index = 0; index < 100; index += 1) {
+      insert({ action: "builder.save", createdAt: `2026-10-06T10:${String(index % 60).padStart(2, "0")}:${String(Math.floor(index / 60)).padStart(2, "0")}.000Z`, id: `audit_new_failed_${String(index).padStart(3, "0")}`, metadata: { outcome: "failed" }, targetId: "flow_a", workspaceId: WORKSPACE });
+    }
+    for (let index = 0; index < 5; index += 1) {
+      insert({ action: "builder.save", createdAt: `2026-10-01T10:0${index}:00.000Z`, id: `audit_old_ok_${index}`, metadata: { outcome: "succeeded" }, targetId: "flow_a", workspaceId: WORKSPACE });
+    }
+    const succeeded = await (await get(handler, "/v1/flow/audit?outcome=succeeded&limit=100", WORKSPACE, auth)).json();
+    assert.equal(succeeded.data.items.length, 5);
+    assert.ok(succeeded.data.items.every((item) => item.outcome === "succeeded"));
+    const failed = await (await get(handler, "/v1/flow/audit?outcome=failed&limit=3", WORKSPACE, auth)).json();
+    assert.equal(failed.data.items.length, 3);
+  } finally {
+    cleanup();
+  }
+});
+
 test("the persisted audit read needs the API key like the other persisted reads", async () => {
   const { cleanup, handler } = setupPersisted();
   try {

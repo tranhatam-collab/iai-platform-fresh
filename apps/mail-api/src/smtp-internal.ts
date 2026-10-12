@@ -864,8 +864,14 @@ class MailPersistenceStore {
       } catch {
         unreadable = true;
       }
-      // A row whose metadata cannot be read has no trustworthy outcome, so it is not reported as a success.
-      const outcome: FlowActionOutcome = unreadable || metadata.outcome === "failed" ? "failed" : "succeeded";
+      // Convention: metadata without an `outcome` means the action succeeded. Anything else that is not
+      // exactly "succeeded" or "failed" (a different string, a number, null) cannot be trusted, so a row
+      // with such a value or with metadata that cannot be read is reported as failed, never as a success.
+      const recorded = metadata.outcome;
+      if (recorded !== undefined && recorded !== "succeeded" && recorded !== "failed") {
+        unreadable = true;
+      }
+      const outcome: FlowActionOutcome = unreadable || recorded === "failed" ? "failed" : "succeeded";
       if (filter.outcomes && filter.outcomes.length > 0 && !filter.outcomes.includes(outcome)) {
         continue;
       }
