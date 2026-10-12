@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { rmSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import test from "node:test";
+import test, { mock } from "node:test";
 
 import { createFlowApiRequestHandler } from "../../apps/mail-api/dist/server.js";
 import { createSmtpInternalBackend } from "../../apps/mail-api/dist/smtp-internal.js";
@@ -100,6 +100,27 @@ test("jobs that are not queued do not count, due or not", async () => {
     addJobs(db, 5, { nextAttemptAt: inAMinute(), status: "failed" });
     assert.equal((await ready(handler)).status, 200);
   } finally {
+    cleanup();
+  }
+});
+
+test("a job whose retry time is exactly now is due", async () => {
+  const { cleanup, db, handler } = setup(3);
+  // Fix the clock so a retry time can be put at exactly the instant /ready reads.
+  const now = Date.parse("2026-10-12T12:00:00.000Z");
+  mock.timers.enable({ apis: ["Date"], now });
+  try {
+    addJobs(db, 4, { nextAttemptAt: new Date(now).toISOString() });
+    const over = await ready(handler);
+    assert.equal(over.status, 503, "four due jobs are over a limit of three");
+    assert.deepEqual(over.json.data.failed, ["queue"]);
+
+    // One millisecond later the same jobs are still due; one millisecond earlier they were not yet.
+    mock.timers.reset();
+    mock.timers.enable({ apis: ["Date"], now: now - 1 });
+    assert.equal((await ready(handler)).status, 200, "one millisecond before their retry time they are not due");
+  } finally {
+    mock.timers.reset();
     cleanup();
   }
 });
