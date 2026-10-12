@@ -76,7 +76,7 @@ function setupPersisted() {
       rmSync(`${dbPath}${suffix}`, { force: true });
     }
   };
-  return { cleanup, handler, insert };
+  return { cleanup, dbPath, handler, insert };
 }
 
 test("every flow list route answers 200 with an empty list by default", async () => {
@@ -190,6 +190,34 @@ test("the audit trail lists only flow-targeted flow actions and caps the page si
     assert.equal(defaulted.data.items.length, 100);
     const filtered = await (await get(handler, "/v1/flow/audit?outcome=succeeded&limit=1000", OTHER_WORKSPACE, auth)).json();
     assert.equal(filtered.data.items.length, 100);
+  } finally {
+    cleanup();
+  }
+});
+
+test("a flow audit row with unreadable metadata is listed as failed, not as a success", async () => {
+  const { cleanup, dbPath, handler, insert } = setupPersisted();
+  try {
+    insert({ action: "builder.save", createdAt: "2026-10-04T10:00:00.000Z", id: "audit_valid", targetId: "flow_a", workspaceId: WORKSPACE });
+    for (const [id, raw] of [["audit_garbled", "{not json"], ["audit_array", "[1,2]"]]) {
+      insert({ action: "builder.save", createdAt: "2026-10-04T09:00:00.000Z", id, targetId: "flow_a", workspaceId: WORKSPACE });
+      const db = new DatabaseSync(dbPath);
+      try {
+        db.prepare("UPDATE audit_logs SET metadata_json = ? WHERE id = ?;").run(raw, id);
+      } finally {
+        db.close();
+      }
+    }
+    const auth = { authorization: `Bearer ${API_KEY}` };
+    const all = await (await get(handler, "/v1/flow/audit", WORKSPACE, auth)).json();
+    const byId = Object.fromEntries(all.data.items.map((item) => [item.eventId, item]));
+    assert.equal(byId.audit_valid.outcome, "succeeded");
+    for (const id of ["audit_garbled", "audit_array"]) {
+      assert.equal(byId[id].outcome, "failed", id);
+      assert.equal(byId[id].details, "audit metadata unreadable", id);
+    }
+    const failed = await (await get(handler, "/v1/flow/audit?outcome=failed", WORKSPACE, auth)).json();
+    assert.deepEqual(failed.data.items.map((item) => item.eventId).sort(), ["audit_array", "audit_garbled"]);
   } finally {
     cleanup();
   }

@@ -853,15 +853,19 @@ class MailPersistenceStore {
     const events: FlowAuditEvent[] = [];
     for (const row of rows) {
       let metadata: { details?: unknown; outcome?: unknown } = {};
+      let unreadable = false;
       try {
         const parsed = JSON.parse(row.metadata_json ?? "{}") as unknown;
-        if (parsed && typeof parsed === "object") {
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
           metadata = parsed as typeof metadata;
+        } else {
+          unreadable = true;
         }
       } catch {
-        // A row with unreadable metadata is still listed, with defaults.
+        unreadable = true;
       }
-      const outcome: FlowActionOutcome = metadata.outcome === "failed" ? "failed" : "succeeded";
+      // A row whose metadata cannot be read has no trustworthy outcome, so it is not reported as a success.
+      const outcome: FlowActionOutcome = unreadable || metadata.outcome === "failed" ? "failed" : "succeeded";
       if (filter.outcomes && filter.outcomes.length > 0 && !filter.outcomes.includes(outcome)) {
         continue;
       }
@@ -869,7 +873,7 @@ class MailPersistenceStore {
         action: row.action as FlowAuditAction,
         actor: row.actor_identifier ?? "unknown",
         createdAt: row.created_at,
-        details: typeof metadata.details === "string" ? metadata.details : "",
+        details: unreadable ? "audit metadata unreadable" : typeof metadata.details === "string" ? metadata.details : "",
         eventId: row.id,
         flowId: row.target_id ?? "",
         outcome,
