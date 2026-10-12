@@ -23,6 +23,9 @@ import {
   INBOUND_WEBHOOK_SIGNATURE_HEADER,
   INBOUND_WEBHOOK_TIMESTAMP_HEADER
 } from "../../apps/mail-api/dist/index.js";
+import { useTempMailDatabase } from "../support/temp-mail-db.mjs";
+
+useTempMailDatabase();
 
 function sign(secret, ts, body) {
   return createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex");
