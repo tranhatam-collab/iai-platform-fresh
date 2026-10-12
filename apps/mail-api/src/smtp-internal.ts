@@ -418,8 +418,10 @@ class MailPersistenceStore {
     private readonly queueSettings: QueueSettings = resolveQueueSettings()
   ) {
     this.db = new DatabaseSync(resolveSqliteDatabasePath(databaseUrl));
-    this.db.exec("PRAGMA journal_mode = WAL;");
+    // The wait comes first: switching the journal mode needs a lock too, and several processes that start
+    // together would otherwise fail at once instead of waiting for each other.
     this.db.exec("PRAGMA busy_timeout = 2000;");
+    this.db.exec("PRAGMA journal_mode = WAL;");
     applyMigrations(this.db);
     if (seed) {
       this.ensureSeed(seed);
@@ -1774,6 +1776,16 @@ class MailPersistenceStore {
   private releaseExpiredLeases(nowDate: Date) {
     const now = nowDate.toISOString();
     const expiredBefore = new Date(nowDate.getTime() - this.queueSettings.leaseSeconds * 1000).toISOString();
+
+    // Most polls find nothing to release. A read does not wait for the write lock (the database is in WAL
+    // mode), so an idle poll no longer competes with senders and other workers for it. A lease that expires
+    // right after this check is released by the next poll.
+    const anyExpired = this.db
+      .prepare("SELECT 1 AS expired FROM smtp_queue_jobs WHERE status = 'processing' AND updated_at <= ? LIMIT 1;")
+      .get(expiredBefore);
+    if (anyExpired === undefined) {
+      return;
+    }
 
     // A job whose claim ran out with no attempts left is failed, and so is its message. The UPDATE ...
     // RETURNING hands each such job to exactly one caller, which also records the failure event.
