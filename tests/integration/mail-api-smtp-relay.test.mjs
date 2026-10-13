@@ -314,6 +314,18 @@ test("a message over the size limit or with too many recipients fails at once, w
     const rawTooLarge = await sendViaSmtp(config(server, { maxMessageBytes: 1024 }), payload({ rawMimeBase64: raw }));
     assert.equal(rawTooLarge.errorClass, "message_too_large");
 
+    assert.equal(server.sessions.length, 0, "the relay was never contacted for a message over the limit");
+
+    // exactly at the limit is allowed, one byte less is not
+    const exact = Buffer.from(`Subject: exact\r\n\r\n${"z".repeat(1000)}\r\n`, "latin1");
+    const exactBase64 = exact.toString("base64");
+    assert.equal((await sendViaSmtp(config(server, { maxMessageBytes: exact.length }), payload({ rawMimeBase64: exactBase64 }))).accepted, true);
+    assert.equal(
+      (await sendViaSmtp(config(server, { maxMessageBytes: exact.length - 1 }), payload({ rawMimeBase64: exactBase64 }))).errorClass,
+      "message_too_large"
+    );
+    server.sessions.length = 0;
+
     const recipients = ["a@example.net", "b@example.net", "c@example.net"];
     const tooMany = await sendViaSmtp(config(server, { maxRecipients: 2 }), payload({ recipients, to: recipients.map((email) => ({ email })) }));
     assert.deepEqual(
@@ -356,6 +368,10 @@ test("settings come from MAIL_RELAY_* and are checked", () => {
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_PASSWORD: "p" }, /set together/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_PASSWORD: "p", MAIL_RELAY_TLS: "none", MAIL_RELAY_USER: "u" }, /credentials are never sent without TLS/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TLS: "none" }, /only allowed for a relay on this machine/u],
+    ...["localhost.evil", "evil.localhost", "evil127.0.0.1", "127.0.0.1.nip.io", "1127.0.0.1", "127.0.0.999", "127.0.0", "0.0.0.0", "10.0.0.1", "::ffff:127.0.0.1"].map((host) => [
+      { MAIL_RELAY_HOST: host, MAIL_RELAY_TLS: "none" },
+      /only allowed for a relay on this machine|host name or an IP address/u
+    ]),
     [{ MAIL_RELAY_HOST: "127.0.0.1", MAIL_RELAY_TLS: "none", NODE_ENV: "production" }, /not allowed when NODE_ENV is "production"/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TLS: "maybe" }, /MAIL_RELAY_TLS must be/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_PORT: "70000" }, /MAIL_RELAY_PORT must be an integer from 1 to 65535/u],

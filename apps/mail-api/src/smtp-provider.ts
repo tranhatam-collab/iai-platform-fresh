@@ -110,7 +110,7 @@ function parseInteger(env: NodeJS.ProcessEnv, name: string, fallback: number, mi
 }
 
 function isLoopbackHost(host: string): boolean {
-  return host === "localhost" || host === "::1" || /^127(?:\.\d{1,3}){3}$/u.test(host);
+  return host === "localhost" || host === "::1" || /^127(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/u.test(host);
 }
 
 /** Reads the relay settings from the environment. Throws a message that names the variable, never its value for secrets. */
