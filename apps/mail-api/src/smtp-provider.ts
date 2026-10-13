@@ -8,7 +8,8 @@
 //
 //   MAIL_RELAY_HOST                  relay host name (required)
 //   MAIL_RELAY_PORT                  default 587 (465 with MAIL_RELAY_TLS=implicit)
-//   MAIL_RELAY_TLS                   starttls (default), implicit, or none; none is refused with credentials and in production
+//   MAIL_RELAY_TLS                   starttls (default), implicit, or none; none sends unencrypted and is for a relay on this machine
+//                                    only (127.0.0.1, ::1, localhost): refused for any other host, with credentials and in production
 //   MAIL_RELAY_USER, MAIL_RELAY_PASSWORD   optional; both or neither; sent with AUTH PLAIN, only over TLS
 //   MAIL_RELAY_HELO_NAME             name used in EHLO (default localhost)
 //   MAIL_RELAY_TIMEOUT_SECONDS       limit for one whole delivery, 1..120 (default 30)
@@ -108,6 +109,10 @@ function parseInteger(env: NodeJS.ProcessEnv, name: string, fallback: number, mi
   return value;
 }
 
+function isLoopbackHost(host: string): boolean {
+  return host === "localhost" || host === "::1" || /^127(?:\.\d{1,3}){3}$/u.test(host);
+}
+
 /** Reads the relay settings from the environment. Throws a message that names the variable, never its value for secrets. */
 export function resolveSmtpRelayConfig(env: NodeJS.ProcessEnv = process.env): SmtpRelayConfig {
   const host = env.MAIL_RELAY_HOST?.trim();
@@ -130,6 +135,9 @@ export function resolveSmtpRelayConfig(env: NodeJS.ProcessEnv = process.env): Sm
   }
   if (tlsMode === "none" && user !== undefined) {
     throw new Error('MAIL_RELAY_TLS=none is not allowed together with MAIL_RELAY_USER: credentials are never sent without TLS.');
+  }
+  if (tlsMode === "none" && !isLoopbackHost(host)) {
+    throw new Error("MAIL_RELAY_TLS=none is only allowed for a relay on this machine (127.0.0.1, ::1 or localhost): mail is sent unencrypted.");
   }
   if (tlsMode === "none" && env.NODE_ENV === "production") {
     throw new Error('MAIL_RELAY_TLS=none is not allowed when NODE_ENV is "production".');

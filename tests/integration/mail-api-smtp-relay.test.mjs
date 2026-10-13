@@ -292,6 +292,9 @@ test("settings come from MAIL_RELAY_* and are checked", () => {
   );
   assert.equal(resolved.password, "secret-from-env");
   assert.equal(resolveSmtpRelayConfig({ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TLS: "implicit" }).port, 465);
+  for (const host of ["127.0.0.1", "127.0.1.5", "::1", "localhost"]) {
+    assert.equal(resolveSmtpRelayConfig({ MAIL_RELAY_HOST: host, MAIL_RELAY_TLS: "none" }).tls, "none", `${host} may use unencrypted SMTP`);
+  }
   assert.deepEqual(
     { maxMessageBytes: resolved.maxMessageBytes, maxRecipients: resolved.maxRecipients },
     { maxMessageBytes: 10485760, maxRecipients: 100 }
@@ -304,7 +307,8 @@ test("settings come from MAIL_RELAY_* and are checked", () => {
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_USER: "u" }, /set together/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_PASSWORD: "p" }, /set together/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_PASSWORD: "p", MAIL_RELAY_TLS: "none", MAIL_RELAY_USER: "u" }, /credentials are never sent without TLS/u],
-    [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TLS: "none", NODE_ENV: "production" }, /not allowed when NODE_ENV is "production"/u],
+    [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TLS: "none" }, /only allowed for a relay on this machine/u],
+    [{ MAIL_RELAY_HOST: "127.0.0.1", MAIL_RELAY_TLS: "none", NODE_ENV: "production" }, /not allowed when NODE_ENV is "production"/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TLS: "maybe" }, /MAIL_RELAY_TLS must be/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_PORT: "70000" }, /MAIL_RELAY_PORT must be an integer from 1 to 65535/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TIMEOUT_SECONDS: "0" }, /MAIL_RELAY_TIMEOUT_SECONDS must be an integer from 1 to 120/u],

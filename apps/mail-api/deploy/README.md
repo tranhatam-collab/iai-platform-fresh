@@ -75,7 +75,7 @@ ssh root@mail.iai.one '
 | `MAIL_PROVIDER_ADAPTER` | no | `none` | How queued mail is delivered. `none`: nothing is sent, a message is deferred and finally failed as `no_provider_configured` and is never reported as accepted. `smtp`: hand the message to the outbound SMTP relay below. `fake` is for local runs only and is refused when `NODE_ENV=production`. The queue worker process reads the same variables |
 | `MAIL_RELAY_HOST` | with `smtp` | — | Host name of the outbound SMTP relay |
 | `MAIL_RELAY_PORT` | no | `587` (`465` with implicit TLS) | Relay port |
-| `MAIL_RELAY_TLS` | no | `starttls` | `starttls` (required: nothing is sent if the relay does not offer it), `implicit` (TLS from the first byte), or `none` (local testing only; refused with credentials and in production) |
+| `MAIL_RELAY_TLS` | no | `starttls` | `starttls` (required: nothing is sent if the relay does not offer it), `implicit` (TLS from the first byte), or `none` (unencrypted: only for a relay on this machine, `127.0.0.1`, `::1` or `localhost`, such as a fake SMTP server in a test; refused for any other host, together with credentials, and in production) |
 | `MAIL_RELAY_USER`, `MAIL_RELAY_PASSWORD` | no | — | Relay login, set together; sent with AUTH PLAIN and only over TLS. Keep the password in the secret store, never in an image or a file in the repository |
 | `MAIL_RELAY_HELO_NAME` | no | `localhost` | Name sent in EHLO |
 | `MAIL_RELAY_TIMEOUT_SECONDS` | no | `30` | Limit for one delivery, 1 to 120; keep it below `MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS` |
