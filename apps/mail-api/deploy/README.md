@@ -72,6 +72,14 @@ ssh root@mail.iai.one '
 | `MAIL_API_WEBHOOK_SECRET` | **YES** | — | HMAC-SHA256 secret for inbound verification. `openssl rand -hex 32` recommended. Read at request time. |
 | `PATH_B_PORT` | no | `3001` | Container listen port |
 | `PATH_B_BIND` | no | `0.0.0.0` | Container bind address (must be 0.0.0.0 inside container, port mapping handles host exposure) |
+| `MAIL_PROVIDER_ADAPTER` | no | `none` | How queued mail is delivered. `none`: nothing is sent, a message is deferred and finally failed as `no_provider_configured` and is never reported as accepted. `smtp`: hand the message to the outbound SMTP relay below. `fake` is for local runs only and is refused when `NODE_ENV=production`. The queue worker process reads the same variables |
+| `MAIL_RELAY_HOST` | with `smtp` | — | Host name of the outbound SMTP relay |
+| `MAIL_RELAY_PORT` | no | `587` (`465` with implicit TLS) | Relay port |
+| `MAIL_RELAY_TLS` | no | `starttls` | `starttls` (required: nothing is sent if the relay does not offer it), `implicit` (TLS from the first byte), or `none` (unencrypted: only for a relay on this machine, `127.0.0.1`, `::1` or `localhost`, such as a fake SMTP server in a test; refused for any other host, together with credentials, and in production) |
+| `MAIL_RELAY_USER`, `MAIL_RELAY_PASSWORD` | no | — | Relay login, set together; sent with AUTH PLAIN and only over TLS. Keep the password in the secret store, never in an image or a file in the repository |
+| `MAIL_RELAY_HELO_NAME` | no | `localhost` | Name sent in EHLO |
+| `MAIL_RELAY_TIMEOUT_SECONDS` | no | `30` | Limit for one delivery, 1 to 120. It must be shorter than the queue's delivery timeout (`MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS`, default 60 or the lease minus one second); the server refuses to start otherwise, because a message the relay still accepts after the queue gave up would be sent twice |
+| `MAIL_RELAY_MAX_MESSAGE_BYTES`, `MAIL_RELAY_MAX_RECIPIENTS` | no | `10485760`, `100` | Largest message and most recipients per message sent through the relay; a message over either limit fails at once as `message_too_large` or `too_many_recipients` without a connection. Limits of the relay delivery: addresses with a non-ASCII domain and an empty sender (bounce messages) are refused as `invalid_address`; raw MIME is sent without negotiating 8BITMIME or SMTPUTF8, so 8-bit mail depends on the relay accepting it |
 | `PATH_B_EVIDENCE_DIR` | no | `/var/lib/iai-mail-api` | NDJSON evidence persistence dir |
 | `NODE_ENV` | no | `production` (set by the Dockerfile) | In production the dev SMTP login (`smtp-dev` / `dev-secret` / `ws_dev`) is never seeded |
 | `MAIL_SMTP_REMOTE_TOKEN` | no | — | Service token for `/v1/internal/smtp/*`. Path B does not need those routes: while unset they answer 503 (fail closed) and a startup error is logged. Set it only if this container should serve them |

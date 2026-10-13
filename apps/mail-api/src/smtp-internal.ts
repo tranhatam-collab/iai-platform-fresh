@@ -28,6 +28,7 @@ import {
   type MailSuppressionSourceSnapshot
 } from "@iai/mail-core";
 import { applyMigrations } from "./migrations.js";
+import { createSmtpQueueDelivery, resolveSmtpRelayConfig, type SmtpRelayConfig } from "./smtp-provider.js";
 
 const SUPPORTED_STREAMS = new Set(["transactional", "system", "marketing", "alerts"]);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
@@ -189,9 +190,13 @@ export interface QueueSettingsInput {
    * Which delivery stands behind the queue (default MAIL_PROVIDER_ADAPTER, then `none`). `none` has no
    * provider: a delivery is deferred and finally failed with `no_provider_configured`, and the
    * queue never reports `provider_accepted`. `fake` accepts every routed message without sending
-   * anything; it is for local runs and tests and is refused when NODE_ENV is production.
+   * anything; it is for local runs and tests and is refused when NODE_ENV is production. `smtp` hands the
+   * message to an SMTP relay (MAIL_RELAY_*, see smtp-provider.ts) and reports `provider_accepted` only
+   * after the relay has accepted the message.
    */
   providerAdapter?: QueueProviderAdapterName;
+  /** Relay settings for the `smtp` adapter; the MAIL_RELAY_* variables are read when this is absent (tests pass their own). */
+  smtpRelay?: SmtpRelayConfig;
   /** Clock used for claims and leases (tests). */
   now?: () => Date;
   /**
@@ -203,7 +208,7 @@ export interface QueueSettingsInput {
   random?: () => number;
 }
 
-export type QueueProviderAdapterName = "fake" | "none";
+export type QueueProviderAdapterName = "fake" | "none" | "smtp";
 
 interface QueueSettings {
   backoffBaseSeconds: number;
@@ -243,6 +248,8 @@ export interface QueueDeliveryInput {
   /** 1-based number of this attempt. */
   attempt: number;
   messageId: string;
+  /** The queued message, for deliveries that send it somewhere (the SMTP relay). */
+  payload?: SmtpQueueRequest;
   routeMatched: boolean;
   stream: string;
   workspaceId: string;
@@ -1444,6 +1451,7 @@ class MailPersistenceStore {
     const input: QueueDeliveryInput = {
       attempt: claimedJob.attempts,
       messageId: payload.messageId,
+      payload,
       routeMatched: Boolean(route),
       stream: payload.stream,
       workspaceId: payload.workspaceId
@@ -2748,8 +2756,8 @@ function resolveInlineFlag(option: boolean | undefined, env: NodeJS.ProcessEnv):
 
 function resolveProviderAdapterName(option: QueueProviderAdapterName | undefined, env: NodeJS.ProcessEnv): QueueProviderAdapterName {
   const raw = (option ?? env.MAIL_PROVIDER_ADAPTER?.trim().toLowerCase()) || "none";
-  if (raw !== "none" && raw !== "fake") {
-    throw new Error(`${option !== undefined ? "queue option providerAdapter" : "MAIL_PROVIDER_ADAPTER"} must be "none" or "fake", got: ${JSON.stringify(raw)}`);
+  if (raw !== "none" && raw !== "fake" && raw !== "smtp") {
+    throw new Error(`${option !== undefined ? "queue option providerAdapter" : "MAIL_PROVIDER_ADAPTER"} must be "none", "fake" or "smtp", got: ${JSON.stringify(raw)}`);
   }
 
   if (raw === "fake" && env.NODE_ENV === "production") {
@@ -2789,6 +2797,14 @@ function deliveryExceptionResult(error: unknown): QueueDeliveryResult {
     providerResponseCode: "0",
     providerResponseMessage: `delivery_exception:${errorClass}`
   };
+}
+
+function resolveQueueDelivery(providerAdapter: QueueProviderAdapterName, env: NodeJS.ProcessEnv, smtpRelay: SmtpRelayConfig | undefined): QueueDeliveryHook {
+  if (providerAdapter === "smtp") {
+    return createSmtpQueueDelivery(smtpRelay ?? resolveSmtpRelayConfig(env));
+  }
+
+  return providerAdapter === "fake" ? fakeQueueDelivery : noProviderQueueDelivery;
 }
 
 /** No provider configured: a routed message can only be deferred and, in the end, failed. */
@@ -3554,11 +3570,19 @@ export function resolveQueueSettings(
   );
   const providerAdapter = resolveProviderAdapterName(input.providerAdapter, env);
   const leaseSeconds = resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env);
+  const deliveryTimeoutMs = resolveDeliveryTimeoutMs(input.deliveryTimeoutSeconds, leaseSeconds, env);
+  const smtpRelay = input.deliver === undefined && providerAdapter === "smtp" ? (input.smtpRelay ?? resolveSmtpRelayConfig(env)) : undefined;
+  if (smtpRelay !== undefined && smtpRelay.timeoutMs >= deliveryTimeoutMs) {
+    // The queue stops waiting first, retries the job, and the relay may still accept the first attempt: two copies.
+    throw new Error(
+      `MAIL_RELAY_TIMEOUT_SECONDS must be shorter than the delivery timeout (${deliveryTimeoutMs / 1000} s, MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS); got ${smtpRelay.timeoutMs / 1000} s.`
+    );
+  }
   return {
     backoffBaseSeconds,
     backoffCapSeconds: Math.max(backoffCapSeconds, backoffBaseSeconds),
-    deliver: input.deliver ?? (providerAdapter === "fake" ? fakeQueueDelivery : noProviderQueueDelivery),
-    deliveryTimeoutMs: resolveDeliveryTimeoutMs(input.deliveryTimeoutSeconds, leaseSeconds, env),
+    deliver: input.deliver ?? resolveQueueDelivery(providerAdapter, env, smtpRelay),
+    deliveryTimeoutMs,
     inline: resolveInlineFlag(input.inline, env),
     leaseSeconds,
     maxAttempts: resolveBoundedInteger(input.maxAttempts, "MAIL_QUEUE_MAX_ATTEMPTS", DEFAULT_QUEUE_MAX_ATTEMPTS, 1, 10, env),
