@@ -133,8 +133,8 @@ test("the stand-in adapter must be asked for explicitly", async () => {
 });
 
 test("the adapter name is validated and the stand-in is refused in production", async () => {
-  assert.throws(() => resolveQueueSettings({}, { MAIL_PROVIDER_ADAPTER: "smtp" }), /MAIL_PROVIDER_ADAPTER must be "none" or "fake"/u);
-  assert.throws(() => resolveQueueSettings({ providerAdapter: "x" }, {}), /providerAdapter must be "none" or "fake"/u);
+  assert.throws(() => resolveQueueSettings({}, { MAIL_PROVIDER_ADAPTER: "ses" }), /MAIL_PROVIDER_ADAPTER must be "none", "fake" or "smtp"/u);
+  assert.throws(() => resolveQueueSettings({ providerAdapter: "x" }, {}), /providerAdapter must be "none", "fake" or "smtp"/u);
   assert.throws(
     () => resolveQueueSettings({}, { MAIL_PROVIDER_ADAPTER: "fake", NODE_ENV: "production" }),
     /not allowed when NODE_ENV is "production"/u
