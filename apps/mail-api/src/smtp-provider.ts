@@ -12,6 +12,8 @@
 //   MAIL_RELAY_USER, MAIL_RELAY_PASSWORD   optional; both or neither; sent with AUTH PLAIN, only over TLS
 //   MAIL_RELAY_HELO_NAME             name used in EHLO (default localhost)
 //   MAIL_RELAY_TIMEOUT_SECONDS       limit for one whole delivery, 1..120 (default 30)
+//   MAIL_RELAY_MAX_MESSAGE_BYTES     largest message sent, 1024..52428800 (default 10485760); larger ones fail without a connection
+//   MAIL_RELAY_MAX_RECIPIENTS        most recipients per message, 1..1000 (default 100); more fail without a connection
 
 import { randomUUID } from "node:crypto";
 import net from "node:net";
@@ -23,9 +25,16 @@ import type { QueueDeliveryResult } from "./smtp-internal.js";
 
 export type SmtpRelayTlsMode = "implicit" | "none" | "starttls";
 
+export const DEFAULT_RELAY_MAX_MESSAGE_BYTES = 10 * 1024 * 1024;
+export const DEFAULT_RELAY_MAX_RECIPIENTS = 100;
+
 export interface SmtpRelayConfig {
   heloName: string;
   host: string;
+  /** Largest message sent, in bytes (default 10 MiB). */
+  maxMessageBytes?: number;
+  /** Most recipients in one message (default 100). */
+  maxRecipients?: number;
   password?: string;
   port: number;
   /** Total time for one delivery, connection included. */
@@ -134,6 +143,8 @@ export function resolveSmtpRelayConfig(env: NodeJS.ProcessEnv = process.env): Sm
   return {
     heloName,
     host,
+    maxMessageBytes: parseInteger(env, "MAIL_RELAY_MAX_MESSAGE_BYTES", DEFAULT_RELAY_MAX_MESSAGE_BYTES, 1024, 52428800),
+    maxRecipients: parseInteger(env, "MAIL_RELAY_MAX_RECIPIENTS", DEFAULT_RELAY_MAX_RECIPIENTS, 1, 1000),
     password,
     port: parseInteger(env, "MAIL_RELAY_PORT", tlsMode === "implicit" ? 465 : 587, 1, 65535),
     timeoutMs: parseInteger(env, "MAIL_RELAY_TIMEOUT_SECONDS", 30, 1, 120) * 1000,
@@ -525,18 +536,24 @@ async function deliver(config: SmtpRelayConfig, payload: SmtpDeliveryPayload, co
   };
 }
 
-/** Checks everything that is sent as a command, before any connection is opened. */
-function validateEnvelope(payload: SmtpDeliveryPayload) {
+/** Checks everything that is sent as a command, and the size limits, before any connection is opened. */
+function validateEnvelope(config: SmtpRelayConfig, payload: SmtpDeliveryPayload) {
   checkedAddress(payload.envelopeFrom, "envelope sender");
   if (payload.recipients.length === 0) {
     throw new SmtpFailure("no_recipients", false, "", "message has no recipients");
   }
+  if (payload.recipients.length > (config.maxRecipients ?? DEFAULT_RELAY_MAX_RECIPIENTS)) {
+    throw new SmtpFailure("too_many_recipients", false, "", "message has more recipients than the relay setting allows");
+  }
   for (const recipient of payload.recipients) {
     checkedAddress(recipient, "recipient");
   }
-  if (!payload.rawMimeBase64) {
-    // Build once up front so header and address problems surface without a connection.
-    buildMime(payload);
+
+  // The raw MIME is trusted as submitted; a message built from parts is built once up front so header and address
+  // problems surface without a connection.
+  const size = payload.rawMimeBase64 ? Buffer.from(payload.rawMimeBase64, "base64").length : Buffer.byteLength(buildMime(payload), "latin1");
+  if (size > (config.maxMessageBytes ?? DEFAULT_RELAY_MAX_MESSAGE_BYTES)) {
+    throw new SmtpFailure("message_too_large", false, "", "message is larger than the relay setting allows");
   }
 }
 
@@ -545,7 +562,7 @@ export async function sendViaSmtp(config: SmtpRelayConfig, payload: SmtpDelivery
   const deadline = Date.now() + config.timeoutMs;
   let connection: SmtpConnection | undefined;
   try {
-    validateEnvelope(payload);
+    validateEnvelope(config, payload);
     connection = await connect(config, deadline);
     return await deliver(config, payload, connection);
   } catch (error) {

@@ -79,6 +79,7 @@ ssh root@mail.iai.one '
 | `MAIL_RELAY_USER`, `MAIL_RELAY_PASSWORD` | no | — | Relay login, set together; sent with AUTH PLAIN and only over TLS. Keep the password in the secret store, never in an image or a file in the repository |
 | `MAIL_RELAY_HELO_NAME` | no | `localhost` | Name sent in EHLO |
 | `MAIL_RELAY_TIMEOUT_SECONDS` | no | `30` | Limit for one delivery, 1 to 120; keep it below `MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS` |
+| `MAIL_RELAY_MAX_MESSAGE_BYTES`, `MAIL_RELAY_MAX_RECIPIENTS` | no | `10485760`, `100` | Largest message and most recipients per message sent through the relay; a message over either limit fails at once as `message_too_large` or `too_many_recipients` without a connection |
 | `PATH_B_EVIDENCE_DIR` | no | `/var/lib/iai-mail-api` | NDJSON evidence persistence dir |
 | `NODE_ENV` | no | `production` (set by the Dockerfile) | In production the dev SMTP login (`smtp-dev` / `dev-secret` / `ws_dev`) is never seeded |
 | `MAIL_SMTP_REMOTE_TOKEN` | no | — | Service token for `/v1/internal/smtp/*`. Path B does not need those routes: while unset they answer 503 (fail closed) and a startup error is logged. Set it only if this container should serve them |

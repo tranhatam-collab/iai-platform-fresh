@@ -254,6 +254,31 @@ test("a message with attachments is refused: the queue keeps no attachment conte
   });
 });
 
+test("a message over the size limit or with too many recipients fails at once, without a connection", async () => {
+  await withServer({}, async (server) => {
+    const tooLarge = await sendViaSmtp(config(server, { maxMessageBytes: 1024 }), payload({ text: "x".repeat(2000) }));
+    assert.deepEqual(
+      { accepted: tooLarge.accepted, errorClass: tooLarge.errorClass, retryable: tooLarge.retryable },
+      { accepted: false, errorClass: "message_too_large", retryable: false }
+    );
+
+    const raw = Buffer.from(`Subject: raw\r\n\r\n${"y".repeat(3000)}\r\n`, "latin1").toString("base64");
+    const rawTooLarge = await sendViaSmtp(config(server, { maxMessageBytes: 1024 }), payload({ rawMimeBase64: raw }));
+    assert.equal(rawTooLarge.errorClass, "message_too_large");
+
+    const recipients = ["a@example.net", "b@example.net", "c@example.net"];
+    const tooMany = await sendViaSmtp(config(server, { maxRecipients: 2 }), payload({ recipients, to: recipients.map((email) => ({ email })) }));
+    assert.deepEqual(
+      { accepted: tooMany.accepted, errorClass: tooMany.errorClass, retryable: tooMany.retryable },
+      { accepted: false, errorClass: "too_many_recipients", retryable: false }
+    );
+
+    assert.equal(server.sessions.length, 0, "the relay was never contacted");
+    const within = await sendViaSmtp(config(server, { maxMessageBytes: 4096, maxRecipients: 3 }), payload({ recipients, to: recipients.map((email) => ({ email })) }));
+    assert.equal(within.accepted, true, "the limits are inclusive");
+  });
+});
+
 test("settings come from MAIL_RELAY_* and are checked", () => {
   const resolved = resolveSmtpRelayConfig({
     MAIL_RELAY_HELO_NAME: "mailer.example",
@@ -267,6 +292,12 @@ test("settings come from MAIL_RELAY_* and are checked", () => {
   );
   assert.equal(resolved.password, "secret-from-env");
   assert.equal(resolveSmtpRelayConfig({ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TLS: "implicit" }).port, 465);
+  assert.deepEqual(
+    { maxMessageBytes: resolved.maxMessageBytes, maxRecipients: resolved.maxRecipients },
+    { maxMessageBytes: 10485760, maxRecipients: 100 }
+  );
+  const limited = resolveSmtpRelayConfig({ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_MAX_MESSAGE_BYTES: "2048", MAIL_RELAY_MAX_RECIPIENTS: "5" });
+  assert.deepEqual({ maxMessageBytes: limited.maxMessageBytes, maxRecipients: limited.maxRecipients }, { maxMessageBytes: 2048, maxRecipients: 5 });
 
   const refused = [
     [{}, /MAIL_RELAY_HOST is required/u],
@@ -277,6 +308,8 @@ test("settings come from MAIL_RELAY_* and are checked", () => {
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TLS: "maybe" }, /MAIL_RELAY_TLS must be/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_PORT: "70000" }, /MAIL_RELAY_PORT must be an integer from 1 to 65535/u],
     [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_TIMEOUT_SECONDS: "0" }, /MAIL_RELAY_TIMEOUT_SECONDS must be an integer from 1 to 120/u],
+    [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_MAX_MESSAGE_BYTES: "10" }, /MAIL_RELAY_MAX_MESSAGE_BYTES must be an integer from 1024 to 52428800/u],
+    [{ MAIL_RELAY_HOST: "relay.example", MAIL_RELAY_MAX_RECIPIENTS: "0" }, /MAIL_RELAY_MAX_RECIPIENTS must be an integer from 1 to 1000/u],
     [{ MAIL_RELAY_HOST: "relay example" }, /host name or an IP address/u]
   ];
   for (const [env, pattern] of refused) {
