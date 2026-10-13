@@ -3570,11 +3570,19 @@ export function resolveQueueSettings(
   );
   const providerAdapter = resolveProviderAdapterName(input.providerAdapter, env);
   const leaseSeconds = resolveBoundedInteger(input.leaseSeconds, "MAIL_QUEUE_LEASE_SECONDS", DEFAULT_QUEUE_LEASE_SECONDS, 10, 3600, env);
+  const deliveryTimeoutMs = resolveDeliveryTimeoutMs(input.deliveryTimeoutSeconds, leaseSeconds, env);
+  const smtpRelay = input.deliver === undefined && providerAdapter === "smtp" ? (input.smtpRelay ?? resolveSmtpRelayConfig(env)) : undefined;
+  if (smtpRelay !== undefined && smtpRelay.timeoutMs >= deliveryTimeoutMs) {
+    // The queue stops waiting first, retries the job, and the relay may still accept the first attempt: two copies.
+    throw new Error(
+      `MAIL_RELAY_TIMEOUT_SECONDS must be shorter than the delivery timeout (${deliveryTimeoutMs / 1000} s, MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS); got ${smtpRelay.timeoutMs / 1000} s.`
+    );
+  }
   return {
     backoffBaseSeconds,
     backoffCapSeconds: Math.max(backoffCapSeconds, backoffBaseSeconds),
-    deliver: input.deliver ?? resolveQueueDelivery(providerAdapter, env, input.smtpRelay),
-    deliveryTimeoutMs: resolveDeliveryTimeoutMs(input.deliveryTimeoutSeconds, leaseSeconds, env),
+    deliver: input.deliver ?? resolveQueueDelivery(providerAdapter, env, smtpRelay),
+    deliveryTimeoutMs,
     inline: resolveInlineFlag(input.inline, env),
     leaseSeconds,
     maxAttempts: resolveBoundedInteger(input.maxAttempts, "MAIL_QUEUE_MAX_ATTEMPTS", DEFAULT_QUEUE_MAX_ATTEMPTS, 1, 10, env),

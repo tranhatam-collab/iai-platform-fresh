@@ -33,7 +33,9 @@ export function createTestCertificate() {
  *   certificate    { cert, key } for the two TLS modes
  *   offerStarttls  with tls "none": whether STARTTLS is advertised anyway (default false)
  *   auth           true to advertise AUTH PLAIN
+ *   authLine      the AUTH extension line to advertise (default "AUTH PLAIN LOGIN")
  *   authReply      reply to AUTH (default "235 2.7.0 ok")
+ *   extraAfterStarttls  text written in the same write as the 220 reply to STARTTLS (a relay that injects a line)
  *   greeting       first line (default "220 fake.test ready")
  *   silent         true: accept connections and never answer
  *   rcpt           (address) => reply line; default "250 ok"
@@ -101,12 +103,12 @@ export async function startFakeSmtp(options = {}) {
             extensions.push("STARTTLS");
           }
           if (options.auth && (session.secure || mode === "none")) {
-            extensions.push("AUTH PLAIN LOGIN");
+            extensions.push(options.authLine ?? "AUTH PLAIN LOGIN");
           }
           extensions.push("8BITMIME");
           socket.write(`${["250-fake.test", ...extensions.map((entry) => `250-${entry}`)].join("\r\n").replace(/250-([^\r\n]*)$/u, "250 $1")}\r\n`);
         } else if (verb === "STARTTLS") {
-          send("220 2.0.0 go ahead");
+          socket.write(`220 2.0.0 go ahead\r\n${options.extraAfterStarttls ?? ""}`);
           socket.removeListener("data", onData);
           const secure = new tls.TLSSocket(socket, { cert: options.certificate.cert, isServer: true, key: options.certificate.key });
           secure.on("error", () => undefined);

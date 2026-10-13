@@ -173,6 +173,54 @@ test("STARTTLS: the relay sees EHLO, STARTTLS, a new EHLO over TLS, then AUTH an
   });
 });
 
+test("a line the relay sends together with its answer to STARTTLS ends the delivery before the handshake", async () => {
+  await withServer({ extraAfterStarttls: "250 injected line\r\n", tls: "starttls" }, async (server) => {
+    const outcome = await sendViaSmtp(config(server, { tls: "starttls" }), payload());
+    assert.equal(outcome.accepted, false);
+    assert.equal(outcome.retryable, true);
+    assert.equal(outcome.errorClass, "unexpected_reply");
+    const [session] = server.sessions;
+    assert.deepEqual(verbs(session), ["EHLO", "STARTTLS"]);
+    assert.ok(!verbs(session).includes("MAIL"));
+  });
+});
+
+test("credentials are not sent to a relay that does not offer AUTH PLAIN", async () => {
+  await withServer({ auth: true, authLine: "AUTH LOGIN", tls: "starttls" }, async (server) => {
+    const outcome = await sendViaSmtp(config(server, { password: "pw-not-sent", tls: "starttls", user: "relay-user" }), payload());
+    assert.equal(outcome.accepted, false);
+    assert.equal(outcome.retryable, true);
+    assert.equal(outcome.errorClass, "relay_auth_unavailable");
+    assert.equal(server.sessions[0].auth, undefined);
+    assert.ok(!verbs(server.sessions[0]).includes("AUTH"));
+  });
+});
+
+test("a reply that is too large or has too many lines ends the delivery", async () => {
+  await withServer({ greeting: `220 ${"x".repeat(70000)}` }, async (server) => {
+    const outcome = await sendViaSmtp(config(server), payload());
+    assert.equal(outcome.accepted, false);
+    assert.equal(outcome.retryable, true);
+    assert.equal(outcome.errorClass, "reply_too_large");
+  });
+
+  const manyLines = `${Array.from({ length: 150 }, (_, index) => `220-line ${index}`).join("\r\n")}\r\n220 end`;
+  await withServer({ greeting: manyLines }, async (server) => {
+    const outcome = await sendViaSmtp(config(server), payload());
+    assert.equal(outcome.accepted, false);
+    assert.equal(outcome.retryable, true);
+    assert.equal(outcome.errorClass, "reply_too_large");
+  });
+});
+
+test("a message without recipients is refused before any connection is made", async () => {
+  await withServer({}, async (server) => {
+    const outcome = await sendViaSmtp(config(server), payload({ recipients: [], to: [] }));
+    assert.deepEqual({ accepted: outcome.accepted, errorClass: outcome.errorClass, retryable: outcome.retryable }, { accepted: false, errorClass: "no_recipients", retryable: false });
+    assert.equal(server.sessions.length, 0);
+  });
+});
+
 test("implicit TLS accepts mail and carries the credentials", async () => {
   await withServer({ auth: true, tls: "implicit" }, async (server) => {
     const outcome = await sendViaSmtp(config(server, { password: "pw-implicit", tls: "implicit", user: "relay-user" }), payload());
@@ -336,6 +384,13 @@ test("the queue only uses the relay when asked to: the default stays without a p
   assert.throws(() => resolveQueueSettings({}, { MAIL_PROVIDER_ADAPTER: "smtp" }), /MAIL_RELAY_HOST is required/u);
   assert.throws(() => resolveQueueSettings({}, { MAIL_PROVIDER_ADAPTER: "ses" }), /must be "none", "fake" or "smtp"/u);
   assert.equal(typeof resolveQueueSettings({}, { ...withRelayVariables, MAIL_PROVIDER_ADAPTER: "smtp" }).deliver, "function");
+
+  // the relay must give up before the queue stops waiting, or a message the relay still accepts is sent again
+  const smtp = { ...withRelayVariables, MAIL_PROVIDER_ADAPTER: "smtp" };
+  assert.throws(() => resolveQueueSettings({}, { ...smtp, MAIL_RELAY_TIMEOUT_SECONDS: "60" }), /MAIL_RELAY_TIMEOUT_SECONDS must be shorter than the delivery timeout/u);
+  assert.throws(() => resolveQueueSettings({}, { ...smtp, MAIL_RELAY_TIMEOUT_SECONDS: "45", MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS: "40" }), /shorter than the delivery timeout/u);
+  assert.equal(typeof resolveQueueSettings({}, { ...smtp, MAIL_RELAY_TIMEOUT_SECONDS: "59" }).deliver, "function");
+  assert.equal(typeof resolveQueueSettings({}, { ...smtp, MAIL_RELAY_TIMEOUT_SECONDS: "45", MAIL_QUEUE_DELIVERY_TIMEOUT_SECONDS: "50" }).deliver, "function");
   assert.equal(typeof resolveQueueSettings({}, { ...withRelayVariables, MAIL_PROVIDER_ADAPTER: "smtp", NODE_ENV: "production" }).deliver, "function");
 });
 
