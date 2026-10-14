@@ -11,7 +11,8 @@ The role map lists `api.noos.iai.one` as the control-plane API of the NOOS layer
 - Each of the 24 operations listed below (19 paths) answers `401` with `WWW-Authenticate: Bearer` when the request has no bearer credential, and `501` with `{"error":"not_implemented"}` when it has one. The credential is never checked: any bearer value gives the same answer.
 - Every other path is `404` and every other method on a known path is `405` with an `Allow` header.
 - A request body above 16 KiB is refused with `413`.
-- No response carries a CORS header.
+- No response carries a CORS header, and every response sets `X-Content-Type-Options: nosniff`.
+- The server sets request and header timeouts and listens on `127.0.0.1` unless `API_NOOS_HOST` is set.
 - No credential can be checked, so no caller is identified and no route is allowed to do any work. The headers `x-user-id` and `x-tenant-id` are never read.
 
 ## What it does not do
@@ -57,4 +58,4 @@ pnpm --filter @iai/api-noos test
 API_NOOS_PORT=4394 pnpm --filter @iai/api-noos start    # listens on 127.0.0.1
 ```
 
-The tests are hermetic (`node:test`, a server on a random local port). They check that the health answer is honest, that every request outside the contract is refused, that credentials and identity headers change nothing, that oversized bodies are refused, that no CORS header is sent, and that the directory contains no deployment or secret configuration.
+The tests are hermetic (`node:test`, a server on a random local port). They check that the health answer is honest, that every request outside the contract is refused, that credentials and identity headers change nothing, that oversized bodies are refused, that no CORS header is sent, that `nosniff` and the timeouts are set, that the process binds to 127.0.0.1 by default, and that the directory contains no deployment or secret configuration.

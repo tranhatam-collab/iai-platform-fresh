@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import http from "node:http";
+import { spawn } from "node:child_process";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -321,5 +323,76 @@ describe("labelling", () => {
     assert.match(readme, /Planned direction \(not released\)/u);
     assert.match(readme, /Định hướng \(chưa phát hành\)/u);
     assert.ok(readme.indexOf("Planned direction") < 400, "the label must open the README");
+  });
+});
+
+describe("process settings", () => {
+  test("every response carries x-content-type-options: nosniff", async () => {
+    const answers = [
+      await call("GET", "/health"),
+      await call("GET", "/nothing-here"),
+      await call("POST", "/health", { body: "{}" }),
+      await call("GET", "//example.invalid/health")
+    ];
+    for (const response of answers) {
+      assert.equal(response.headers["x-content-type-options"], "nosniff", `status ${response.status}`);
+    }
+  });
+
+  test("the server limits how long a request may take", () => {
+    assert.ok(server.requestTimeout > 0 && server.requestTimeout <= 30_000, `requestTimeout is ${server.requestTimeout}`);
+    assert.ok(server.headersTimeout > 0 && server.headersTimeout <= 30_000, `headersTimeout is ${server.headersTimeout}`);
+  });
+
+  test("started without settings, the process listens on 127.0.0.1 only", async () => {
+    const free = await new Promise((resolve) => {
+      const probe = net.createServer();
+      probe.listen(0, "127.0.0.1", () => {
+        const { port: chosen } = probe.address();
+        probe.close(() => resolve(chosen));
+      });
+    });
+    const child = spawn(process.execPath, [path.join(appDir, "dist", "index.js")], {
+      env: { PATH: process.env.PATH, API_NOOS_PORT: String(free) },
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    try {
+      const started = await new Promise((resolve, reject) => {
+        let out = "";
+        child.stdout.on("data", (chunk) => {
+          out += chunk;
+          if (out.includes("\n")) {
+            resolve(out);
+          }
+        });
+        child.on("exit", () => reject(new Error("the process exited before it started")));
+        setTimeout(() => reject(new Error("no start message within 5 s")), 5000).unref();
+      });
+      assert.ok(started.includes(`listening on http://127.0.0.1:${free}`), started);
+
+      const health = await new Promise((resolve, reject) => {
+        http.get({ host: "127.0.0.1", port: free, path: "/health", agent: false }, (reply) => {
+          reply.resume();
+          reply.on("end", () => resolve(reply.statusCode));
+        }).on("error", reject);
+      });
+      assert.equal(health, 200);
+
+      const external = Object.values(os.networkInterfaces()).flat().find((entry) => entry && entry.family === "IPv4" && !entry.internal);
+      if (external) {
+        await assert.rejects(
+          new Promise((resolve, reject) => {
+            const socket = net.connect(free, external.address, () => {
+              socket.destroy();
+              resolve();
+            });
+            socket.on("error", reject);
+          }),
+          "the process answered on a non-loopback address"
+        );
+      }
+    } finally {
+      child.kill();
+    }
   });
 });
