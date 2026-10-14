@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import http from "node:http";
+import { spawn } from "node:child_process";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { contractRoutes, createCdnServer, maxBodyBytes } from "../dist/server.js";
+import { createCdnServer } from "../dist/server.js";
 
 const appDir = path.dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
-const EXPECTED_ROUTES = [];
 
 let server;
 let port;
@@ -40,16 +41,6 @@ function call(method, target, { headers = {}, body } = {}) {
   });
 }
 
-const concrete = (template) => template.replace(/\{[^}]+\}/gu, "example-id");
-
-describe("contract", () => {
-  test("the routes in the code are exactly the ones this skeleton documents", () => {
-    assert.deepEqual(
-      contractRoutes.map((route) => `${route.method} ${route.path}`),
-      EXPECTED_ROUTES
-    );
-  });
-});
 
 describe("health", () => {
   test("GET /health says plainly that nothing is implemented", async () => {
@@ -96,122 +87,38 @@ describe("routes outside the contract", () => {
   });
 });
 
-describe("deny by default", () => {
-  const credentialSets = [
-    { name: "no credentials", headers: {} },
-    { name: "x-user-id and x-tenant-id", headers: { "x-user-id": "u_1", "x-tenant-id": "t_1", "x-tenant": "t_1" } },
-    { name: "a bearer token", headers: { authorization: "Bearer not-a-real-token" } },
-    { name: "a cookie", headers: { cookie: "session=not-a-real-session" } },
-    { name: "an api key header", headers: { "x-api-key": "not-a-real-key" } }
-  ];
-
-  test("no route answers with a success status, with or without credentials", async () => {
-    for (const route of contractRoutes) {
-      for (const credentials of credentialSets) {
-        const body = route.method === "GET" ? undefined : "{}";
-        const headers = { ...credentials.headers, ...(body ? { "content-type": "application/json" } : {}) };
-        const response = await call(route.method, concrete(route.path), { headers, body });
-        assert.equal(response.status, 501, `${route.method} ${route.path} with ${credentials.name}`);
-        assert.deepEqual(response.json, { error: "not_implemented" });
-      }
-    }
-  });
-
-  test("identity headers change nothing and are not echoed", async () => {
-    for (const route of contractRoutes) {
-      const bare = await call(route.method, concrete(route.path), { body: route.method === "GET" ? undefined : "{}" });
-      const named = await call(route.method, concrete(route.path), {
-        headers: { "x-user-id": "u_marker", "x-tenant-id": "t_marker" },
-        body: route.method === "GET" ? undefined : "{}"
-      });
-      assert.equal(named.status, bare.status);
-      assert.equal(named.text, bare.text);
-      assert.ok(!named.text.includes("marker"));
-    }
-  });
-
-  test("a method the contract does not list for a path is 405 with an Allow header", async () => {
-    for (const route of contractRoutes) {
-      const others = ["GET", "POST", "PUT", "PATCH", "DELETE"].filter((method) => !contractRoutes.some((entry) => entry.path === route.path && entry.method === method));
-      for (const method of others) {
-        const response = await call(method, concrete(route.path), { body: method === "GET" ? undefined : "{}" });
-        assert.equal(response.status, 405, `${method} ${route.path}`);
-        assert.ok(response.headers.allow, `${method} ${route.path}`);
-      }
-    }
-  });
-});
-
-describe("request size", () => {
-  test("a body above the limit is refused with 413 before any route answers", async () => {
-    const probe = contractRoutes.find((route) => route.method !== "GET") ?? contractRoutes[0];
-    if (!probe) {
-      return;
-    }
-    const big = "x".repeat(maxBodyBytes + 1);
-    const response = await call(probe.method === "GET" ? "POST" : probe.method, concrete(probe.path), { headers: { "content-type": "application/json" }, body: big });
-    if (probe.method === "GET") {
-      assert.equal(response.status, 405);
-      return;
-    }
-    assert.equal(response.status, 413);
-    assert.deepEqual(response.json, { error: "payload_too_large" });
-  });
-
-  test("a chunked body above the limit is refused without a content-length", async () => {
-    const probe = contractRoutes.find((route) => route.method !== "GET");
-    if (!probe) {
-      return;
-    }
-    const response = await new Promise((resolve, reject) => {
-      const request = http.request({ host: "127.0.0.1", port, method: probe.method, path: concrete(probe.path), headers: { "transfer-encoding": "chunked" }, agent: false }, (reply) => {
-        let text = "";
-        reply.on("data", (chunk) => (text += chunk));
-        reply.on("end", () => resolve({ status: reply.statusCode, text }));
-      });
-      request.on("error", reject);
-      request.write("x".repeat(maxBodyBytes));
-      request.end("x".repeat(16));
-    });
-    assert.equal(response.status, 413);
-  });
-
-  test("a body that declares a huge length is refused at once, before any body arrives", async () => {
-    const probe = contractRoutes.find((route) => route.method !== "GET");
-    if (!probe) {
-      return;
-    }
-    const first = await new Promise((resolve, reject) => {
-      const socket = net.connect(port, "127.0.0.1", () => {
-        socket.write(`${probe.method} ${concrete(probe.path)} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 99999999\r\n\r\n`);
-      });
-      let text = "";
-      socket.on("data", (chunk) => {
-        text += chunk;
-        if (text.includes("\r\n")) {
-          socket.destroy();
-          resolve(text.split("\r\n")[0]);
+describe("nothing but the health check answers", () => {
+  test("no request outside GET /health gets a success status, with or without credentials or identity headers", async () => {
+    const credentialSets = [
+      {},
+      { "x-user-id": "u_1", "x-tenant-id": "t_1", "x-tenant": "t_1" },
+      { authorization: "Bearer not-a-real-token" },
+      { cookie: "session=not-a-real-session" },
+      { "x-api-key": "not-a-real-key" }
+    ];
+    for (const headers of credentialSets) {
+      for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
+        for (const target of ["/", "/v1", "/v1/anything", "/assets/example", "/admin"]) {
+          const response = await call(method, target, { headers, body: method === "GET" ? undefined : "{}" });
+          assert.equal(response.status, 404, `${method} ${target}`);
+          assert.deepEqual(response.json, { error: "not_found" });
         }
-      });
-      socket.on("error", reject);
-      setTimeout(() => reject(new Error("no answer within 3 s")), 3000).unref();
-    });
-    assert.match(first, /^HTTP\/1\.1 413/u);
+      }
+    }
   });
 
-  test("a body exactly at the limit is read and answered with 501", async () => {
-    const probe = contractRoutes.find((route) => route.method !== "GET");
-    if (!probe) {
-      return;
-    }
-    const response = await call(probe.method, concrete(probe.path), { headers: { "content-type": "application/json" }, body: "x".repeat(maxBodyBytes) });
-    assert.equal(response.status, 501);
+  test("identity headers do not change the health answer and are not echoed", async () => {
+    const bare = await call("GET", "/health");
+    const named = await call("GET", "/health", { headers: { "x-user-id": "u_marker", "x-tenant-id": "t_marker" } });
+    assert.equal(named.text, bare.text);
+    assert.ok(!named.text.includes("marker"));
   });
 });
+
 
 describe("cross-origin access", () => {
   test("no response carries a CORS header, even for a request with an Origin", async () => {
-    const targets = ["/health", "/nothing-here", ...contractRoutes.map((route) => concrete(route.path))];
+    const targets = ["/health", "/nothing-here"];
     for (const target of targets) {
       const response = await call("GET", target, { headers: { origin: "https://example.invalid" } });
       for (const name of Object.keys(response.headers)) {
@@ -281,5 +188,76 @@ describe("labelling", () => {
     assert.match(readme, /Planned direction \(not released\)/u);
     assert.match(readme, /Định hướng \(chưa phát hành\)/u);
     assert.ok(readme.indexOf("Planned direction") < 400, "the label must open the README");
+  });
+});
+
+describe("process settings", () => {
+  test("every response carries x-content-type-options: nosniff", async () => {
+    const answers = [
+      await call("GET", "/health"),
+      await call("GET", "/nothing-here"),
+      await call("POST", "/health", { body: "{}" }),
+      await call("GET", "//example.invalid/health")
+    ];
+    for (const response of answers) {
+      assert.equal(response.headers["x-content-type-options"], "nosniff", `status ${response.status}`);
+    }
+  });
+
+  test("the server limits how long a request may take", () => {
+    assert.ok(server.requestTimeout > 0 && server.requestTimeout <= 30_000, `requestTimeout is ${server.requestTimeout}`);
+    assert.ok(server.headersTimeout > 0 && server.headersTimeout <= 30_000, `headersTimeout is ${server.headersTimeout}`);
+  });
+
+  test("started without settings, the process listens on 127.0.0.1 only", async () => {
+    const free = await new Promise((resolve) => {
+      const probe = net.createServer();
+      probe.listen(0, "127.0.0.1", () => {
+        const { port: chosen } = probe.address();
+        probe.close(() => resolve(chosen));
+      });
+    });
+    const child = spawn(process.execPath, [path.join(appDir, "dist", "index.js")], {
+      env: { PATH: process.env.PATH, CDN_PORT: String(free) },
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    try {
+      const started = await new Promise((resolve, reject) => {
+        let out = "";
+        child.stdout.on("data", (chunk) => {
+          out += chunk;
+          if (out.includes("\n")) {
+            resolve(out);
+          }
+        });
+        child.on("exit", () => reject(new Error("the process exited before it started")));
+        setTimeout(() => reject(new Error("no start message within 5 s")), 5000).unref();
+      });
+      assert.ok(started.includes(`listening on http://127.0.0.1:${free}`), started);
+
+      const health = await new Promise((resolve, reject) => {
+        http.get({ host: "127.0.0.1", port: free, path: "/health", agent: false }, (reply) => {
+          reply.resume();
+          reply.on("end", () => resolve(reply.statusCode));
+        }).on("error", reject);
+      });
+      assert.equal(health, 200);
+
+      const external = Object.values(os.networkInterfaces()).flat().find((entry) => entry && entry.family === "IPv4" && !entry.internal);
+      if (external) {
+        await assert.rejects(
+          new Promise((resolve, reject) => {
+            const socket = net.connect(free, external.address, () => {
+              socket.destroy();
+              resolve();
+            });
+            socket.on("error", reject);
+          }),
+          "the process answered on a non-loopback address"
+        );
+      }
+    } finally {
+      child.kill();
+    }
   });
 });
