@@ -28,6 +28,8 @@ importers:
 
   apps/flow: {}
 
+  apps/flows: {}
+
   apps/home: {}
 
   apps/mail-api:
