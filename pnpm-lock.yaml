@@ -20,6 +20,8 @@ importers:
 
   apps/app: {}
 
+  apps/cdn: {}
+
   apps/dash: {}
 
   apps/developer: {}
