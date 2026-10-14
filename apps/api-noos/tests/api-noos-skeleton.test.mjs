@@ -171,6 +171,34 @@ describe("challenge when no bearer credential is sent", () => {
     }
   });
 
+  test("a request without a credential is refused at once, even when it announces a body it never sends", async () => {
+    if (AUTH_MODE !== "bearer") {
+      return;
+    }
+    const route = contractRoutes.find((entry) => entry.method === "POST");
+    const started = Date.now();
+    const first = await new Promise((resolve, reject) => {
+      const socket = net.connect(port, "127.0.0.1", () => {
+        socket.write(`POST ${concrete(route.path)} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n`);
+      });
+      let text = "";
+      socket.on("data", (chunk) => {
+        text += chunk;
+        if (text.includes("\r\n")) {
+          socket.destroy();
+          resolve(text.split("\r\n")[0]);
+        }
+      });
+      socket.on("error", reject);
+      setTimeout(() => {
+        socket.destroy();
+        reject(new Error("no answer within 2 s: the server waits for a body before it checks the credential"));
+      }, 2000).unref();
+    });
+    assert.match(first, /^HTTP\/1\.1 401/u);
+    assert.ok(Date.now() - started < 2000);
+  });
+
   test("the credential is not checked: two different bearer values give the same answer", async () => {
     if (AUTH_MODE !== "bearer") {
       return;
