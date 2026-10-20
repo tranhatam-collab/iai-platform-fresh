@@ -243,6 +243,7 @@ test("dash builder and publish action routes execute commands and expose audit t
   const flowRequests = [];
   const apiHandler = createFlowApiRequestHandler({ demoData: true });
   const dashHandler = createDashRequestHandler({
+    demoMode: true,
     fetchImpl: createHandlerFetch(flowApiBase, apiHandler, flowRequests),
     flowApiBase
   });
@@ -415,4 +416,69 @@ test("dash logout clears session and workspace cookies", async () => {
   assert.match(setCookie, /iai_session=/);
   assert.match(setCookie, /iai_workspace=/);
   assert.match(setCookie, /Max-Age=0/);
+});
+
+test("dash hides the audit page and its navigation link outside demo mode", async () => {
+  const flowApiBase = "http://internal.flow.test";
+  const flowRequests = [];
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
+  const headers = { "x-dash-session": "session_test_001", "x-workspace-id": "ws_flow_main" };
+  const make = (options) =>
+    createDashRequestHandler({
+      fetchImpl: createHandlerFetch(flowApiBase, apiHandler, flowRequests),
+      flowApiBase,
+      ...options
+    });
+
+  for (const [label, handler] of [
+    ["default", make({})],
+    ["demoMode false", make({ demoMode: false })]
+  ]) {
+    flowRequests.length = 0;
+    // With a session and without one: the page is not there, so nothing about it is revealed.
+    for (const sessionHeaders of [headers, {}]) {
+      const audit = await dispatchToHandler(handler, { headers: sessionHeaders, url: "/audit" });
+      assert.equal(audit.status, 404, `${label} /audit`);
+      assert.doesNotMatch(await audit.text(), /publish\.confirm|audit_timeline/i);
+    }
+    assert.ok(
+      !flowRequests.some((request) => request.url.startsWith("/v1/flow/audit")),
+      `${label}: the audit endpoint must not be called`
+    );
+    const dashboard = await dispatchToHandler(handler, { headers, url: "/dashboard" });
+    assert.equal(dashboard.status, 200);
+    assert.doesNotMatch(await dashboard.text(), /href="\/audit/, `${label}: no audit link in the navigation`);
+  }
+
+  const demo = make({ demoMode: true });
+  const shown = await dispatchToHandler(demo, { headers, url: "/dashboard" });
+  assert.match(await shown.text(), /href="\/audit/);
+});
+
+test("DASH_DEMO_MODE shows the audit page, except in production", async () => {
+  const flowApiBase = "http://internal.flow.test";
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
+  const headers = { "x-dash-session": "session_test_001", "x-workspace-id": "ws_flow_main" };
+  const saved = { demo: process.env.DASH_DEMO_MODE, node: process.env.NODE_ENV };
+  try {
+    process.env.DASH_DEMO_MODE = "1";
+    delete process.env.NODE_ENV;
+    const handler = createDashRequestHandler({ fetchImpl: createHandlerFetch(flowApiBase, apiHandler, []), flowApiBase });
+    assert.equal((await dispatchToHandler(handler, { headers, url: "/audit" })).status, 200);
+
+    process.env.NODE_ENV = "production";
+    const production = createDashRequestHandler({ fetchImpl: createHandlerFetch(flowApiBase, apiHandler, []), flowApiBase });
+    assert.equal((await dispatchToHandler(production, { headers, url: "/audit" })).status, 404);
+    const forced = createDashRequestHandler({
+      demoMode: true,
+      fetchImpl: createHandlerFetch(flowApiBase, apiHandler, []),
+      flowApiBase
+    });
+    assert.equal((await dispatchToHandler(forced, { headers, url: "/audit" })).status, 404);
+  } finally {
+    for (const [key, value] of [["DASH_DEMO_MODE", saved.demo], ["NODE_ENV", saved.node]]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 });
