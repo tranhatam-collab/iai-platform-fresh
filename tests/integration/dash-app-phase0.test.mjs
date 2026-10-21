@@ -482,3 +482,35 @@ test("DASH_DEMO_MODE shows the audit page, except in production", async () => {
     }
   }
 });
+
+test("only DASH_DEMO_MODE=1 turns demo mode on, and an explicit demoMode option wins over the variable", async () => {
+  const flowApiBase = "http://internal.flow.test";
+  const apiHandler = createFlowApiRequestHandler({ demoData: true });
+  const headers = { "x-dash-session": "session_test_001", "x-workspace-id": "ws_flow_main" };
+  const saved = { demo: process.env.DASH_DEMO_MODE, node: process.env.NODE_ENV };
+  const statusOf = async (options) => {
+    const handler = createDashRequestHandler({
+      fetchImpl: createHandlerFetch(flowApiBase, apiHandler, []),
+      flowApiBase,
+      ...options
+    });
+    return (await dispatchToHandler(handler, { headers, url: "/audit" })).status;
+  };
+  try {
+    delete process.env.NODE_ENV;
+    for (const value of ["0", "false", "", "true", "yes"]) {
+      process.env.DASH_DEMO_MODE = value;
+      assert.equal(await statusOf({}), 404, `DASH_DEMO_MODE=${JSON.stringify(value)} must not enable demo mode`);
+    }
+    process.env.DASH_DEMO_MODE = "1";
+    assert.equal(await statusOf({}), 200);
+    assert.equal(await statusOf({ demoMode: false }), 404, "the option wins over the variable");
+    delete process.env.DASH_DEMO_MODE;
+    assert.equal(await statusOf({ demoMode: true }), 200);
+  } finally {
+    for (const [key, value] of [["DASH_DEMO_MODE", saved.demo], ["NODE_ENV", saved.node]]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
