@@ -920,7 +920,11 @@ function renderAppShell(
           ${renderNavLink(locale, "/dashboard", t(locale, "nav.dashboard"), activeNav === "dashboard")}
           ${renderNavLink(locale, "/actions", t(locale, "dash.page.actions"), activeNav === "actions")}
           ${renderNavLink(locale, "/flows", t(locale, "dash.render.flow_inventory_2"), activeNav === "flows")}
-          ${renderNavLink(locale, "/audit", t(locale, "dash.render.audit_timeline_4"), activeNav === "audit")}
+          ${
+            session.auditVisible === true
+              ? renderNavLink(locale, "/audit", t(locale, "dash.render.audit_timeline_4"), activeNav === "audit")
+              : ""
+          }
           ${renderNavLink(locale, "/runtime/executions", t(locale, "dash.render.runtime_executions_4"), activeNav === "runtime")}
         </nav>
         <div class="sidebar-meta">

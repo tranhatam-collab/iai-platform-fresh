@@ -34,7 +34,7 @@ describe("flow, dash and web against a real mail-api", { skip: skipUnlessBuilt(b
   let flow;
 
   before(async () => {
-    api = await startMailApi();
+    api = await startMailApi({ env: { MAIL_API_DEMO_DATA: "1" } });
     [dash, web, flow] = await startAll([
       () =>
         startService({
@@ -42,7 +42,7 @@ describe("flow, dash and web against a real mail-api", { skip: skipUnlessBuilt(b
           entry: "apps/dash/dist/index.js",
           portEnv: "DASH_PORT",
           hostEnv: "DASH_HOST",
-          env: { DASH_FLOW_API_BASE: api.baseUrl }
+          env: { DASH_DEMO_MODE: "1", DASH_FLOW_API_BASE: api.baseUrl }
         }),
       () =>
         startService({

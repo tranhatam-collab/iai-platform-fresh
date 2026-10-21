@@ -7,6 +7,8 @@ export interface DashAuthConfig {
 }
 
 export interface DashSessionContext {
+  /** True only in demo mode: the audit timeline page and its navigation link are shown. */
+  auditVisible?: boolean;
   authenticated: boolean;
   loginPath: string;
   sessionSource: "cookie" | "header" | "missing";

@@ -5,7 +5,7 @@ import { createFlowApiRequestHandler } from "../../apps/mail-api/dist/server.js"
 import { dispatchToHandler } from "../support/http-handler.mjs";
 
 test("api.flow exposes source-of-truth summary and domain slices", async () => {
-  const handler = createFlowApiRequestHandler();
+  const handler = createFlowApiRequestHandler({ demoData: true });
   const headers = {
     "x-request-id": "req_flow_contract",
     "x-workspace-id": "ws_flow_main"

@@ -22,10 +22,14 @@ import {
 } from "./render.js";
 
 export interface DashServerOptions extends Partial<DashAuthConfig>, Partial<DashRenderConfig> {
+  /** Demo mode shows the audit timeline page. Off by default; ignored when NODE_ENV is production. */
+  demoMode?: boolean;
   fetchImpl?: typeof globalThis.fetch;
 }
 
-interface ResolvedDashConfig extends DashAuthConfig, DashRenderConfig {}
+interface ResolvedDashConfig extends DashAuthConfig, DashRenderConfig {
+  demoMode: boolean;
+}
 
 export function createDashServer(options: DashServerOptions = {}): Server {
   return createServer(createDashRequestHandler(options));
@@ -44,6 +48,7 @@ export function createDashRequestHandler(options: DashServerOptions = {}) {
 
 function resolveConfig(options: DashServerOptions): ResolvedDashConfig {
   return {
+    demoMode: (options.demoMode ?? process.env.DASH_DEMO_MODE === "1") && process.env.NODE_ENV !== "production",
     defaultWorkspaceId:
       options.defaultWorkspaceId ?? process.env.DASH_DEFAULT_WORKSPACE_ID ?? "ws_flow_main",
     flowApiBase: options.flowApiBase ?? process.env.DASH_FLOW_API_BASE ?? "http://127.0.0.1:8787",
@@ -122,7 +127,7 @@ async function handleRequest(
       url.pathname !== "/" &&
       url.pathname !== "/dashboard" &&
       url.pathname !== "/actions" &&
-      url.pathname !== "/audit" &&
+      !(url.pathname === "/audit" && config.demoMode) &&
       url.pathname !== "/flows" &&
       url.pathname !== "/runtime" &&
       url.pathname !== "/runtime/executions" &&
@@ -134,7 +139,7 @@ async function handleRequest(
       return;
     }
 
-    const session = resolveDashSessionContext(request, url, config);
+    const session = { ...resolveDashSessionContext(request, url, config), auditVisible: config.demoMode };
 
     if (!session.authenticated) {
       redirect(response, localizePath(session.loginPath, locale));

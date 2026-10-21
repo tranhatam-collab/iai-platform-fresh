@@ -16,5 +16,6 @@ Environment:
 - `DASH_DEFAULT_WORKSPACE_ID`
 - `DASH_PORT`
 - `DASH_HOST`
+- `DASH_DEMO_MODE` (`1` shows the audit timeline page and its link; off by default and ignored when `NODE_ENV=production`)
 
 This package is intentionally narrow until the Phase 1 control-home lane is locked.
