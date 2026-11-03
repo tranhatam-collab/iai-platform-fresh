@@ -1,5 +1,7 @@
 # IAI Platform - GitHub Remote Audit Handoff
 
+> Status note: this document defines the still-blocked complete handoff. The separately published partial recovery state is documented in `CROSS_MACHINE_PARTIAL_HANDOFF_2026-11-03.md` and `IAI_SUBPROJECT_GITHUB_HANDOFF_2026-11-03.md`; it is not a release candidate.
+
 - Handoff date: `2026-11-03` (`Asia/Ho_Chi_Minh`)
 - Repository: `tranhatam-collab/iai-platform-fresh`
 - Local workspace: `/Users/tranhatam/Documents/New project/iai-platform-worktree`

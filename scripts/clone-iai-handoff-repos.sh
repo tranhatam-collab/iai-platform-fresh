@@ -28,7 +28,26 @@ clone_exact() {
   echo "[handoff] PASS: $repo $branch $actual_sha"
 }
 
-clone_exact "iai-platform-fresh" "OMCODE/partial-cross-machine-handoff-20261103" "ac5015ab15385ff5d61e341aed7ad42336d9a4a7" "iai-platform-fresh"
+clone_contains() {
+  local repo="$1"
+  local branch="$2"
+  local required_sha="$3"
+  local directory="$4"
+
+  if [[ -e "$TARGET_ROOT/$directory" ]]; then
+    echo "[handoff] ERROR: target already exists: $TARGET_ROOT/$directory" >&2
+    return 1
+  fi
+
+  git clone --branch "$branch" --single-branch "git@github.com:${ORG}/${repo}.git" "$TARGET_ROOT/$directory"
+  git -C "$TARGET_ROOT/$directory" merge-base --is-ancestor "$required_sha" HEAD
+  test -z "$(git -C "$TARGET_ROOT/$directory" status --porcelain)"
+  local actual_sha
+  actual_sha="$(git -C "$TARGET_ROOT/$directory" rev-parse HEAD)"
+  echo "[handoff] PASS: $repo $branch contains $required_sha; cloned HEAD $actual_sha"
+}
+
+clone_contains "iai-platform-fresh" "OMCODE/partial-cross-machine-handoff-20261103" "ac5015ab15385ff5d61e341aed7ad42336d9a4a7" "iai-platform-fresh"
 clone_exact "iai.one-platform" "OMCODE/partial-cross-machine-handoff-20261103" "fc5e5b2b66b5e582d2725230b1409609f5d5540c" "iai.one-platform"
 clone_exact "AI.OMDALA.COM" "OMCODE/go-live-security-frontend-20261013" "84a21c2091b16ecee591f983f4e1905ee84e7ae5" "AI.OMDALA.COM"
 clone_exact "Computer-AI" "wip/rescue-20261027-main" "1558cc9df3e7b8470432cd8d26753bb35331c20b" "Computer.iai.one"
@@ -36,7 +55,7 @@ clone_exact "Life-Code-OS" "codex/complete-upgrade-plan-2026-10-20" "a0a3bd64cc2
 clone_exact "app.iai.one" "main" "c71b39756eabaa7364bc5f8dd69cd492cdd218d6" "app.iai.one"
 clone_exact "cios.iai.one" "main" "c0b350f1c04b930bd326b8ee4e19ed220c25b022" "cios.iai.one"
 clone_exact "docs.iai.one" "main" "611b4fe028ea61a063b1de23ba432f1838a211ec" "docs.iai.one"
-clone_exact "flow.iai.one" "main" "fbd3c36ec88bd2b5aeb8e9b3cb64c9f7da24ccb2" "flow.iai.one"
+clone_exact "flow.iai.one" "OMCODE/partial-cross-machine-handoff-20261103" "b5ca0c6ed3bfbde25713429c216f2689e967ff10" "flow.iai.one"
 clone_exact "home.iai.one" "main" "9e46cf8af5c9d6b3cb457ec081ee8556968ccc4b" "home.iai.one"
 clone_exact "nft.iai.one" "main" "7de03e5909b657b60a28aea67ae6bd089326d574" "nft.iai.one"
 clone_exact "noos.iai.one" "main" "d7401cfc8837ea618f72d5d25b26c85b94d864e0" "noos.iai.one"
