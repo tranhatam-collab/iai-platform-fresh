@@ -11,7 +11,7 @@ This registry identifies the GitHub sources that an independent team can clone f
 | Scope | GitHub repository | Branch | Exact SHA | Handoff status |
 |---|---|---|---|---|
 | IAI platform, root/app/dash/developer/docs/flow/home/mail/nft/noos/pay/verify/web/trust starter | `tranhatam-collab/iai-platform-fresh` | `OMCODE/partial-cross-machine-handoff-20261103` | `ac5015ab15385ff5d61e341aed7ad42336d9a4a7` | `PARTIAL`: 61 readable WIP files included; 24 FileProvider-blocked paths listed in manifest |
-| Legacy/parallel IAI platform | `tranhatam-collab/iai.one-platform` | `main` | `c4992477a774b37541a94a1eadb07544c39174de` | Remote baseline only; local checkout is stale and has untracked files |
+| Legacy/parallel IAI platform | `tranhatam-collab/iai.one-platform` | `OMCODE/partial-cross-machine-handoff-20261103` | `fc5e5b2b66b5e582d2725230b1409609f5d5540c` | `PARTIAL`: eight readable WIP files included; blocked `package.json` and historical local commit are documented |
 | AI Agent and AI.OMDALA source | `tranhatam-collab/AI.OMDALA.COM` | `OMCODE/go-live-security-frontend-20261013` | `84a21c2091b16ecee591f983f4e1905ee84e7ae5` | Remote source candidate; staging/runtime/approval gates remain separate |
 | Computer.iai.one recovery source | `tranhatam-collab/Computer-AI` | `wip/rescue-20261027-main` | `1558cc9df3e7b8470432cd8d26753bb35331c20b` | Matches local committed HEAD; local missing index/untracked state is not included |
 | LifeCode comprehensive upgrade plan | `tranhatam-collab/Life-Code-OS` | `codex/complete-upgrade-plan-2026-10-20` | `a0a3bd64cc20dc07c054d4979d44dafc684ee7e0` | Planning/audit candidate; production source and local phase WIP require separate reconciliation |

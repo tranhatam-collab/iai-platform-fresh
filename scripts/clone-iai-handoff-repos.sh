@@ -29,7 +29,7 @@ clone_exact() {
 }
 
 clone_exact "iai-platform-fresh" "OMCODE/partial-cross-machine-handoff-20261103" "ac5015ab15385ff5d61e341aed7ad42336d9a4a7" "iai-platform-fresh"
-clone_exact "iai.one-platform" "main" "c4992477a774b37541a94a1eadb07544c39174de" "iai.one-platform"
+clone_exact "iai.one-platform" "OMCODE/partial-cross-machine-handoff-20261103" "fc5e5b2b66b5e582d2725230b1409609f5d5540c" "iai.one-platform"
 clone_exact "AI.OMDALA.COM" "OMCODE/go-live-security-frontend-20261013" "84a21c2091b16ecee591f983f4e1905ee84e7ae5" "AI.OMDALA.COM"
 clone_exact "Computer-AI" "wip/rescue-20261027-main" "1558cc9df3e7b8470432cd8d26753bb35331c20b" "Computer.iai.one"
 clone_exact "Life-Code-OS" "codex/complete-upgrade-plan-2026-10-20" "a0a3bd64cc20dc07c054d4979d44dafc684ee7e0" "Life-Code-OS"
