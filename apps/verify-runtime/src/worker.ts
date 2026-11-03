@@ -13,6 +13,66 @@ export interface Env {
   QUOTA_DO: DurableObjectNamespace;
   USAGE_LEDGER_DB?: D1Database;
   USAGE_EVENTS_QUEUE?: Queue;
+  VERIFY_RUNTIME_SERVICE_TOKEN?: string;
+}
+
+interface QuotaRequestBody {
+  tenant: string;
+  workspaceId: string;
+  amount?: number;
+  limit?: number;
+}
+
+function constantTimeEqual(left: string, right: string): boolean {
+  const leftBytes = new TextEncoder().encode(left);
+  const rightBytes = new TextEncoder().encode(right);
+  const length = Math.max(leftBytes.length, rightBytes.length);
+  let mismatch = leftBytes.length ^ rightBytes.length;
+  for (let index = 0; index < length; index += 1) {
+    mismatch |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
+  }
+  return mismatch === 0;
+}
+
+function authorizeServiceRequest(request: Request, env: Env): Response | undefined {
+  const expected = env.VERIFY_RUNTIME_SERVICE_TOKEN?.trim();
+  if (!expected) {
+    return Response.json({ error: "service_auth_not_configured" }, { status: 503 });
+  }
+
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  const presented = authorization.toLowerCase().startsWith("bearer ")
+    ? authorization.slice(7).trim()
+    : request.headers.get("x-service-key")?.trim() ?? "";
+  if (!presented || !constantTimeEqual(presented, expected)) {
+    return Response.json({ error: "service_auth_required" }, { status: 401 });
+  }
+  return undefined;
+}
+
+function parseQuotaBody(value: unknown): QuotaRequestBody {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Quota request validation: body must be an object");
+  }
+  const body = value as Record<string, unknown>;
+  if (typeof body.tenant !== "string" || body.tenant.trim() === "") {
+    throw new Error("Quota request validation: tenant is required");
+  }
+  if (typeof body.workspaceId !== "string" || body.workspaceId.trim() === "") {
+    throw new Error("Quota request validation: workspaceId is required");
+  }
+  if (body.amount !== undefined && (!Number.isSafeInteger(body.amount) || Number(body.amount) <= 0)) {
+    throw new Error("Quota request validation: amount must be a positive safe integer");
+  }
+  if (body.limit !== undefined && (!Number.isSafeInteger(body.limit) || Number(body.limit) <= 0)) {
+    throw new Error("Quota request validation: limit must be a positive safe integer");
+  }
+  return {
+    tenant: body.tenant.trim(),
+    workspaceId: body.workspaceId.trim(),
+    ...(body.amount === undefined ? {} : { amount: Number(body.amount) }),
+    ...(body.limit === undefined ? {} : { limit: Number(body.limit) }),
+  };
 }
 
 export const worker = {
@@ -36,14 +96,12 @@ export const worker = {
         });
       }
 
+      const unauthorized = authorizeServiceRequest(request, env);
+      if (unauthorized) return unauthorized;
+
       if (url.pathname === "/quota/check" && request.method === "POST") {
         const resolved = resolveTenant(request);
-        const body = (await request.json()) as {
-          tenant: string;
-          workspaceId: string;
-          amount?: number;
-          limit?: number;
-        };
+        const body = parseQuotaBody(await request.json());
         if (body.tenant !== resolved.tenant) {
           return Response.json(
             { error: "tenant_mismatch", resolved: resolved.tenant, body: body.tenant },
@@ -68,12 +126,7 @@ export const worker = {
 
       if (url.pathname === "/quota/increment" && request.method === "POST") {
         const resolved = resolveTenant(request);
-        const body = (await request.json()) as {
-          tenant: string;
-          workspaceId: string;
-          amount?: number;
-          limit?: number;
-        };
+        const body = parseQuotaBody(await request.json());
         if (body.tenant !== resolved.tenant) {
           return Response.json(
             { error: "tenant_mismatch", resolved: resolved.tenant, body: body.tenant },
@@ -97,8 +150,15 @@ export const worker = {
       }
 
       if (url.pathname === "/usage/emit" && request.method === "POST") {
+        const resolved = resolveTenant(request);
         const event = (await request.json()) as UsageEvent;
         validateUsageEvent(event);
+        if (event.tenant !== resolved.tenant) {
+          return Response.json(
+            { error: "tenant_mismatch", resolved: resolved.tenant, body: event.tenant },
+            { status: 403 }
+          );
+        }
 
         if (env.USAGE_EVENTS_QUEUE) {
           await emitUsageEventToQueue(event, env.USAGE_EVENTS_QUEUE);
@@ -121,21 +181,31 @@ export const worker = {
       if (err instanceof Error && err.message.includes("UsageEvent validation")) {
         return Response.json({ error: err.message }, { status: 400 });
       }
+      if (err instanceof Error && err.message.includes("Quota request validation")) {
+        return Response.json({ error: err.message }, { status: 400 });
+      }
       return Response.json({ error: "Internal error" }, { status: 500 });
     }
   },
 
-  async queue(batch: MessageBatch, env: Env, ctx: ExecutionContext): Promise<void> {
+  async queue(batch: MessageBatch, env: Env, _ctx: ExecutionContext): Promise<void> {
     for (const message of batch.messages) {
-      const event = message.body as UsageEvent;
-      validateUsageEvent(event);
+      if (!env.USAGE_LEDGER_DB) {
+        message.retry();
+        console.error("[verify-runtime] Usage ledger D1 binding is missing; event queued for retry");
+        continue;
+      }
 
-      if (env.USAGE_LEDGER_DB) {
+      try {
+        const event = message.body as UsageEvent;
+        validateUsageEvent(event);
         await emitUsageEventToD1(event, env.USAGE_LEDGER_DB);
-      } else {
-        // D1 not bound — drop silently during pre-staging phase
-        // eslint-disable-next-line no-console
-        console.warn(`[verify-runtime] Dropped usage event ${event.event_id}: D1 not bound`);
+        message.ack();
+      } catch (error) {
+        message.retry();
+        console.error(
+          `[verify-runtime] Usage event persistence failed; event queued for retry: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
   },

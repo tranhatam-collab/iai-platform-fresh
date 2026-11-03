@@ -1,11 +1,11 @@
 {
   "name": "iai-mail-platform",
   "private": true,
-  "packageManager": "pnpm@10.0.0",
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "prepare": "node scripts/install-git-hooks.mjs",
     "quality:gate": "node scripts/universal-quality-gate.mjs",
-    "build": "pnpm --filter @iai/config build && pnpm --filter @iai/mail-core build && pnpm --filter @iai/mail-api build && pnpm --filter @iai/root build && pnpm --filter @iai/home build && pnpm --filter @iai/app build && pnpm --filter @iai/flow build && pnpm --filter @iai/docs build && pnpm --filter @iai/nft build && pnpm --filter @iai/pay build && pnpm --filter @iai/web build && pnpm --filter @iai/dash build && pnpm --filter @iai/mail-web build && pnpm --filter @iai/mail-smtp build && pnpm --filter @iai/mail-worker build",
+    "build": "pnpm -r --if-present build",
     "build:root": "pnpm --filter @iai/root build",
     "build:home": "pnpm --filter @iai/home build",
     "build:app": "pnpm --filter @iai/app build",
@@ -29,7 +29,9 @@
     "dev:web-stack": "node scripts/web-dev-stack.mjs",
     "dev:web": "pnpm --filter @iai/web dev",
     "mock:noos-commerce": "node scripts/noos-commerce-mock-server.mjs",
-    "test": "pnpm test:mail-smtp && pnpm test:flow && pnpm test:docs && pnpm test:nft && pnpm test:pay && pnpm test:root && pnpm test:home && pnpm test:app && pnpm test:web && pnpm test:dash && pnpm test:mail-worker && pnpm test:noos-commerce-contracts",
+    "test": "pnpm test:source",
+    "test:source": "pnpm build && pnpm --filter @iai/verify-runtime test && node scripts/run-source-integration-tests.mjs",
+    "test:external-evidence": "node scripts/run-external-evidence-tests.mjs",
     "test:root": "pnpm --filter @iai/root build && node --test tests/integration/root-*.test.mjs",
     "test:home": "pnpm --filter @iai/home build && node --test tests/integration/home-*.test.mjs",
     "test:app": "pnpm --filter @iai/app build && node --test tests/integration/app-*.test.mjs",
@@ -97,7 +99,7 @@
     "typecheck:dash": "pnpm --filter @iai/dash typecheck",
     "typecheck:noos-web": "pnpm --filter @iai/noos-web typecheck",
     "typecheck:web": "pnpm --filter @iai/web typecheck",
-    "typecheck": "pnpm --filter @iai/config build && pnpm --filter @iai/mail-core build && pnpm --filter @iai/mail-core typecheck && pnpm --filter @iai/mail-api typecheck && pnpm --filter @iai/root typecheck && pnpm --filter @iai/home typecheck && pnpm --filter @iai/app typecheck && pnpm --filter @iai/flow typecheck && pnpm --filter @iai/docs typecheck && pnpm --filter @iai/nft typecheck && pnpm --filter @iai/pay typecheck && pnpm --filter @iai/web typecheck && pnpm --filter @iai/dash typecheck && pnpm --filter @iai/mail-web typecheck && pnpm --filter @iai/mail-smtp typecheck && pnpm --filter @iai/mail-worker typecheck",
+    "typecheck": "pnpm -r --if-present typecheck",
     "dev:mail-smtp": "pnpm --filter @iai/mail-smtp dev",
     "quality:team2:static": "node scripts/team2-quality-static-check.mjs",
     "quality:team2:semantic": "pnpm typecheck:pay && pnpm typecheck:dash",
@@ -112,7 +114,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "tsx": "^4.19.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.3"
   }
 }

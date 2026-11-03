@@ -300,7 +300,7 @@ function nav(active: string, buyerId: string, locale: Locale, currentPath: strin
     { href: "/documents", key: "documents", label: chrome.nav.documents },
     { href: "/programs", key: "programs", label: chrome.nav.programs },
     { href: "/licenses", key: "licenses", label: chrome.nav.licenses },
-    { href: `/library?buyer=${buyerId}`, key: "library", label: chrome.nav.library },
+    { href: `/library?buyer=${encodeURIComponent(buyerId)}`, key: "library", label: chrome.nav.library },
     { href: "/operations", key: "operations", label: chrome.nav.operations }
   ];
 

@@ -23,9 +23,12 @@ import {
 
 export interface DashServerOptions extends Partial<DashAuthConfig>, Partial<DashRenderConfig> {
   fetchImpl?: typeof globalThis.fetch;
+  flowApiKey?: string;
 }
 
-interface ResolvedDashConfig extends DashAuthConfig, DashRenderConfig {}
+interface ResolvedDashConfig extends DashAuthConfig, DashRenderConfig {
+  flowApiKey?: string;
+}
 
 export function createDashServer(options: DashServerOptions = {}): Server {
   return createServer(createDashRequestHandler(options));
@@ -45,8 +48,11 @@ function resolveConfig(options: DashServerOptions): ResolvedDashConfig {
     defaultWorkspaceId:
       options.defaultWorkspaceId ?? process.env.DASH_DEFAULT_WORKSPACE_ID ?? "ws_flow_main",
     flowApiBase: options.flowApiBase ?? process.env.DASH_FLOW_API_BASE ?? "http://127.0.0.1:8787",
+    flowApiKey: options.flowApiKey ?? process.env.DASH_FLOW_API_KEY,
     sessionCookieName:
       options.sessionCookieName ?? process.env.DASH_SESSION_COOKIE_NAME ?? "iai_session",
+    sessionSigningSecret:
+      options.sessionSigningSecret ?? process.env.DASH_SESSION_SIGNING_SECRET,
     sharedAuthUrl:
       options.sharedAuthUrl ?? process.env.DASH_SHARED_AUTH_URL ?? "https://app.iai.one/auth/start",
     workspaceCookieName:
@@ -61,7 +67,13 @@ async function handleRequest(
   fetchImpl: typeof globalThis.fetch
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  let url: URL;
+  try {
+    url = new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    respondMalformedUrl(response);
+    return;
+  }
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
   const actionFeedback = resolveActionFeedback(url);
   const flowActionRoute = matchFlowActionRoute(url.pathname);
@@ -135,6 +147,7 @@ async function handleRequest(
     }
 
     const apiClient = createDashApiClient({
+      apiKey: config.flowApiKey,
       fetchImpl,
       flowApiBase: config.flowApiBase,
       workspaceId: session.workspaceId
@@ -152,7 +165,7 @@ async function handleRequest(
         return;
       }
 
-      const actor = session.sessionToken ?? "dash.operator";
+      const actor = session.subject ?? "dash.operator";
       const result =
         flowActionRoute.action === "builder.save"
           ? await apiClient.saveFlowDraft(flowActionRoute.flowId, requestId, actor)
@@ -246,6 +259,12 @@ async function handleRequest(
       ok: false
     }, locale);
   }
+}
+
+function respondMalformedUrl(response: ServerResponse): void {
+  response.statusCode = 400;
+  response.setHeader("content-type", "application/json; charset=utf-8");
+  response.end(JSON.stringify({ ok: false, error: { code: "INVALID_REQUEST_URL" } }));
 }
 
 function normalizeNextPath(value: string | null): string {

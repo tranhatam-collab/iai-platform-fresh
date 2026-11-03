@@ -1,0 +1,19 @@
+{
+  "eventType": "checkout.session.completed",
+  "checkoutSessionId": "cs_test_a1b2c3d4",
+  "productCode": "P11",
+  "licenseType": "Individual",
+  "entitlementCode": "ENT_MASTER",
+  "buyerEmail": "buyer@example.com",
+  "orderId": "ord_20260414_master_001",
+  "fulfillmentKey": "cs_test_a1b2c3d4",
+  "idempotencyPassed": false,
+  "entitlementActions": [
+    {
+      "action": "grant_parent_entitlement",
+      "entitlementCode": "ENT_MASTER"
+    }
+  ],
+  "confirmationEmailQueued": false,
+  "loggedAt": "2026-04-14T11:05:00Z"
+}

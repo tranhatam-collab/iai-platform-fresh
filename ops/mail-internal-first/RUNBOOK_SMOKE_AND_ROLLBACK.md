@@ -14,13 +14,15 @@ Chuan bi file env:
 ```bash
 cd /path/to/ops/mail-internal-first
 cp .env.production.example .env.production
-openssl rand -hex 32
+openssl rand -hex 32 # MAIL_API_KEY
+openssl rand -hex 32 # MAIL_API_WEBHOOK_SECRET
+openssl rand -hex 32 # MAIL_SMTP_REMOTE_TOKEN
+openssl rand -hex 32 # MAIL_SMTP_SEED_PASSWORD
 ```
 
-Gan cung 1 gia tri moi vao:
-- `MAIL_SMTP_REMOTE_TOKEN` trong `.env.production`
-- runtime `mail-api`
-- runtime `mail-smtp`
+Dung bon gia tri khac nhau. Khong tai su dung secret giua API, webhook,
+SMTP service auth va SMTP credential. Dien day du cac bien `REPLACE_WITH_*`
+trong `.env.production`.
 
 Tao thu muc data tren host:
 
@@ -34,7 +36,7 @@ set +a
 Xac nhan 3 duong dan nay ton tai:
 
 ```bash
-test -f "$MAIL_REPO_ROOT/apps/mail-api/dist/index.js"
+test -f "$MAIL_REPO_ROOT/apps/mail-api/dist/bootstrap.js"
 test -f "$MAIL_REPO_ROOT/apps/mail-smtp/dist/index.js"
 test -f "$MAIL_TLS_CERTS_PATH/cert.pem" && test -f "$MAIL_TLS_CERTS_PATH/key.pem"
 ```

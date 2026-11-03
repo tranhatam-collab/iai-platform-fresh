@@ -11,8 +11,9 @@ describe("noos-web surface", () => {
     assert.equal(typeof mod.renderRoute, "function", "renderRoute exported");
   });
 
-  it("server.ts exports a fetch handler", async () => {
+  it("exports side-effect-free request and server factories", async () => {
     const mod = await import("../../apps/noos-web/src/server.ts");
-    assert.ok(mod, "server module loads");
+    assert.equal(typeof mod.createNoosWebRequestHandler, "function");
+    assert.equal(typeof mod.createNoosWebServer, "function");
   });
 });

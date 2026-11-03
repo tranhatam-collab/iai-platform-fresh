@@ -20,24 +20,29 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Load AI system config
         run: |
-          node -e "const fs=require('fs'); const cfg=JSON.parse(fs.readFileSync('docs/AI_AUTONOMOUS_CONFIG.json','utf8')); console.log('system='+cfg.system_name); console.log('first_activation='+cfg.first_activation);"
+          node -e "const fs=require('fs'); const cfg=JSON.parse(fs.readFileSync('.github/AI_AUTONOMOUS_CONFIG.json','utf8')); console.log('system='+cfg.system_name); console.log('project='+cfg.project);"
 
       - name: Guard autonomous dispatcher
+        id: dispatcher_guard
         run: |
           if [ "${{ vars.AI_AUTONOMOUS_ENABLED }}" != "true" ]; then
             echo "AI_AUTONOMOUS_ENABLED is not true. Dispatcher scaffold is present but inactive."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
             echo "OPENAI_API_KEY is missing. Dispatcher scaffold is present but inactive."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - name: Call AI planner
+        if: steps.dispatcher_guard.outputs.enabled == 'true'
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
@@ -46,4 +51,3 @@ jobs:
           echo "Issue number: ${ISSUE_NUMBER}"
           echo "Issue title: ${ISSUE_TITLE}"
           echo "Use docs/AI_TEAM_EXECUTION_SYSTEM.md + docs/PROJECT_CONTEXT_ENGINE.md + docs/AI_MODEL_ROUTING_POLICY.md here."
-

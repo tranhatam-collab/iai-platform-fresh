@@ -64,14 +64,103 @@ function makeEnv(): Env {
     QUOTA_DO: mockNamespace(),
     USAGE_LEDGER_DB: undefined,
     USAGE_EVENTS_QUEUE: undefined,
+    VERIFY_RUNTIME_SERVICE_TOKEN: "verify-runtime-test-token",
   };
 }
 
 function makeRequest(path: string, init?: RequestInit): Request {
-  return new Request(new URL(path, "https://verify-runtime.iai.one"), init);
+  const headers = new Headers(init?.headers);
+  headers.set("authorization", "Bearer verify-runtime-test-token");
+  return new Request(new URL(path, "https://verify-runtime.iai.one"), { ...init, headers });
 }
 
 describe("worker routes", () => {
+  it("queue consumer retries instead of dropping usage when D1 is unavailable", async () => {
+    let retried = 0;
+    let acknowledged = 0;
+    const batch = {
+      messages: [
+        {
+          body: { event_id: "evt_queue_001" },
+          retry: () => { retried += 1; },
+          ack: () => { acknowledged += 1; },
+        },
+      ],
+    } as unknown as MessageBatch;
+
+    await (worker as any).queue(batch, makeEnv(), {} as ExecutionContext);
+    assert.strictEqual(retried, 1);
+    assert.strictEqual(acknowledged, 0);
+  });
+
+  it("queue consumer acknowledges usage only after D1 persistence", async () => {
+    let retried = 0;
+    let acknowledged = 0;
+    let inserted = 0;
+    const event = {
+      event_id: "evt_queue_002",
+      tenant: "iai",
+      workspace_id: "ws_queue",
+      subject_id: "system",
+      domain_surface: "verify.iai.one",
+      event_type: "api_call",
+      usage_unit: "request",
+      usage_amount: 1,
+      source_object_id: "req_queue_002",
+      occurred_at: new Date().toISOString(),
+      environment: "development",
+    };
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          run: async () => { inserted += 1; },
+        }),
+      }),
+    } as unknown as D1Database;
+    const batch = {
+      messages: [
+        {
+          body: event,
+          retry: () => { retried += 1; },
+          ack: () => { acknowledged += 1; },
+        },
+      ],
+    } as unknown as MessageBatch;
+    const env = makeEnv();
+    env.USAGE_LEDGER_DB = db;
+
+    await (worker as any).queue(batch, env, {} as ExecutionContext);
+    assert.strictEqual(inserted, 1);
+    assert.strictEqual(acknowledged, 1);
+    assert.strictEqual(retried, 0);
+  });
+
+  it("protected routes fail closed when service auth is not configured", async () => {
+    const req = makeRequest("/quota/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-iai-tenant": "iai" },
+      body: JSON.stringify({ tenant: "iai", workspaceId: "ws_auth" }),
+    });
+    const env = makeEnv();
+    env.VERIFY_RUNTIME_SERVICE_TOKEN = undefined;
+    const resp = await (worker as any).fetch(req, env, {} as any);
+    assert.strictEqual(resp.status, 503);
+  });
+
+  it("protected routes reject an invalid service token", async () => {
+    const req = new Request("https://verify-runtime.iai.one/quota/check", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-iai-tenant": "iai",
+        authorization: "Bearer invalid",
+      },
+      body: JSON.stringify({ tenant: "iai", workspaceId: "ws_auth" }),
+    });
+    const resp = await (worker as any).fetch(req, makeEnv(), {} as any);
+    assert.strictEqual(resp.status, 401);
+  });
+
   it("GET /health returns ok without tenant headers", async () => {
     const req = makeRequest("/health");
     const resp = await (worker as any).fetch(req, makeEnv(), {} as any);
@@ -139,6 +228,26 @@ describe("worker routes", () => {
     assert.strictEqual(json.error, "tenant_mismatch");
   });
 
+  it("POST /quota/increment rejects negative amounts", async () => {
+    const req = makeRequest("/quota/increment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-iai-tenant": "iai" },
+      body: JSON.stringify({ tenant: "iai", workspaceId: "ws_negative", amount: -10 }),
+    });
+    const resp = await (worker as any).fetch(req, makeEnv(), {} as any);
+    assert.strictEqual(resp.status, 400);
+  });
+
+  it("POST /quota/check rejects string limits", async () => {
+    const req = makeRequest("/quota/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-iai-tenant": "iai" },
+      body: JSON.stringify({ tenant: "iai", workspaceId: "ws_string", limit: "100" }),
+    });
+    const resp = await (worker as any).fetch(req, makeEnv(), {} as any);
+    assert.strictEqual(resp.status, 400);
+  });
+
   it("POST /usage/emit with valid event returns validate-only", async () => {
     const event = {
       event_id: "evt_001",
@@ -155,7 +264,7 @@ describe("worker routes", () => {
     };
     const req = makeRequest("/usage/emit", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-iai-tenant": "iai" },
       body: JSON.stringify(event),
     });
     const resp = await (worker as any).fetch(req, makeEnv(), {} as any);
@@ -181,7 +290,7 @@ describe("worker routes", () => {
     };
     const req = makeRequest("/usage/emit", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-iai-tenant": "iai" },
       body: JSON.stringify(event),
     });
     const resp = await (worker as any).fetch(req, makeEnv(), {} as any);

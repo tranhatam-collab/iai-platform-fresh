@@ -12,6 +12,7 @@
  * Env contract:
  *   PORT                            (default 3000)
  *   MAIL_API_BIND_ADDRESS           (default 0.0.0.0)
+ *   MAIL_API_KEY                    (required for all non-webhook /v1 routes)
  *   MAIL_API_WEBHOOK_SECRET         (required for inbound webhook to accept)
  *   MAIL_API_INBOUND_EVIDENCE_FILE  (optional; NDJSON path → file sink)
  *   MAIL_API_INBOUND_REPLAY_WINDOW_S (optional; default 300)
@@ -58,6 +59,7 @@ export function buildServerOptionsFromEnv(
     "0.0.0.0";
 
   const options: FlowApiServerOptions = {
+    apiKey: normalizeStringEnv(env.MAIL_API_KEY),
     inboundWebhook: {
       // Bind the secret resolver to the *passed-in* env object so tests (and
       // any other caller that supplies a synthetic env) get a deterministic

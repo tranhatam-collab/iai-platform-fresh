@@ -39,6 +39,11 @@ export class QuotaDO {
   private state: QuotaState;
 
   constructor(initial: QuotaState) {
+    assertNonNegativeSafeInteger(initial.used, "used");
+    assertPositiveSafeInteger(initial.limit, "limit");
+    if (initial.used > initial.limit) {
+      throw new RangeError("used must not exceed limit");
+    }
     this.state = initial;
   }
 
@@ -46,6 +51,7 @@ export class QuotaDO {
    * Check whether an increment would be allowed without mutating state.
    */
   check(increment: number): { allowed: boolean; remaining: number } {
+    assertPositiveSafeInteger(increment, "increment");
     const remaining = this.state.limit - this.state.used;
     return {
       allowed: increment <= remaining,
@@ -58,6 +64,7 @@ export class QuotaDO {
    * Throws QuotaExceededError if the increment would exceed limit.
    */
   increment(amount: number): QuotaState {
+    assertPositiveSafeInteger(amount, "amount");
     if (this.state.used + amount > this.state.limit) {
       throw new QuotaExceededError(
         this.state.tenant,
@@ -72,6 +79,18 @@ export class QuotaDO {
 
   getState(): Readonly<QuotaState> {
     return { ...this.state };
+  }
+}
+
+function assertPositiveSafeInteger(value: number, field: string): void {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new RangeError(`${field} must be a positive safe integer`);
+  }
+}
+
+function assertNonNegativeSafeInteger(value: number, field: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`${field} must be a non-negative safe integer`);
   }
 }
 

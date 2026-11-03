@@ -6,6 +6,21 @@ import { createFlowApiRequestHandler } from "../apps/mail-api/dist/server.js";
 import { createWebRequestHandler } from "../apps/web/dist/server.js";
 import { dispatchToHandler } from "../tests/support/http-handler.mjs";
 
+const BASELINE_EVENT_NAMES = [
+  "web_landing_view",
+  "web_role_selected",
+  "web_onboarding_started",
+  "web_auth_handoff_started",
+  "web_auth_handoff_completed",
+  "web_auth_handoff_failed",
+  "web_first_action_completed",
+  "web_flow_handoff_completed",
+  "web_route_handoff_failed",
+  "web_paid_intent_started",
+  "web_revenue_assist_completed",
+  "web_returned_within_7d"
+];
+
 function parseArg(prefix) {
   const entry = process.argv.find((argument) => argument.startsWith(`${prefix}=`));
   return entry ? entry.slice(prefix.length + 1) : null;
@@ -125,7 +140,7 @@ async function dispatchAndAssert(handler, { expectedStatus = 200, ...request }) 
   return response;
 }
 
-async function runSyntheticSmokeFlow(webHandler) {
+async function runSyntheticSmokeFlow(webHandler, eventApiKey) {
   await dispatchAndAssert(webHandler, {
     url: "/?campaign=pilot-alpha&variant=pilot-A&experiment_id=WEB-EXP-001&assignment_reason=smoke"
   });
@@ -171,31 +186,34 @@ async function runSyntheticSmokeFlow(webHandler) {
     url: "/shared-auth?campaign=pilot-alpha&variant=pilot-A"
   });
 
-  await dispatchAndAssert(webHandler, {
-    body: JSON.stringify({
-      assignmentReason: "smoke",
-      eventName: "web_first_action_completed",
-      experimentId: "WEB-EXP-001",
-      sourceCampaign: "pilot-alpha",
-      userOrAnonymousId: "buyer_pilot_001",
-      variantId: "pilot-A"
-    }),
-    expectedStatus: 202,
-    headers: {
-      "content-type": "application/json"
-    },
-    method: "POST",
-    url: "/events/track"
-  });
+  for (const eventName of BASELINE_EVENT_NAMES) {
+    await dispatchAndAssert(webHandler, {
+      body: JSON.stringify({
+        assignmentReason: "synthetic_smoke",
+        eventName,
+        experimentId: "WEB-EXP-001",
+        sourceCampaign: "pilot-alpha",
+        variantId: "pilot-A"
+      }),
+      expectedStatus: 202,
+      headers: {
+        authorization: `Bearer ${eventApiKey}`,
+        "content-type": "application/json"
+      },
+      method: "POST",
+      url: "/events/track"
+    });
+  }
 }
 
-async function runPilotBatchFlow(webHandler, batchFile) {
+async function runPilotBatchFlow(webHandler, batchFile, eventApiKey) {
   const records = await loadPilotBatch(batchFile);
   for (const record of records) {
     await dispatchAndAssert(webHandler, {
       body: JSON.stringify(record),
       expectedStatus: 202,
       headers: {
+        authorization: `Bearer ${eventApiKey}`,
         "content-type": "application/json"
       },
       method: "POST",
@@ -229,7 +247,10 @@ async function main() {
   process.env.WEB_EVENT_SINK_PATH = sinkPath;
 
   const flowApiBase = "http://internal.flow.team5";
+  const flowApiKey = "team5-local-flow-api-key";
+  const eventApiKey = "team5-local-event-api-key";
   const apiHandler = createFlowApiRequestHandler({
+    apiKey: flowApiKey,
     webContractConfig: {
       sharedAuthUrl: "https://app-preview.iai.one/auth/entry",
       sharedBillingUrl: "https://dash-preview.iai.one/billing-center",
@@ -240,8 +261,10 @@ async function main() {
   });
 
   const webHandler = createWebRequestHandler({
+    eventApiKey,
     fetchImpl: createHandlerFetch(flowApiBase, apiHandler),
-    flowApiBase
+    flowApiBase,
+    flowApiKey
   });
 
   let ingestedEvents = 0;
@@ -249,12 +272,13 @@ async function main() {
     if (!batchFile) {
       throw new Error("Bắt buộc truyền `--batch-file` khi mode=pilot-batch.");
     }
-    ingestedEvents = await runPilotBatchFlow(webHandler, batchFile);
+    ingestedEvents = await runPilotBatchFlow(webHandler, batchFile, eventApiKey);
   } else {
-    await runSyntheticSmokeFlow(webHandler);
+    await runSyntheticSmokeFlow(webHandler, eventApiKey);
   }
 
   const baselineResponse = await dispatchAndAssert(webHandler, {
+    headers: { authorization: `Bearer ${eventApiKey}` },
     url: "/events/baseline"
   });
   const baselinePayload = await baselineResponse.json();
@@ -263,6 +287,7 @@ async function main() {
   assert.deepEqual(baselinePayload.data.missing, []);
 
   const eventsResponse = await dispatchAndAssert(webHandler, {
+    headers: { authorization: `Bearer ${eventApiKey}` },
     url: "/events"
   });
   const eventsPayload = await eventsResponse.json();

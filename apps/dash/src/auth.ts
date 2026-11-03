@@ -1,7 +1,9 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 
 export interface DashAuthConfig {
   defaultWorkspaceId: string;
+  sessionSigningSecret?: string;
   sessionCookieName: string;
   workspaceCookieName: string;
 }
@@ -11,6 +13,7 @@ export interface DashSessionContext {
   loginPath: string;
   sessionSource: "cookie" | "header" | "missing";
   sessionToken?: string;
+  subject?: string;
   workspaceId: string;
   workspaceSource: "cookie" | "default" | "header" | "query";
 }
@@ -33,11 +36,8 @@ export function resolveDashSessionContext(
   const workspaceFromHeader = getHeader(request, "x-workspace-id");
   const workspaceFromQuery = normalizeString(url.searchParams.get("workspace_id"));
   const workspaceFromCookie = cookies[config.workspaceCookieName];
-  const workspaceId =
-    workspaceFromHeader ??
-    workspaceFromQuery ??
-    workspaceFromCookie ??
-    config.defaultWorkspaceId;
+  const requestedWorkspaceId =
+    workspaceFromHeader ?? workspaceFromQuery ?? workspaceFromCookie ?? config.defaultWorkspaceId;
   const workspaceSource: DashSessionContext["workspaceSource"] = workspaceFromHeader
     ? "header"
     : workspaceFromQuery
@@ -46,14 +46,89 @@ export function resolveDashSessionContext(
         ? "cookie"
         : "default";
 
+  const claims = verifyDashSessionToken(sessionToken, config.sessionSigningSecret);
+  const workspaceId = claims?.workspaceIds.includes(requestedWorkspaceId)
+    ? requestedWorkspaceId
+    : claims?.workspaceIds[0] ?? config.defaultWorkspaceId;
+
   return {
-    authenticated: Boolean(sessionToken),
+    authenticated: Boolean(claims),
     loginPath: buildLoginPath(url.pathname),
     sessionSource,
     sessionToken,
+    subject: claims?.subject,
     workspaceId,
     workspaceSource
   };
+}
+
+interface DashSessionClaims {
+  expiresAt: number;
+  subject: string;
+  workspaceIds: string[];
+}
+
+export function createDashSessionToken(
+  claims: DashSessionClaims,
+  signingSecret: string
+): string {
+  if (signingSecret.length < 32) {
+    throw new Error("Dash session signing secret must be at least 32 characters.");
+  }
+
+  const payload = Buffer.from(JSON.stringify(claims), "utf8").toString("base64url");
+  const signature = signPayload(payload, signingSecret);
+  return `${payload}.${signature}`;
+}
+
+function verifyDashSessionToken(
+  token: string | undefined,
+  signingSecret: string | undefined
+): DashSessionClaims | undefined {
+  if (!token || !signingSecret || signingSecret.length < 32) {
+    return undefined;
+  }
+
+  const [payload, signature, extra] = token.split(".");
+  if (!payload || !signature || extra) {
+    return undefined;
+  }
+
+  const expected = Buffer.from(signPayload(payload, signingSecret));
+  const actual = Buffer.from(signature);
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as Partial<DashSessionClaims>;
+    const workspaceIds = Array.isArray(parsed.workspaceIds)
+      ? parsed.workspaceIds.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+
+    if (
+      typeof parsed.subject !== "string" ||
+      !parsed.subject.trim() ||
+      typeof parsed.expiresAt !== "number" ||
+      !Number.isSafeInteger(parsed.expiresAt) ||
+      parsed.expiresAt <= Math.floor(Date.now() / 1000) ||
+      workspaceIds.length === 0
+    ) {
+      return undefined;
+    }
+
+    return {
+      expiresAt: parsed.expiresAt,
+      subject: parsed.subject.trim(),
+      workspaceIds
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function signPayload(payload: string, signingSecret: string): string {
+  return createHmac("sha256", signingSecret).update(payload).digest("base64url");
 }
 
 export function expireCookie(name: string): string {

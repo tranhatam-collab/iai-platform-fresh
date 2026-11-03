@@ -4,8 +4,10 @@ import test from "node:test";
 import { createWebRequestHandler } from "../../apps/web/dist/server.js";
 import { dispatchToHandler } from "../support/http-handler.mjs";
 
+const EVENT_API_KEY = "test-web-event-api-key-0123456789";
+
 test("web feedback form renders in English and Vietnamese", async () => {
-  const handler = createWebRequestHandler();
+  const handler = createWebRequestHandler({ eventApiKey: EVENT_API_KEY });
 
   const enResponse = await dispatchToHandler(handler, { url: "/feedback" });
   const enHtml = await enResponse.text();
@@ -30,7 +32,7 @@ test("disabling the publication hold removes the noindex header (Wave 5 go-live)
 });
 
 test("submitting valid feedback records an event and shows the submitted confirmation", async () => {
-  const handler = createWebRequestHandler();
+  const handler = createWebRequestHandler({ eventApiKey: EVENT_API_KEY });
 
   const submitResponse = await dispatchToHandler(handler, {
     body: new URLSearchParams({
@@ -48,7 +50,10 @@ test("submitting valid feedback records an event and shows the submitted confirm
   assert.match(submitHtml, /Feedback submitted/);
   assert.match(submitHtml, /Reference/);
 
-  const eventsResponse = await dispatchToHandler(handler, { url: "/events" });
+  const eventsResponse = await dispatchToHandler(handler, {
+    headers: { authorization: `Bearer ${EVENT_API_KEY}` },
+    url: "/events"
+  });
   const eventsPayload = await eventsResponse.json();
   assert.equal(eventsResponse.status, 200);
   assert.equal(eventsPayload.data.total, 1);

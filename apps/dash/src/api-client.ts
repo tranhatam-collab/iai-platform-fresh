@@ -1,4 +1,5 @@
 export interface DashApiClientConfig {
+  apiKey?: string;
   fetchImpl?: typeof globalThis.fetch;
   flowApiBase: string;
   workspaceId: string;
@@ -306,7 +307,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         `v1/flow/flows/${encodeURIComponent(flowId)}`,
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.flow) {
@@ -333,7 +335,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         "v1/flow/flows",
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.items) {
@@ -360,7 +363,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         `v1/flow/flows/${encodeURIComponent(flowId)}/drafts`,
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.items) {
@@ -391,7 +395,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         path,
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.items) {
@@ -421,7 +426,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         `v1/flow/flows/${encodeURIComponent(flowId)}/publish`,
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.readiness) {
@@ -454,7 +460,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         config.workspaceId,
         requestId,
         actor,
-        "preview publish packet"
+        "preview publish packet",
+        config.apiKey
       );
     },
 
@@ -470,7 +477,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         config.workspaceId,
         requestId,
         actor,
-        "publish flow"
+        "publish flow",
+        config.apiKey
       );
     },
 
@@ -486,7 +494,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         config.workspaceId,
         requestId,
         actor,
-        "save flow draft"
+        "save flow draft",
+        config.apiKey
       );
     },
 
@@ -502,7 +511,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         config.workspaceId,
         requestId,
         actor,
-        "validate flow draft"
+        "validate flow draft",
+        config.apiKey
       );
     },
 
@@ -512,7 +522,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         `v1/flow/flows/${encodeURIComponent(flowId)}/versions`,
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.items) {
@@ -543,7 +554,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         `v1/flow/runtime/executions/${encodeURIComponent(executionId)}`,
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.execution) {
@@ -569,7 +581,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         "v1/flow/runtime/executions",
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.items) {
@@ -596,7 +609,8 @@ export function createDashApiClient(config: DashApiClientConfig) {
         flowApiBase,
         "v1/flow/source-of-truth",
         config.workspaceId,
-        requestId
+        requestId,
+        config.apiKey
       );
 
       if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.summary) {
@@ -631,11 +645,13 @@ async function fetchResource<T>(
   flowApiBase: string,
   path: string,
   workspaceId: string,
-  requestId: string
+  requestId: string,
+  apiKey?: string
 ): Promise<{ payload?: DashApiEnvelope<T>; response: Response }> {
   const response = await fetchImpl(new URL(path, flowApiBase), {
     headers: {
       accept: "application/json",
+      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
       "x-request-id": requestId,
       "x-workspace-id": workspaceId
     }
@@ -660,11 +676,13 @@ async function postResource<T>(
   path: string,
   workspaceId: string,
   requestId: string,
-  actor: string
+  actor: string,
+  apiKey?: string
 ): Promise<{ payload?: DashApiEnvelope<T>; response: Response }> {
   const response = await fetchImpl(new URL(path, flowApiBase), {
     headers: {
       accept: "application/json",
+      ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
       "content-type": "application/json; charset=utf-8",
       "x-actor-id": actor,
       "x-request-id": requestId,
@@ -693,7 +711,8 @@ async function runFlowAction(
   workspaceId: string,
   requestId: string,
   actor: string,
-  actionLabel: string
+  actionLabel: string,
+  apiKey?: string
 ): Promise<DashFlowActionFetchResult> {
   const result = await postResource<FlowActionPayload>(
     fetchImpl,
@@ -701,7 +720,8 @@ async function runFlowAction(
     path,
     workspaceId,
     requestId,
-    actor
+    actor,
+    apiKey
   );
 
   if (!result.response.ok || result.payload?.ok !== true || !result.payload.data?.result) {

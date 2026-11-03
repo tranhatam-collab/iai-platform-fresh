@@ -4,9 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const workspaceRoot = path.resolve(__dirname, "../../../");
-const docsRoot = path.join(workspaceRoot, "docs", "noos");
-const fixturesRoot = path.join(docsRoot, "NOOS_COMMERCE_FIXTURES_v0.1");
+const commerceDataRoot = path.resolve(__dirname, "../data/commerce");
+const fixturesRoot = path.join(commerceDataRoot, "NOOS_COMMERCE_FIXTURES_v0.1");
 
 export type ProductCode =
   | "P01"
@@ -596,7 +595,7 @@ function loadData(): CommerceData {
     "product_definitions_all_v1.json"
   );
   const pricingPack = readJsonFile<CommerceSchemaPack>(
-    docsRoot,
+    commerceDataRoot,
     "NOOS_COMMERCE_SCHEMA_PACK_v0.1.json"
   );
   const libraries = new Map<string, LibraryView>();

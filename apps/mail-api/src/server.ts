@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import {
   createServer,
   type IncomingMessage,
@@ -107,6 +107,7 @@ class HttpError extends Error {
 }
 
 export interface FlowApiServerOptions {
+  apiKey?: string;
   domainDnsHealthSource?: MailDomainDnsHealthSource;
   messageSource?: MailMessageReadSource;
   providerRouteSource?: MailProviderRouteSource;
@@ -210,6 +211,7 @@ export function createFlowApiRequestHandler(options: FlowApiServerOptions = {}) 
   const webContractConfig = resolveWebOnboardingContractConfig(options.webContractConfig);
   const webContractWording = resolveWebOnboardingWordingContract(options.webContractWording);
   const inboundWebhookHandler = createInboundWebhookHandler(options.inboundWebhook);
+  const resolveApiKey = () => options.apiKey ?? process.env.MAIL_API_KEY;
 
   return (request: IncomingMessage, response: ServerResponse) => {
     void handleRequest(
@@ -223,7 +225,8 @@ export function createFlowApiRequestHandler(options: FlowApiServerOptions = {}) 
       suppressionSource,
       webContractConfig,
       webContractWording,
-      inboundWebhookHandler
+      inboundWebhookHandler,
+      resolveApiKey
     );
   };
 }
@@ -239,7 +242,8 @@ async function handleRequest(
   suppressionSource: MailSuppressionReadSource,
   webContractConfig: WebOnboardingContractConfig,
   webContractWording: WebOnboardingWordingContract,
-  inboundWebhookHandler: ReturnType<typeof createInboundWebhookHandler>
+  inboundWebhookHandler: ReturnType<typeof createInboundWebhookHandler>,
+  resolveApiKey: () => string | undefined
 ) {
   const requestId = getHeader(request, "x-request-id") ?? `req_${randomUUID()}`;
   const now = new Date().toISOString();
@@ -248,11 +252,31 @@ async function handleRequest(
     const method = request.method ?? "GET";
     const url = new URL(request.url ?? "/", "http://localhost");
 
-    const inboundResult = await inboundWebhookHandler(request, response, requestId);
-    if (inboundResult.handled) {
+    if (method !== "GET" && method !== "POST") {
+      throw new HttpError(405, "VALIDATION_ERROR", "Only GET and POST methods are supported by this service.");
+    }
+
+    if (url.pathname === "/health") {
+      respondSuccess(response, 200, requestId, {
+        service: "api.flow",
+        status: "ok",
+        timestamp: now
+      });
       return;
     }
 
+    // Provider webhook delivery is authenticated by its HMAC signature. All
+    // other /v1 routes require the internal service key below.
+    if (method === "POST" && url.pathname === "/v1/webhooks/inbound") {
+      const inboundResult = await inboundWebhookHandler(request, response, requestId);
+      if (inboundResult.handled) {
+        return;
+      }
+    }
+
+    // The SMTP bridge and /v1/send implement their own narrower service-key
+    // contracts. Let that backend authenticate its routes before applying the
+    // general read-model key below.
     if (
       await smtpInternalBackend.handleRequest(
         request,
@@ -265,16 +289,12 @@ async function handleRequest(
       return;
     }
 
-    if (method !== "GET" && method !== "POST") {
-      throw new HttpError(405, "VALIDATION_ERROR", "Only GET and POST methods are supported by this service.");
+    if (url.pathname.startsWith("/v1/")) {
+      assertMailApiAuthorization(request, resolveApiKey());
     }
 
-    if (url.pathname === "/health") {
-      respondSuccess(response, 200, requestId, {
-        service: "api.flow",
-        status: "ok",
-        timestamp: now
-      });
+    const inboundResult = await inboundWebhookHandler(request, response, requestId);
+    if (inboundResult.handled) {
       return;
     }
 
@@ -732,6 +752,26 @@ function getHeader(request: IncomingMessage, headerName: string): string | undef
   }
 
   return undefined;
+}
+
+function assertMailApiAuthorization(request: IncomingMessage, expectedApiKey: string | undefined): void {
+  const normalizedExpected = expectedApiKey?.trim();
+  if (!normalizedExpected) {
+    throw new HttpError(503, "MAIL_API_KEY_MISSING", "MAIL_API_KEY is not configured.");
+  }
+
+  const authorization = getHeader(request, "authorization");
+  const bearer = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  const supplied = bearer ?? getHeader(request, "x-api-key");
+  if (!supplied || !constantTimeTextEqual(supplied, normalizedExpected)) {
+    throw new HttpError(401, "UNAUTHORIZED", "A valid mail service API key is required.");
+  }
+}
+
+function constantTimeTextEqual(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left, "utf8");
+  const rightBuffer = Buffer.from(right, "utf8");
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function matchMessageRoute(

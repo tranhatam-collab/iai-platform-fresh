@@ -74,7 +74,12 @@ import {
   escalateReconciliationCase
 } from "./lib/reconciliation";
 import { sendPaymentEmailWithEvidence } from "./lib/email-evidence";
-import { readJsonBody, scalarValue, sha256Hex, stringValue, integerValue } from "./lib/utils";
+import { readJsonBody, scalarValue, sha256Hex, stringValue, integerValue, timingSafeEqual } from "./lib/utils";
+import {
+  authorizeOperator,
+  checkoutUrlsMatchSiteOrigin,
+  requiresOperatorAuthorization
+} from "./lib/payment-security";
 
 export interface Env {
   [key: string]: unknown;
@@ -87,6 +92,7 @@ export interface Env {
   PAYOS_CHECKSUM_KEY?: string;
   PAYOS_PARTNER_CODE?: string;
   PAY_IAI_ONE_WEBHOOK_SECRET?: string;
+  PAY_OPERATOR_API_KEY?: string;
   VETUONGLAI_PRODUCT_CATALOG_JSON?: string;
   SMTP_HOST?: string;
   SMTP_PORT?: string;
@@ -123,11 +129,19 @@ function baseResponse(env: Env) {
   };
 }
 
-async function createPlannedCheckoutSession(request: Request, env: Env): Promise<Response> {
-  const body = await request.json().catch(() => null);
-  const payload = readJsonBody(body);
-  const result = await executeCheckoutSessionPayload(payload, env);
-  return json(result.body, result.status);
+async function authorizeOperatorRequest(request: Request, env: Env): Promise<Response | null> {
+  const result = await authorizeOperator(request.headers, stringValue(env.PAY_OPERATOR_API_KEY));
+  if (result.ok) return null;
+  return json(
+    {
+      ok: false,
+      code: result.code,
+      ...(result.status === 503
+        ? { message: "PAY_OPERATOR_API_KEY is required for operator and finance routes." }
+        : {})
+    },
+    result.status
+  );
 }
 
 async function executeCheckoutSessionPayload(payload: Record<string, unknown>, env: Env): Promise<{ status: number; body: Record<string, unknown> }> {
@@ -304,6 +318,19 @@ async function createInternalCheckoutSession(request: Request, env: Env): Promis
     siteCode: validation.value.site_code
   });
   if (!siteAuthorization.ok) return siteAuthorization.response;
+
+  if (!checkoutUrlsMatchSiteOrigin(validation.value, siteAuthorization.record.allowed_origin)) {
+    return json(
+      {
+        ok: false,
+        success: false,
+        contract_version: "2026-04-15",
+        code: "CHECKOUT_ORIGIN_NOT_ALLOWED",
+        message: "success_url, cancel_url, and callback_url must match the registered merchant origin."
+      },
+      422
+    );
+  }
 
   const requestHash = await sha256Hex(rawBody);
   const existingIdempotency = await getIdempotencyRecord(db, INTERNAL_CHECKOUT_ROUTE, idempotencyKey);
@@ -587,7 +614,19 @@ export default {
       }
 
       if (path === "/v1/checkout/sessions" && request.method === "POST") {
-        return await createPlannedCheckoutSession(request, env);
+        return json(
+          {
+            ok: false,
+            code: "ROUTE_RETIRED",
+            message: "Use the authenticated /internal/checkout-session contract."
+          },
+          410
+        );
+      }
+
+      if (requiresOperatorAuthorization(path, request.method)) {
+        const authorizationError = await authorizeOperatorRequest(request, env);
+        if (authorizationError) return authorizationError;
       }
 
       if (path === "/v1/payments/search" && request.method === "GET") {
@@ -1344,15 +1383,29 @@ export default {
           new Request(request.url, { method: "POST", headers: request.headers, body: rawBody }),
           tenantCode
         );
+
+        if (!result.body.signature_valid) {
+          return json(
+            {
+              ...result.body,
+              ok: false,
+              code: "WEBHOOK_SIGNATURE_INVALID"
+            },
+            401
+          );
+        }
+
         const payload = readJsonBody(result.body.raw);
         const webhookData = readJsonBody(payload.data);
         const providerOrderId = scalarValue(webhookData.orderCode);
         const providerEventId = await sha256Hex(rawBody);
         const existingProviderEvent = await getProviderEventByEventId(db, "payos", providerEventId);
-        const attempt = providerOrderId ? await findPaymentIntentByProviderOrderId(db, "payos", providerOrderId) : null;
-        const payosSuccess = Boolean(result.body.signature_valid && payload.success === true && stringValue(webhookData.code) === "00");
-        let providerEventProcessed = Boolean(result.body.signature_valid);
-        let providerEventErrorDetail = result.body.signature_valid ? null : "Webhook signature invalid";
+        const attempt = providerOrderId
+          ? await findPaymentIntentByProviderOrderId(db, "payos", providerOrderId, tenantCode)
+          : null;
+        const payosSuccess = Boolean(payload.success === true && stringValue(webhookData.code) === "00");
+        let providerEventProcessed = true;
+        let providerEventErrorDetail: string | null = null;
         let memberWebhookSummary: VetuongLaiMemberWebhookDispatchSummary | null = null;
         let ledgerPostingResult: { ok: boolean; transferId?: string; error?: string } | null = null;
         let emailEvidenceResult: { ok: boolean; emailReceiptId?: string; error?: string } | null = null;
@@ -1395,11 +1448,11 @@ export default {
             captureReference: stringValue(webhookData.reference) || null,
             responseJson: payload,
             completed: payosSuccess,
-            failed: Boolean(result.body.signature_valid && stringValue(webhookData.code) !== "00")
+            failed: stringValue(webhookData.code) !== "00"
           });
 
           await updatePaymentIntentStatus(db, attempt.payment_intent_id, {
-            paymentStatus: payosSuccess ? "paid" : result.body.signature_valid ? "provider_response" : "webhook_rejected",
+            paymentStatus: payosSuccess ? "paid" : "provider_response",
             paid: payosSuccess
           });
 

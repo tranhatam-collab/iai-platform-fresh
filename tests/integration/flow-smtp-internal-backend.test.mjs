@@ -10,9 +10,20 @@ import { dispatchToHandler } from "../support/http-handler.mjs";
 
 function createBackendConfig() {
   return {
+    defaultSender: "no-reply@tx.iai.one",
     password: "smtp-secret",
+    primaryDomain: "tx.iai.one",
     username: "smtp-operator",
     workspaceId: "ws_mail_main"
+  };
+}
+
+const API_KEY = "mail-api-test-key";
+const REMOTE_TOKEN = "mail-smtp-remote-test-token";
+
+function internalHeaders() {
+  return {
+    authorization: `Bearer ${REMOTE_TOKEN}`
   };
 }
 
@@ -20,7 +31,9 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
   const dbPath = `/tmp/iai-mail-smtp-internal-${randomUUID()}.sqlite`;
   const seed = createBackendConfig();
   const backend = createSmtpInternalBackend({
+    apiKey: API_KEY,
     databaseUrl: `sqlite:${dbPath}`,
+    remoteToken: REMOTE_TOKEN,
     seed
   });
   const handler = createFlowApiRequestHandler({
@@ -41,13 +54,14 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
       secure: true,
       username: seed.username
     }),
+    headers: internalHeaders(),
     method: "POST",
     url: "/v1/internal/smtp/auth"
   });
   const authPayload = await authResponse.json();
   assert.equal(authResponse.status, 200);
   assert.equal(authPayload.workspaceId, "ws_mail_main");
-  assert.equal(authPayload.credentialId, "smtpcred_dev");
+  assert.equal(authPayload.credentialId, "smtpcred_ws_mail_main");
 
   const rawMimeBase64 = Buffer.from(
     "From: no-reply@tx.iai.one\r\nSubject: Smoke\r\n\r\nhello",
@@ -62,6 +76,7 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
       recipients: ["user@example.com"],
       stream: "transactional"
     }),
+    headers: internalHeaders(),
     method: "POST",
     url: "/v1/internal/smtp/normalize"
   });
@@ -92,6 +107,7 @@ test("internal smtp backend normalizes, queues, and persists worker artifacts", 
       traceId: normalizePayload.traceId,
       workspaceId: normalizePayload.workspaceId
     }),
+    headers: internalHeaders(),
     method: "POST",
     url: "/v1/internal/smtp/queue"
   });
@@ -131,7 +147,9 @@ test("internal smtp backend recipient check returns suppression rejection", asyn
   const dbPath = `/tmp/iai-mail-smtp-internal-${randomUUID()}.sqlite`;
   const seed = createBackendConfig();
   const backend = createSmtpInternalBackend({
+    apiKey: API_KEY,
     databaseUrl: `sqlite:${dbPath}`,
+    remoteToken: REMOTE_TOKEN,
     seed
   });
   const handler = createFlowApiRequestHandler({
@@ -152,6 +170,7 @@ test("internal smtp backend recipient check returns suppression rejection", asyn
       secure: true,
       username: seed.username
     }),
+    headers: internalHeaders(),
     method: "POST",
     url: "/v1/internal/smtp/auth"
   });
@@ -165,6 +184,7 @@ test("internal smtp backend recipient check returns suppression rejection", asyn
       recipientCount: 1,
       stream: "transactional"
     }),
+    headers: internalHeaders(),
     method: "POST",
     url: "/v1/internal/smtp/recipient"
   });
@@ -173,4 +193,61 @@ test("internal smtp backend recipient check returns suppression rejection", asyn
   assert.equal(recipientResponse.status, 200);
   assert.equal(recipientPayload.ok, false);
   assert.equal(recipientPayload.smtpCode, 550);
+});
+
+test("internal smtp backend fails closed when the service token is missing", async (t) => {
+  const dbPath = `/tmp/iai-mail-smtp-internal-${randomUUID()}.sqlite`;
+  const backend = createSmtpInternalBackend({
+    databaseUrl: `sqlite:${dbPath}`,
+    seed: createBackendConfig()
+  });
+  const handler = createFlowApiRequestHandler({ smtpInternalBackend: backend });
+
+  t.after(() => {
+    backend.close();
+    rmSync(dbPath, { force: true });
+  });
+
+  const response = await dispatchToHandler(handler, {
+    body: JSON.stringify({
+      method: "LOGIN",
+      password: "smtp-secret",
+      secure: true,
+      username: "smtp-operator"
+    }),
+    method: "POST",
+    url: "/v1/internal/smtp/auth"
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(payload.error.code, "SERVICE_AUTH_NOT_CONFIGURED");
+});
+
+test("internal smtp backend does not create default credentials", async (t) => {
+  const dbPath = `/tmp/iai-mail-smtp-internal-${randomUUID()}.sqlite`;
+  const backend = createSmtpInternalBackend({
+    databaseUrl: `sqlite:${dbPath}`,
+    remoteToken: REMOTE_TOKEN
+  });
+  const handler = createFlowApiRequestHandler({ smtpInternalBackend: backend });
+
+  t.after(() => {
+    backend.close();
+    rmSync(dbPath, { force: true });
+  });
+
+  const response = await dispatchToHandler(handler, {
+    body: JSON.stringify({
+      method: "LOGIN",
+      password: "dev-secret",
+      secure: true,
+      username: "smtp-dev"
+    }),
+    headers: internalHeaders(),
+    method: "POST",
+    url: "/v1/internal/smtp/auth"
+  });
+
+  assert.equal(response.status, 401);
 });

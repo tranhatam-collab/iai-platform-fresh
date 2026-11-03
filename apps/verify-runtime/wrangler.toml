@@ -34,6 +34,11 @@ queue = "verify-usage-events"
 queue = "verify-usage-events"
 max_batch_size = 10
 max_batch_timeout = 5
+max_retries = 5
+dead_letter_queue = "verify-usage-events-dlq"
+
+# Required secret; provision separately for every deployed environment:
+#   wrangler secret put VERIFY_RUNTIME_SERVICE_TOKEN --config apps/verify-runtime/wrangler.toml
 
 [vars]
 APP_NAME = "verify-runtime"

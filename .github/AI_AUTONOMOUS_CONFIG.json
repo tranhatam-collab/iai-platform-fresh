@@ -1,0 +1,19 @@
+{
+  "system_name": "iai.one-ai-team-system",
+  "project": "iai.one",
+  "default_branch": "main",
+  "branch_prefix": "OMCODE/",
+  "auto_create_branch": true,
+  "auto_pr": true,
+  "auto_merge": false,
+  "require_human_approval": true,
+  "require_test_evidence": true,
+  "require_release_evidence": true,
+  "allow_secret_mutation_by_ai": false,
+  "allow_infra_core_mutation_by_ai": false,
+  "limits": {
+    "max_turns_per_task": 7,
+    "max_files_per_task": 20,
+    "max_parallel_tracks": 3
+  }
+}

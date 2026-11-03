@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -31,18 +31,26 @@ jobs:
       - name: Universal Quality Gate
         run: pnpm quality:gate
 
+      - name: Source Tests
+        run: pnpm test:source
+
       - name: Guard AI review
+        id: ai_review_guard
         run: |
           if [ "${{ vars.AI_AUTONOMOUS_ENABLED }}" != "true" ]; then
             echo "AI_AUTONOMOUS_ENABLED is not true. PR review scaffold is present but inactive."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
             echo "OPENAI_API_KEY is missing. PR review scaffold is present but inactive."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       - name: Review Code
+        if: steps.ai_review_guard.outputs.enabled == 'true'
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |

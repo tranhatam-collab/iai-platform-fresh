@@ -1,11 +1,30 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { resolveLocale, t, type Locale } from "./i18n.js";
 import { renderNftHome, renderNftNotFound, type NftRenderConfig } from "./render.js";
 
-export interface NftServerOptions extends Partial<NftRenderConfig> {}
+export interface NftServerOptions extends Partial<NftRenderConfig> {
+  allowDemoAsset?: boolean;
+  partnerSyncSecret?: string;
+  verifyPasskey?: (input: {
+    authenticatorResponse: string;
+    challengeNonce: string;
+  }) => Promise<boolean>;
+  verifyWalletSignature?: (input: {
+    action: string;
+    assetId?: string;
+    challengeNonce: string;
+    signature: string;
+    walletId: string;
+  }) => Promise<boolean>;
+}
 
-interface ResolvedNftConfig extends NftRenderConfig {}
+interface ResolvedNftConfig extends NftRenderConfig {
+  allowDemoAsset: boolean;
+  partnerSyncSecret?: string;
+  verifyPasskey?: NftServerOptions["verifyPasskey"];
+  verifyWalletSignature?: NftServerOptions["verifyWalletSignature"];
+}
 
 interface AuditEvent {
   eventName: string;
@@ -15,12 +34,15 @@ interface AuditEvent {
 
 interface NftRuntimeState {
   auditEvents: AuditEvent[];
-  proxyTokens: Map<string, { action: string; assetId: string }>;
+  proxyTokens: Map<string, { action: string; assetId: string; expiresAt: number }>;
   stepChallenges: Set<string>;
-  stepSessions: Set<string>;
+  stepSessions: Map<string, number>;
   walletChallenges: Map<string, { action: string; assetId?: string; walletId: string }>;
-  walletProofs: Set<string>;
+  walletProofs: Map<string, number>;
 }
+
+const PROOF_TTL_MS = 5 * 60 * 1000;
+const PROXY_TOKEN_TTL_MS = 60 * 1000;
 
 export function createNftServer(options: NftServerOptions = {}): Server {
   return createServer(createNftRequestHandler(options));
@@ -43,7 +65,11 @@ function resolveConfig(options: NftServerOptions): ResolvedNftConfig {
       options.developerUrl ?? process.env.NFT_DEVELOPER_URL ?? "https://developer.iai.one",
     flowUrl: options.flowUrl ?? process.env.NFT_FLOW_URL ?? "https://flow.iai.one",
     homeUrl: options.homeUrl ?? process.env.NFT_HOME_URL ?? "https://home.iai.one",
-    rootUrl: options.rootUrl ?? process.env.NFT_ROOT_URL ?? "https://iai.one"
+    rootUrl: options.rootUrl ?? process.env.NFT_ROOT_URL ?? "https://iai.one",
+    allowDemoAsset: options.allowDemoAsset ?? process.env.NFT_ALLOW_DEMO_ASSET === "true",
+    partnerSyncSecret: options.partnerSyncSecret ?? process.env.NFT_PARTNER_SYNC_SECRET,
+    verifyPasskey: options.verifyPasskey,
+    verifyWalletSignature: options.verifyWalletSignature
   };
 }
 
@@ -54,11 +80,17 @@ async function handleRequest(
   state: NftRuntimeState
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  let url: URL;
+  try {
+    url = new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    respondMalformedUrl(response);
+    return;
+  }
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
 
   try {
-    if (await handleNftApiRequest(request, response, method, url, locale, state)) {
+    if (await handleNftApiRequest(request, response, method, url, locale, state, config)) {
       return;
     }
 
@@ -139,13 +171,20 @@ async function handleRequest(
   }
 }
 
+function respondMalformedUrl(response: ServerResponse): void {
+  response.statusCode = 400;
+  response.setHeader("content-type", "application/json; charset=utf-8");
+  response.end(JSON.stringify({ ok: false, error: { code: "INVALID_REQUEST_URL" } }));
+}
+
 async function handleNftApiRequest(
   request: IncomingMessage,
   response: ServerResponse,
   method: string,
   url: URL,
   locale: Locale,
-  state: NftRuntimeState
+  state: NftRuntimeState,
+  config: ResolvedNftConfig
 ): Promise<boolean> {
   if (!url.pathname.startsWith("/v1/nft/")) {
     return false;
@@ -174,12 +213,14 @@ async function handleNftApiRequest(
     const proxyTokenId = url.searchParams.get("proxy_token_id")?.trim() ?? "";
     const token = state.proxyTokens.get(proxyTokenId);
 
-    if (!token || token.assetId !== assetId) {
+    if (!token || token.assetId !== assetId || token.expiresAt <= Date.now()) {
+      if (token) state.proxyTokens.delete(proxyTokenId);
       recordAuditEvent(state, "download.denied", { assetId });
       respondJson(response, 403, { ok: false, error: { code: "PROXY_TOKEN_INVALID" } }, locale);
       return true;
     }
 
+    state.proxyTokens.delete(proxyTokenId);
     recordAuditEvent(state, "download.started", { assetId });
     recordAuditEvent(state, "download.completed", { assetId });
     respondJson(response, 200, { ok: true, data: { download_status: "completed" } }, locale);
@@ -205,14 +246,24 @@ async function handleNftApiRequest(
     const challengeNonce = stringField(body, "challenge_nonce");
     const authenticatorResponse = stringField(body, "authenticator_response");
 
-    if (!challengeNonce || !state.stepChallenges.has(challengeNonce) || authenticatorResponse !== "passkey_ok") {
+    if (!config.verifyPasskey) {
+      respondJson(response, 503, { ok: false, error: { code: "PASSKEY_VERIFIER_NOT_CONFIGURED" } }, locale);
+      return true;
+    }
+    const passkeyValid = Boolean(
+      challengeNonce &&
+      authenticatorResponse &&
+      state.stepChallenges.has(challengeNonce) &&
+      (await config.verifyPasskey({ challengeNonce, authenticatorResponse }))
+    );
+    if (!passkeyValid || !challengeNonce) {
       respondJson(response, 401, { ok: false, error: { code: "STEP_UP_INVALID" } }, locale);
       return true;
     }
 
     state.stepChallenges.delete(challengeNonce);
     const stepUpSessionId = `step_session_${randomUUID()}`;
-    state.stepSessions.add(stepUpSessionId);
+    state.stepSessions.set(stepUpSessionId, Date.now() + PROOF_TTL_MS);
     recordAuditEvent(state, "step_up.verified");
     respondJson(response, 200, { ok: true, data: { step_up_session_id: stepUpSessionId } }, locale);
     return true;
@@ -239,15 +290,31 @@ async function handleNftApiRequest(
     const challengeNonce = stringField(body, "challenge_nonce");
     const signature = stringField(body, "signature");
 
-    if (!challengeNonce || !state.walletChallenges.has(challengeNonce) || signature !== `sig:${challengeNonce}`) {
+    if (!config.verifyWalletSignature) {
+      respondJson(response, 503, { ok: false, error: { code: "WALLET_VERIFIER_NOT_CONFIGURED" } }, locale);
+      return true;
+    }
+    const challenge = challengeNonce ? state.walletChallenges.get(challengeNonce) : undefined;
+    const signatureValid = Boolean(
+      challengeNonce &&
+      signature &&
+      challenge &&
+      (await config.verifyWalletSignature({
+        action: challenge.action,
+        assetId: challenge.assetId,
+        challengeNonce,
+        signature,
+        walletId: challenge.walletId
+      }))
+    );
+    if (!signatureValid || !challengeNonce || !challenge) {
       respondJson(response, 401, { ok: false, error: { code: "WALLET_PROOF_INVALID" } }, locale);
       return true;
     }
 
-    const challenge = state.walletChallenges.get(challengeNonce);
     state.walletChallenges.delete(challengeNonce);
     const signatureProofId = `wallet_proof_${randomUUID()}`;
-    state.walletProofs.add(signatureProofId);
+    state.walletProofs.set(signatureProofId, Date.now() + PROOF_TTL_MS);
     recordAuditEvent(state, "wallet.proof.verified", {
       assetId: challenge?.assetId,
       walletId: challenge?.walletId
@@ -259,7 +326,7 @@ async function handleNftApiRequest(
   const assetAccessMatch = url.pathname.match(/^\/v1\/nft\/assets\/([^/]+)\/access-check$/);
   if (assetAccessMatch) {
     const assetId = decodeURIComponent(assetAccessMatch[1] ?? "");
-    const decision = evaluateAssetAccess(assetId, body, state);
+    const decision = evaluateAssetAccess(assetId, body, state, config);
     recordAuditEvent(state, decision === "allow" ? "access.allowed" : "access.denied", { assetId, decision });
     respondJson(
       response,
@@ -280,7 +347,7 @@ async function handleNftApiRequest(
   const proxyTokenMatch = url.pathname.match(/^\/v1\/nft\/assets\/([^/]+)\/proxy-token$/);
   if (proxyTokenMatch) {
     const assetId = decodeURIComponent(proxyTokenMatch[1] ?? "");
-    const decision = evaluateAssetAccess(assetId, body, state);
+    const decision = evaluateAssetAccess(assetId, body, state, config);
 
     if (decision !== "allow") {
       recordAuditEvent(state, "access.denied", { assetId, decision });
@@ -289,17 +356,21 @@ async function handleNftApiRequest(
     }
 
     const tokenId = `proxy_${randomUUID()}`;
-    state.proxyTokens.set(tokenId, { action: stringField(body, "action") ?? "download", assetId });
+    state.proxyTokens.set(tokenId, {
+      action: stringField(body, "action") ?? "download",
+      assetId,
+      expiresAt: Date.now() + PROXY_TOKEN_TTL_MS
+    });
     recordAuditEvent(state, "download.proxy_token.issued", { assetId });
     respondJson(response, 200, { ok: true, data: { proxy_token_id: tokenId } }, locale);
     return true;
   }
 
   if (url.pathname === "/v1/nft/partner-sync/events") {
-    const result = verifyPartnerSyncHeaders(request.headers);
+    const result = verifyPartnerSyncHeaders(request.headers, body, config.partnerSyncSecret);
     if (!result.ok) {
       recordAuditEvent(state, "partner.sync.rejected", { code: result.code });
-      respondJson(response, 400, { ok: false, error: { code: result.code } }, locale);
+      respondJson(response, result.status, { ok: false, error: { code: result.code } }, locale);
       return true;
     }
 
@@ -320,50 +391,71 @@ function createRuntimeState(): NftRuntimeState {
     auditEvents: [],
     proxyTokens: new Map(),
     stepChallenges: new Set(),
-    stepSessions: new Set(),
+    stepSessions: new Map(),
     walletChallenges: new Map(),
-    walletProofs: new Set()
+    walletProofs: new Map()
   };
 }
 
-function evaluateAssetAccess(assetId: string, body: Record<string, unknown>, state: NftRuntimeState): string {
-  if (assetId === "ASSET-20260324-DEMO01") {
+function evaluateAssetAccess(
+  assetId: string,
+  body: Record<string, unknown>,
+  state: NftRuntimeState,
+  config: ResolvedNftConfig
+): string {
+  if (config.allowDemoAsset && assetId === "ASSET-20260324-DEMO01") {
     return "allow";
   }
 
   const stepUpSessionId = stringField(body, "step_up_session_id_optional");
-  if (!stepUpSessionId || !state.stepSessions.has(stepUpSessionId)) {
+  const stepExpiry = stepUpSessionId ? state.stepSessions.get(stepUpSessionId) : undefined;
+  if (!stepUpSessionId || !stepExpiry || stepExpiry <= Date.now()) {
+    if (stepUpSessionId) state.stepSessions.delete(stepUpSessionId);
     return "need_step_up";
   }
 
   const signatureProofId = stringField(body, "signature_proof_id_optional");
-  if (!signatureProofId || !state.walletProofs.has(signatureProofId)) {
+  const proofExpiry = signatureProofId ? state.walletProofs.get(signatureProofId) : undefined;
+  if (!signatureProofId || !proofExpiry || proofExpiry <= Date.now()) {
+    if (signatureProofId) state.walletProofs.delete(signatureProofId);
     return "need_wallet_proof";
   }
 
   return "allow";
 }
 
-function verifyPartnerSyncHeaders(headers: IncomingMessage["headers"]): { code: string; ok: false } | { ok: true } {
+function verifyPartnerSyncHeaders(
+  headers: IncomingMessage["headers"],
+  body: Record<string, unknown>,
+  secret: string | undefined
+): { code: string; ok: false; status: 400 | 503 } | { ok: true } {
+  if (!secret) {
+    return { code: "PARTNER_SYNC_SECRET_NOT_CONFIGURED", ok: false, status: 503 };
+  }
   const idempotencyKey = normalizeHeaderValue(headers["x-idempotency-key"]);
   const signature = normalizeHeaderValue(headers["x-partner-signature"]);
   const sourceTimestamp = normalizeHeaderValue(headers["x-source-timestamp"]);
 
   if (!idempotencyKey || !signature || !sourceTimestamp) {
-    return { code: "PARTNER_SYNC_SIGNATURE_REQUIRED", ok: false };
+    return { code: "PARTNER_SYNC_SIGNATURE_REQUIRED", ok: false, status: 400 };
   }
 
   const timestampMs = Date.parse(sourceTimestamp);
   if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000) {
-    return { code: "PARTNER_SYNC_STALE", ok: false };
+    return { code: "PARTNER_SYNC_STALE", ok: false, status: 400 };
   }
 
-  const expected = `sha256:${createHash("sha256")
-    .update(`${idempotencyKey}:${sourceTimestamp}:vc.vetuonglai.com`)
+  const expected = `sha256=${createHmac("sha256", secret)
+    .update(`${idempotencyKey}:${sourceTimestamp}:${JSON.stringify(body)}`)
     .digest("hex")}`;
 
-  if (signature !== expected) {
-    return { code: "PARTNER_SYNC_SIGNATURE_INVALID", ok: false };
+  const presentedBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (
+    presentedBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(presentedBuffer, expectedBuffer)
+  ) {
+    return { code: "PARTNER_SYNC_SIGNATURE_INVALID", ok: false, status: 400 };
   }
 
   return { ok: true };

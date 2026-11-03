@@ -5,14 +5,22 @@ services:
     container_name: iai-mail-api-internal
     image: node:22-alpine
     working_dir: /workspace
-    command: ["node", "apps/mail-api/dist/index.js"]
+    command: ["node", "apps/mail-api/dist/bootstrap.js"]
     restart: unless-stopped
     environment:
       NODE_ENV: "production"
       PORT: "8787"
       API_FLOW_BIND_ADDRESS: "0.0.0.0"
       MAIL_DB_URL: "sqlite:/data/iai-mail-flow.sqlite"
-      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN}"
+      MAIL_API_KEY: "${MAIL_API_KEY:?MAIL_API_KEY is required}"
+      MAIL_API_WEBHOOK_SECRET: "${MAIL_API_WEBHOOK_SECRET:?MAIL_API_WEBHOOK_SECRET is required}"
+      MAIL_API_INBOUND_EVIDENCE_FILE: "/data/inbound-evidence.ndjson"
+      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN:?MAIL_SMTP_REMOTE_TOKEN is required}"
+      MAIL_SMTP_SEED_USERNAME: "${MAIL_SMTP_SEED_USERNAME:?MAIL_SMTP_SEED_USERNAME is required}"
+      MAIL_SMTP_SEED_PASSWORD: "${MAIL_SMTP_SEED_PASSWORD:?MAIL_SMTP_SEED_PASSWORD is required}"
+      MAIL_SMTP_SEED_WORKSPACE_ID: "${MAIL_SMTP_SEED_WORKSPACE_ID:?MAIL_SMTP_SEED_WORKSPACE_ID is required}"
+      MAIL_SMTP_SEED_DEFAULT_SENDER: "${MAIL_SMTP_SEED_DEFAULT_SENDER:?MAIL_SMTP_SEED_DEFAULT_SENDER is required}"
+      MAIL_SMTP_SEED_PRIMARY_DOMAIN: "${MAIL_SMTP_SEED_PRIMARY_DOMAIN:?MAIL_SMTP_SEED_PRIMARY_DOMAIN is required}"
     volumes:
       - type: bind
         source: ${MAIL_REPO_ROOT}
@@ -67,7 +75,7 @@ services:
       MAIL_SMTP_METRICS_ENABLED: "false"
       MAIL_SMTP_BACKEND_MODE: "remote"
       MAIL_SMTP_REMOTE_BASE_URL: "${MAIL_SMTP_REMOTE_BASE_URL}"
-      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN}"
+      MAIL_SMTP_REMOTE_TOKEN: "${MAIL_SMTP_REMOTE_TOKEN:?MAIL_SMTP_REMOTE_TOKEN is required}"
       MAIL_API_HEALTH_URL: "http://mail-api:8787/health"
       MAIL_API_DEPENDENCIES_HEALTH_URL: "http://mail-api:8787/v1/health/dependencies"
       MAIL_SMTP_QUEUE_URL: "${MAIL_SMTP_QUEUE_URL:-redis://placeholder:6379/0}"

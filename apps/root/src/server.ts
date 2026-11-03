@@ -110,7 +110,15 @@ async function handleRequest(
   config: ResolvedRootConfig
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  let url: URL;
+  try {
+    url = new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    response.statusCode = 400;
+    response.setHeader("content-type", "application/json; charset=utf-8");
+    response.end(JSON.stringify({ ok: false, error: { code: "INVALID_REQUEST_URL" } }));
+    return;
+  }
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
   const authProviderStatuses = getAuthProviderStatuses(config);
 

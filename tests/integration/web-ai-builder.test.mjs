@@ -4,6 +4,9 @@ import test from "node:test";
 import { createWebRequestHandler } from "../../apps/web/dist/server.js";
 import { dispatchToHandler } from "../support/http-handler.mjs";
 
+const EVENT_API_KEY = "test-web-event-api-key-0123456789";
+const eventHeaders = { authorization: `Bearer ${EVENT_API_KEY}` };
+
 function stubClient(result) {
   const calls = [];
   return {
@@ -32,7 +35,11 @@ test("a successful AI build renders the generated sections and records completio
     ],
     previewHtml: "<section>Hero</section>"
   });
-  const handler = createWebRequestHandler({ aiBuilderEnabled: true, aiAgentClient: client });
+  const handler = createWebRequestHandler({
+    aiBuilderEnabled: true,
+    aiAgentClient: client,
+    eventApiKey: EVENT_API_KEY
+  });
 
   const formResponse = await dispatchToHandler(handler, { url: "/build" });
   assert.equal(formResponse.status, 200);
@@ -57,7 +64,7 @@ test("a successful AI build renders the generated sections and records completio
   assert.equal(client.calls.length, 1);
   assert.equal(client.calls[0].businessName, "Tam Coffee");
 
-  const eventsResponse = await dispatchToHandler(handler, { url: "/events" });
+  const eventsResponse = await dispatchToHandler(handler, { headers: eventHeaders, url: "/events" });
   const eventsPayload = await eventsResponse.json();
   const names = eventsPayload.data.items.map((item) => item.eventName);
   assert.deepEqual(names, ["web_ai_build_started", "web_ai_build_completed"]);
@@ -65,7 +72,11 @@ test("a successful AI build renders the generated sections and records completio
 
 test("a quota-exceeded AI build renders the quota error and records failure", async () => {
   const client = stubClient({ ok: false, error: "AI_QUOTA_EXCEEDED" });
-  const handler = createWebRequestHandler({ aiBuilderEnabled: true, aiAgentClient: client });
+  const handler = createWebRequestHandler({
+    aiBuilderEnabled: true,
+    aiAgentClient: client,
+    eventApiKey: EVENT_API_KEY
+  });
 
   const buildResponse = await dispatchToHandler(handler, {
     body: new URLSearchParams({
@@ -82,7 +93,7 @@ test("a quota-exceeded AI build renders the quota error and records failure", as
   assert.equal(buildResponse.status, 502);
   assert.match(buildHtml, /free AI build quota is reached/);
 
-  const eventsResponse = await dispatchToHandler(handler, { url: "/events" });
+  const eventsResponse = await dispatchToHandler(handler, { headers: eventHeaders, url: "/events" });
   const eventsPayload = await eventsResponse.json();
   const failed = eventsPayload.data.items.find((item) => item.eventName === "web_ai_build_failed");
   assert.ok(failed);

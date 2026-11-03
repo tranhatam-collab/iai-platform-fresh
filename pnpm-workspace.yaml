@@ -1,3 +1,9 @@
 packages:
   - apps/*
   - packages/*
+  - pay.iai.one
+  - trust-iai-one-starter
+
+allowBuilds:
+  esbuild: true
+  workerd: true

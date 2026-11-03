@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-03T06:12:15.667Z",
+  "status": "PARTIAL_RECOVERY_HANDOFF",
+  "sourceBranch": "security-remediation-20261006",
+  "sourceHead": "930c7af5c1ee4d00e717f1502697e403f6e6aa66",
+  "includedReadableTracked": [
+    ".github/workflows/ai-dispatcher.yml",
+    ".github/workflows/ai-pr-review.yml",
+    ".github/workflows/ai-release.yml",
+    ".gitignore",
+    "apps/app/src/server.ts",
+    "apps/dash/src/api-client.ts",
+    "apps/dash/src/auth.ts",
+    "apps/dash/src/server.ts",
+    "apps/developer/src/server.ts",
+    "apps/docs/src/server.ts",
+    "apps/mail-api/package.json",
+    "apps/mail-api/src/bootstrap.ts",
+    "apps/mail-api/src/server.ts",
+    "apps/mail-api/src/smtp-internal.ts",
+    "apps/mail-smtp/package.json",
+    "apps/mail-smtp/src/health-server.ts",
+    "apps/nft/src/server.ts",
+    "apps/noos-web/package.json",
+    "apps/noos-web/src/data.ts",
+    "apps/noos-web/src/index.ts",
+    "apps/noos-web/src/render.ts",
+    "apps/noos-web/src/server.ts",
+    "apps/pay/src/server.ts",
+    "apps/root/src/server.ts",
+    "apps/verify-runtime/src/durable-object.ts",
+    "apps/verify-runtime/src/quota-do.ts",
+    "apps/verify-runtime/src/worker.ts",
+    "apps/verify-runtime/tests/worker-routes.test.ts",
+    "apps/verify-runtime/wrangler.toml",
+    "apps/web/src/server.ts",
+    "ops/mail-internal-first/.env.production.example",
+    "ops/mail-internal-first/RUNBOOK_SMOKE_AND_ROLLBACK.md",
+    "ops/mail-internal-first/docker-compose.prod.yml",
+    "package.json",
+    "pay.iai.one/src/index.ts",
+    "pay.iai.one/wrangler.jsonc",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "scripts/noos-commerce-contract-check.mjs",
+    "scripts/team5-web-kpi-smoke.mjs",
+    "tests/integration/flow-smtp-internal-backend.test.mjs",
+    "tests/integration/noos-commerce-surface.test.mjs",
+    "tests/integration/noos-web-surface.test.mjs",
+    "tests/integration/web-ai-builder.test.mjs",
+    "tests/integration/web-feedback.test.mjs"
+  ],
+  "includedReadableUntracked": [
+    "tests/integration/http-request-url-security.test.mjs",
+    "tests/integration/pay-worker-security.test.mjs",
+    "tests/integration/web-event-security.test.mjs",
+    "IAI_ONE_MASTER_HANDOFF_QA_2026-10-17.md",
+    "scripts/run-external-evidence-tests.mjs",
+    "scripts/run-source-integration-tests.mjs",
+    ".github/AI_AUTONOMOUS_CONFIG.json",
+    "pay.iai.one/src/lib/payment-security.ts",
+    "ops/security/SECURITY_REMEDIATION_DEPLOY_GATES.md",
+    "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/catalog/product_definitions_all_v1.json",
+    "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/library/library_expired_updates_architecture.json",
+    "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/library/library_active_master.json",
+    "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/manifest.json",
+    "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/webhooks/checkout_session_completed_p11_duplicate.json",
+    "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/webhooks/checkout_session_completed_p11.json",
+    "GITHUB_REMOTE_AUDIT_HANDOFF_2026-11-03.md"
+  ],
+  "blockedTracked": [
+    {
+      "file": "apps/flow/src/server.ts",
+      "indexSize": 4863,
+      "placeholderSize": 5201,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/home/src/server.ts",
+      "indexSize": 4819,
+      "placeholderSize": 5157,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/verify-runtime/tests/quota-do.test.ts",
+      "indexSize": 1829,
+      "placeholderSize": 2409,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/web/src/event-log.ts",
+      "indexSize": 1300,
+      "placeholderSize": 2482,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "pay.iai.one/src/lib/db.ts",
+      "indexSize": 36959,
+      "placeholderSize": 37234,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "scripts/noos-commerce-mock-server.mjs",
+      "indexSize": 16940,
+      "placeholderSize": 16774,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "tests/integration/dash-app-phase0.test.mjs",
+      "indexSize": 14523,
+      "placeholderSize": 15151,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "tests/integration/flow-api-source-of-truth.test.mjs",
+      "indexSize": 13882,
+      "placeholderSize": 15168,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "tests/integration/flow-mail-api-send.test.mjs",
+      "indexSize": 7442,
+      "placeholderSize": 7534,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "tests/integration/mail-api-bootstrap.test.mjs",
+      "indexSize": 6852,
+      "placeholderSize": 7166,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "tests/integration/nft-runtime-secure.test.mjs",
+      "indexSize": 9067,
+      "placeholderSize": 10837,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "tests/integration/noos-commerce-stack.test.mjs",
+      "indexSize": 6905,
+      "placeholderSize": 6934,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "tests/integration/web-onboarding-contract.test.mjs",
+      "indexSize": 5301,
+      "placeholderSize": 5686,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    }
+  ],
+  "blockedUntracked": [
+    {
+      "file": ".github/workflows/source-ci.yml",
+      "size": 468,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_OPENAPI_RENDERED.yaml",
+      "size": 39729,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/library/library_upgraded_master_to_team.json",
+      "size": 1060,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/library/library_update_available_vietnam.json",
+      "size": 686,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/README.md",
+      "size": 1104,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/entitlements/active_update_available_vietnam_p07.json",
+      "size": 366,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/entitlements/expired_updates_only_ent_architecture_p03.json",
+      "size": 392,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/entitlements/active_ent_master_p11.json",
+      "size": 353,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_FIXTURES_v0.1/entitlements/upgraded_ent_master_p11.json",
+      "size": 354,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/data/commerce/NOOS_COMMERCE_SCHEMA_PACK_v0.1.json",
+      "size": 54944,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    },
+    {
+      "file": "apps/noos-web/src/main.ts",
+      "size": 261,
+      "reason": "FILEPROVIDER_DATALESS_NOT_UPLOADED"
+    }
+  ],
+  "secretScan": {
+    "scope": "readable included files only",
+    "recognizedRawSecretFindings": 0,
+    "complete": false,
+    "reason": "blocked files unavailable"
+  },
+  "validation": {
+    "installFrozenLockfile": "PASS",
+    "diffCheck": "PASS",
+    "githubAssetGuard": "PASS",
+    "qualityGate": "FAIL_BLOCKED_WIP_DEPENDENCY",
+    "sourceTests": "FAIL_BLOCKED_WIP_DEPENDENCY",
+    "sourceTestBlocker": "apps/web/src/event-log.ts is unavailable while apps/web/src/server.ts requires its new exports"
+  },
+  "releaseAuthorization": false
+}

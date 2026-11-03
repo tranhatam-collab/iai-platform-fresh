@@ -1,7 +1,13 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { createAiAgentClient, type AiAgentClient, type AiAgentMode } from "./aiagent-client.js";
-import { createWebEventRecorder, type WebEventRecorder } from "./event-log.js";
+import {
+  WEB_BASELINE_EVENT_NAMES,
+  buildWebEventBaseline,
+  createWebEventRecorder,
+  type WebEventName,
+  type WebEventRecorder
+} from "./event-log.js";
 import { buildFlowContractUrl } from "./flow-contract.js";
 import { resolveLocale } from "./i18n.js";
 import {
@@ -22,6 +28,8 @@ import {
 
 export interface WebServerOptions extends Partial<SharedContractConfig> {
   contractWorkspaceId?: string;
+  flowApiKey?: string;
+  eventApiKey?: string;
   fetchImpl?: typeof globalThis.fetch;
   aiBuilderEnabled?: boolean;
   aiAgentApiBase?: string;
@@ -32,6 +40,8 @@ export interface WebServerOptions extends Partial<SharedContractConfig> {
 
 interface WebRuntimeConfig extends SharedContractConfig {
   contractWorkspaceId: string;
+  flowApiKey?: string;
+  eventApiKey?: string;
   aiBuilderEnabled: boolean;
   aiAgentApiBase: string;
   aiAgentMode: AiAgentMode;
@@ -61,6 +71,17 @@ interface SharedOnboardingContractPayload extends SharedContractConfig {
 const validRoles: OnboardingRole[] = ["starter", "builder", "operator"];
 const validIntents: OnboardingIntent[] = ["information", "leads", "commerce"];
 
+class WebHttpError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    public readonly code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = "WebHttpError";
+  }
+}
+
 export function createWebServer(options: WebServerOptions = {}): Server {
   return createServer(createWebRequestHandler(options));
 }
@@ -88,6 +109,8 @@ function resolveConfig(options: WebServerOptions): WebRuntimeConfig {
     contractWorkspaceId:
       options.contractWorkspaceId ?? process.env.WEB_CONTRACT_WORKSPACE_ID ?? "ws_flow_main",
     flowApiBase: options.flowApiBase ?? process.env.WEB_SHARED_FLOW_API_BASE ?? "http://127.0.0.1:8787",
+    flowApiKey: options.flowApiKey ?? process.env.WEB_SHARED_FLOW_API_KEY,
+    eventApiKey: options.eventApiKey ?? process.env.WEB_EVENT_API_KEY,
     sharedAuthUrl:
       options.sharedAuthUrl ?? process.env.WEB_SHARED_AUTH_URL ?? "https://app.iai.one/auth/start",
     sharedBillingUrl:
@@ -151,6 +174,7 @@ async function handleRequest(
     }
 
     if (request.method === "GET" && url.pathname === "/events") {
+      assertWebEventAuthorization(request, config.eventApiKey);
       respondJson(response, 200, {
         ok: true,
         data: {
@@ -158,6 +182,40 @@ async function handleRequest(
           total: eventRecorder.list(10_000).length
         }
       });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/events/baseline") {
+      assertWebEventAuthorization(request, config.eventApiKey);
+      respondJson(response, 200, {
+        ok: true,
+        data: buildWebEventBaseline(eventRecorder.list(10_000))
+      });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/events/track") {
+      assertWebEventAuthorization(request, config.eventApiKey);
+      const body = await readJsonBody(request);
+      const eventName = parseWebEventName(body.eventName);
+      if (!eventName) {
+        respondJson(response, 400, {
+          ok: false,
+          error: { code: "VALIDATION_ERROR", message: "Unsupported eventName." }
+        });
+        return;
+      }
+      const record = eventRecorder.record({
+        eventName,
+        assignmentReason: normalizeBoundedString(body.assignmentReason),
+        experimentId: normalizeBoundedString(body.experimentId),
+        intent: normalizeBoundedString(body.intent),
+        role: normalizeBoundedString(body.role),
+        route: normalizeBoundedString(body.route) ?? "/events/track",
+        sourceCampaign: normalizeBoundedString(body.sourceCampaign) ?? "internal",
+        variantId: normalizeBoundedString(body.variantId) ?? "control"
+      });
+      respondJson(response, 202, { ok: true, data: record });
       return;
     }
 
@@ -545,6 +603,13 @@ async function handleRequest(
       error: { code: "NOT_FOUND", message: "Route not found." }
     });
   } catch (error) {
+    if (error instanceof WebHttpError) {
+      respondJson(response, error.statusCode, {
+        ok: false,
+        error: { code: error.code, message: error.message }
+      });
+      return;
+    }
     const message = error instanceof Error ? error.message : "Unknown runtime error.";
     respondJson(response, 502, {
       ok: false,
@@ -605,6 +670,48 @@ function normalizeString(value: string | null): string | undefined {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeBoundedString(value: unknown, maxLength = 160): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, maxLength) : undefined;
+}
+
+function parseWebEventName(value: unknown): WebEventName | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  return WEB_BASELINE_EVENT_NAMES.includes(value as WebEventName)
+    ? (value as WebEventName)
+    : undefined;
+}
+
+function assertWebEventAuthorization(request: IncomingMessage, expectedKey: string | undefined): void {
+  const expected = expectedKey?.trim();
+  if (!expected) {
+    throw new WebHttpError(503, "EVENT_API_KEY_MISSING", "WEB_EVENT_API_KEY is not configured.");
+  }
+  const authorization = normalizeRequestHeader(request.headers.authorization);
+  const supplied = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  if (!supplied || !constantTimeTextEqual(supplied, expected)) {
+    throw new WebHttpError(401, "UNAUTHORIZED", "A valid event API key is required.");
+  }
+}
+
+function constantTimeTextEqual(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left, "utf8");
+  const rightBuffer = Buffer.from(right, "utf8");
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function normalizeRequestHeader(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0]?.trim() || undefined;
+  }
+  return value?.trim() || undefined;
 }
 
 const validFeedbackCategories: FeedbackCategory[] = ["bug", "idea", "praise", "question"];
@@ -720,11 +827,12 @@ function buildSharedAuthHref(
 }
 
 async function loadSharedOnboardingContract(
-  config: SharedContractConfig & { contractWorkspaceId: string },
+  config: SharedContractConfig & { contractWorkspaceId: string; flowApiKey?: string },
   requestId: string,
   fetchImpl: typeof globalThis.fetch
 ): Promise<SharedOnboardingContractPayload> {
   const headers = {
+    ...(config.flowApiKey ? { authorization: `Bearer ${config.flowApiKey}` } : {}),
     "x-request-id": requestId,
     "x-workspace-id": config.contractWorkspaceId
   };

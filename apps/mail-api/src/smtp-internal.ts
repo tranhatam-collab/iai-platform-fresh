@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import { type IncomingMessage, type ServerResponse } from "node:http";
 import { DatabaseSync } from "node:sqlite";
 import { URL } from "node:url";
@@ -204,13 +204,15 @@ class MailPersistenceStore {
 
   constructor(
     databaseUrl: string,
-    seed: ResolvedSeedConfig
+    seed?: ResolvedSeedConfig
   ) {
     this.db = new DatabaseSync(resolveSqliteDatabasePath(databaseUrl));
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA busy_timeout = 2000;");
     this.ensureSchema();
-    this.ensureSeed(seed);
+    if (seed) {
+      this.ensureSeed(seed);
+    }
   }
 
   close() {
@@ -523,28 +525,36 @@ class MailPersistenceStore {
             credential_id AS credentialId,
             workspace_id AS workspaceId,
             principal,
+            password AS passwordHash,
             default_stream AS defaultStream,
             allowed_streams_json AS allowedStreamsJson,
             sender_identity_id AS senderIdentityId
           FROM smtp_credentials
           WHERE status = 'active'
             AND username = ?
-            AND password = ?
           LIMIT 1;
         `
       )
-      .get(username.trim(), password) as
+      .get(username.trim()) as
       | {
           allowedStreamsJson?: string;
           credentialId?: string;
           defaultStream?: string;
           principal?: string;
+          passwordHash?: string;
           senderIdentityId?: string;
           workspaceId?: string;
         }
       | undefined;
 
-    if (!row?.credentialId || !row.workspaceId || !row.principal || !row.defaultStream) {
+    if (
+      !row?.credentialId ||
+      !row.workspaceId ||
+      !row.principal ||
+      !row.defaultStream ||
+      !row.passwordHash ||
+      !verifyCredentialPassword(password, row.passwordHash)
+    ) {
       return undefined;
     }
 
@@ -1237,14 +1247,23 @@ class MailPersistenceStore {
             sender_identity_id,
             status,
             created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?);
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
+          ON CONFLICT(credential_id) DO UPDATE SET
+            workspace_id = excluded.workspace_id,
+            username = excluded.username,
+            password = excluded.password,
+            principal = excluded.principal,
+            default_stream = excluded.default_stream,
+            allowed_streams_json = excluded.allowed_streams_json,
+            sender_identity_id = excluded.sender_identity_id,
+            status = 'active';
         `
       )
       .run(
         seed.credentialId,
         seed.workspaceId,
         seed.username,
-        seed.password,
+        hashCredentialPassword(seed.password),
         seed.username,
         seed.defaultStream,
         JSON.stringify(seed.allowedStreams),
@@ -1436,7 +1455,7 @@ export function createSmtpInternalBackend(
   options: SmtpInternalBackendOptions = {}
 ): SmtpInternalBackend {
   const expectedApiKey = options.apiKey ?? process.env.MAIL_API_KEY;
-  const seed = resolveSeed(options.seed);
+  const seed = resolveSeed(options.seed ?? seedFromEnvironment());
   const expectedToken = options.remoteToken ?? process.env.MAIL_SMTP_REMOTE_TOKEN;
   const databaseUrl = options.databaseUrl ?? process.env.MAIL_DB_URL ?? "sqlite:/tmp/iai-mail.db";
   const store = new MailPersistenceStore(databaseUrl, seed);
@@ -1522,6 +1541,23 @@ export function createSmtpInternalBackend(
         const messageRoute = matchMessageReadRoute(url.pathname);
 
         if (workspaceId && messageRoute && store.hasPersistedMessage(messageRoute.messageId, workspaceId)) {
+          try {
+            assertApiAuthorization(request, expectedApiKey);
+          } catch (error) {
+            if (error instanceof SmtpBackendError) {
+              writeErrorEnvelope(
+                response,
+                requestId,
+                error.statusCode,
+                error.errorCode,
+                error.message,
+                error.details
+              );
+              return true;
+            }
+            throw error;
+          }
+
           if (messageRoute.resource === "detail") {
             const detail = store.getPersistedMessageDetail(messageRoute.messageId, workspaceId);
             if (detail) {
@@ -2286,24 +2322,86 @@ function parseJsonStringArray(value: string | undefined, fallback: string[]) {
   }
 }
 
-function resolveSeed(seed: SmtpInternalBackendOptions["seed"]) {
-  const workspaceId = seed?.workspaceId?.trim() || "ws_dev";
-  const defaultStream = normalizeSeedStream(seed?.defaultStream) ?? "transactional";
-  const allowedStreams = normalizeSeedAllowedStreams(seed?.allowedStreams, defaultStream);
+function resolveSeed(seed: SmtpInternalBackendOptions["seed"]): ResolvedSeedConfig | undefined {
+  if (!seed) {
+    return undefined;
+  }
+
+  const username = requireSeedValue(seed.username, "username");
+  const password = requireSeedValue(seed.password, "password");
+  const workspaceId = requireSeedValue(seed.workspaceId, "workspaceId");
+  const defaultSender = requireSeedValue(seed.defaultSender, "defaultSender").toLowerCase();
+  const primaryDomain = requireSeedValue(seed.primaryDomain, "primaryDomain").toLowerCase();
+  const defaultStream = normalizeSeedStream(seed.defaultStream) ?? "transactional";
+  const allowedStreams = normalizeSeedAllowedStreams(seed.allowedStreams, defaultStream);
 
   return {
     allowedStreams,
-    blockedRecipient: seed?.blockedRecipient?.trim().toLowerCase() || "blocked@example.com",
-    credentialId: seed?.credentialId?.trim() || "smtpcred_dev",
-    defaultSender: seed?.defaultSender?.trim().toLowerCase() || "no-reply@tx.iai.one",
+    blockedRecipient: seed.blockedRecipient?.trim().toLowerCase() || "blocked@example.com",
+    credentialId: seed.credentialId?.trim() || `smtpcred_${workspaceId}`,
+    defaultSender,
     defaultStream,
-    password: seed?.password?.trim() || "dev-secret",
-    primaryDomain: seed?.primaryDomain?.trim().toLowerCase() || "tx.iai.one",
-    providerRouteId: seed?.providerRouteId?.trim() || "transactional_primary",
-    seededSenderIdentityId: "sender_dev_default",
-    username: seed?.username?.trim() || "smtp-dev",
+    password,
+    primaryDomain,
+    providerRouteId: seed.providerRouteId?.trim() || "transactional_primary",
+    seededSenderIdentityId: `sender_${workspaceId}_default`,
+    username,
     workspaceId
   };
+}
+
+function seedFromEnvironment(): SmtpInternalBackendOptions["seed"] | undefined {
+  const username = process.env.MAIL_SMTP_SEED_USERNAME?.trim();
+  const password = process.env.MAIL_SMTP_SEED_PASSWORD?.trim();
+  const workspaceId = process.env.MAIL_SMTP_SEED_WORKSPACE_ID?.trim();
+  const defaultSender = process.env.MAIL_SMTP_SEED_DEFAULT_SENDER?.trim();
+  const primaryDomain = process.env.MAIL_SMTP_SEED_PRIMARY_DOMAIN?.trim();
+
+  if (!username && !password && !workspaceId && !defaultSender && !primaryDomain) {
+    return undefined;
+  }
+
+  return {
+    allowedStreams: process.env.MAIL_SMTP_SEED_ALLOWED_STREAMS?.split(","),
+    blockedRecipient: process.env.MAIL_SMTP_SEED_BLOCKED_RECIPIENT,
+    credentialId: process.env.MAIL_SMTP_SEED_CREDENTIAL_ID,
+    defaultSender,
+    defaultStream: process.env.MAIL_SMTP_SEED_DEFAULT_STREAM,
+    password,
+    primaryDomain,
+    providerRouteId: process.env.MAIL_SMTP_SEED_PROVIDER_ROUTE_ID,
+    username,
+    workspaceId
+  };
+}
+
+function requireSeedValue(value: string | undefined, field: string): string {
+  const normalized = value?.trim();
+  if (!normalized) {
+    throw new Error(`SMTP seed ${field} is required when SMTP seed configuration is enabled.`);
+  }
+  return normalized;
+}
+
+function hashCredentialPassword(password: string): string {
+  const salt = randomBytes(16);
+  const digest = scryptSync(password, salt, 64);
+  return `scrypt$${salt.toString("base64")}$${digest.toString("base64")}`;
+}
+
+function verifyCredentialPassword(password: string, encoded: string): boolean {
+  const [algorithm, saltBase64, digestBase64] = encoded.split("$");
+  if (algorithm !== "scrypt" || !saltBase64 || !digestBase64) {
+    return false;
+  }
+
+  try {
+    const expected = Buffer.from(digestBase64, "base64");
+    const actual = scryptSync(password, Buffer.from(saltBase64, "base64"), expected.length);
+    return expected.length > 0 && timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
 }
 
 function normalizeSeedAllowedStreams(value: string[] | undefined, fallback: string) {
@@ -2410,7 +2508,11 @@ function getOperationFromPath(pathname: string): SmtpOperation {
 
 function assertAuthorization(request: IncomingMessage, expectedToken?: string) {
   if (!expectedToken) {
-    return;
+    throw new SmtpBackendError(
+      503,
+      "SERVICE_AUTH_NOT_CONFIGURED",
+      "MAIL_SMTP_REMOTE_TOKEN is not configured for internal SMTP routes."
+    );
   }
 
   const authorization = getHeaderValue(request, "authorization");

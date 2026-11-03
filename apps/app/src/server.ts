@@ -37,7 +37,13 @@ async function handleRequest(
   config: ResolvedAppConfig
 ) {
   const method = request.method ?? "GET";
-  const url = new URL(request.url ?? "/", "http://127.0.0.1");
+  let url: URL;
+  try {
+    url = new URL(request.url ?? "/", "http://127.0.0.1");
+  } catch {
+    respondMalformedUrl(response);
+    return;
+  }
   const locale = resolveLocale(url, normalizeHeaderValue(request.headers["accept-language"]));
 
   try {
@@ -100,6 +106,12 @@ async function handleRequest(
       locale
     );
   }
+}
+
+function respondMalformedUrl(response: ServerResponse): void {
+  response.statusCode = 400;
+  response.setHeader("content-type", "application/json; charset=utf-8");
+  response.end(JSON.stringify({ ok: false, error: { code: "INVALID_REQUEST_URL" } }));
 }
 
 function respondHtml(response: ServerResponse, statusCode: number, html: string, locale: Locale): void {

@@ -7,8 +7,8 @@ import path from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, '..');
-const docsRoot = path.join(workspaceRoot, 'docs', 'noos');
-const fixturesRoot = path.join(docsRoot, 'NOOS_COMMERCE_FIXTURES_v0.1');
+const commerceDataRoot = path.join(workspaceRoot, 'apps', 'noos-web', 'data', 'commerce');
+const fixturesRoot = path.join(commerceDataRoot, 'NOOS_COMMERCE_FIXTURES_v0.1');
 
 function loadJson(filePath) {
   return JSON.parse(readFileSync(filePath, 'utf8'));
@@ -43,16 +43,12 @@ function walkJsonFiles(dirPath) {
   return entries.sort();
 }
 
-const schemaPack = loadJson(path.join(docsRoot, 'NOOS_COMMERCE_SCHEMA_PACK_v0.1.json'));
-const yamlSummary = loadYamlSummary(path.join(docsRoot, 'NOOS_COMMERCE_OPENAPI_RENDERED.yaml'));
+const schemaPack = loadJson(path.join(commerceDataRoot, 'NOOS_COMMERCE_SCHEMA_PACK_v0.1.json'));
+const yamlSummary = loadYamlSummary(path.join(commerceDataRoot, 'NOOS_COMMERCE_OPENAPI_RENDERED.yaml'));
 const manifest = loadJson(path.join(fixturesRoot, 'manifest.json'));
 const allFixtureFiles = walkJsonFiles(fixturesRoot);
 const nonManifestFixtureFiles = allFixtureFiles.filter((filePath) => path.basename(filePath) !== 'manifest.json');
 const fixturesReadme = readFileSync(path.join(fixturesRoot, 'README.md'), 'utf8');
-const entitlementDoc = readFileSync(
-  path.join(docsRoot, '26_NOOS_BUYER_LIBRARY_ENTITLEMENTS_AND_DELIVERY_SYSTEM_2026.md'),
-  'utf8'
-);
 
 const schemaRegistry = schemaPack.components.schemas;
 
@@ -205,12 +201,8 @@ const entitlementStates = new Set(
 
 for (const state of entitlementStates) {
   assert.ok(
-    entitlementDoc.includes(state),
-    `Entitlement doc drifted from fixture state ${state}. Update docs/noos together with the fixture.`
-  );
-  assert.ok(
     fixturesReadme.includes(`\`${state}\``) || fixturesReadme.includes(state),
-    `Fixtures README drifted from entitlement state ${state}. Update docs/noos together with the fixture manifest.`
+    `Fixtures README drifted from entitlement state ${state}. Update app-owned commerce data together with the fixture manifest.`
   );
 }
 

@@ -16,20 +16,32 @@ interface QuotaRequest {
   limit?: number;
 }
 
+function requirePositiveSafeInteger(value: number | undefined, fallback: number, field: string): number {
+  const resolved = value ?? fallback;
+  if (!Number.isSafeInteger(resolved) || resolved <= 0) {
+    throw new Error(`${field} must be a positive safe integer`);
+  }
+  return resolved;
+}
+
 export class QuotaDurableObject extends DurableObject {
   async fetch(request: Request): Promise<Response> {
     const body = (await request.json()) as QuotaRequest;
 
+    if (!body.tenant?.trim() || !body.workspaceId?.trim()) {
+      return Response.json({ error: "tenant_and_workspace_required" }, { status: 400 });
+    }
+
     if (body.action === "check") {
       const state = await this.getState(body);
       const remaining = state.limit - state.used;
-      const amount = body.amount ?? 1;
+      const amount = requirePositiveSafeInteger(body.amount, 1, "amount");
       return Response.json({ allowed: amount <= remaining, remaining });
     }
 
     if (body.action === "increment") {
       const state = await this.getState(body);
-      const amount = body.amount ?? 1;
+      const amount = requirePositiveSafeInteger(body.amount, 1, "amount");
       if (state.used + amount > state.limit) {
         return Response.json(
           { error: "quota_exceeded", used: state.used, limit: state.limit },
@@ -58,7 +70,7 @@ export class QuotaDurableObject extends DurableObject {
       workspaceId: body.workspaceId,
       unit: "run_count",
       used: 0,
-      limit: body.limit ?? 100,
+      limit: requirePositiveSafeInteger(body.limit, 100, "limit"),
       windowStart: Date.now(),
     };
     await this.ctx.storage.put<QuotaState>("quota_state", fresh);

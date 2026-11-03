@@ -1,0 +1,30 @@
+{
+  "buyerId": "buyer_arch009",
+  "items": [
+    {
+      "productCode": "P03",
+      "name": "NOOS Architecture and System Map Pack",
+      "currentVersion": "1.2",
+      "purchasedDate": "2025-10-01T08:30:00Z",
+      "licenseType": "Individual",
+      "updateStatus": "window_expired",
+      "actions": [
+        "view",
+        "download",
+        "updates"
+      ]
+    }
+  ],
+  "recommendations": {
+    "nextProductPrimary": "P11",
+    "nextProductSecondary": "P05",
+    "ruleRef": "P03->P11"
+  },
+  "routeSet": [
+    "/library",
+    "/library/product/noos-architecture-system-map-pack",
+    "/library/updates",
+    "/library/licenses",
+    "/library/account"
+  ]
+}

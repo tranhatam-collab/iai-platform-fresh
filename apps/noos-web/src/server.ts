@@ -1,9 +1,7 @@
-import { createServer } from "node:http";
+import { createServer, type RequestListener, type Server } from "node:http";
 import { getCommerceSourceMode } from "./data.js";
 import { renderCheckoutFromForm, renderRoute } from "./render.js";
 import { defaultLocale, type Locale } from "./i18n.js";
-
-const port = Number(process.env.NOOS_WEB_PORT ?? 4320);
 
 async function readFormBody(req: AsyncIterable<Buffer | string>): Promise<URLSearchParams> {
   let body = "";
@@ -13,14 +11,22 @@ async function readFormBody(req: AsyncIterable<Buffer | string>): Promise<URLSea
   return new URLSearchParams(body);
 }
 
-const server = createServer(async (req, res) => {
+export function createNoosWebRequestHandler(port = Number(process.env.NOOS_WEB_PORT ?? 4320)): RequestListener {
+  return async (req, res) => {
   if (!req.url || !req.method) {
     res.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
     res.end("Bad request");
     return;
   }
 
-  const url = new URL(req.url, `http://127.0.0.1:${port}`);
+  let url: URL;
+  try {
+    url = new URL(req.url, `http://127.0.0.1:${port}`);
+  } catch {
+    res.writeHead(400, { "content-type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ code: "invalid_request_url" }));
+    return;
+  }
   const localeMatch = url.pathname.match(/^\/(en|vi)(\/.*)?$/);
   const locale = (localeMatch?.[1] as Locale | undefined) ?? defaultLocale;
   const normalizedPostPath = localeMatch?.[2] || url.pathname;
@@ -65,8 +71,9 @@ const server = createServer(async (req, res) => {
       )
     );
   }
-});
+  };
+}
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`NOOS web listening on http://127.0.0.1:${port}`);
-});
+export function createNoosWebServer(port = Number(process.env.NOOS_WEB_PORT ?? 4320)): Server {
+  return createServer(createNoosWebRequestHandler(port));
+}

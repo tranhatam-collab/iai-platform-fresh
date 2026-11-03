@@ -36,6 +36,18 @@ test("public routes redirect to locale-prefixed canonicals", async () => {
   assert.equal(localeRootResponse.headers.location, "/vi/products");
 });
 
+test("buyer identifiers are URL-encoded before being rendered into navigation links", async () => {
+  const maliciousBuyer = 'buyer_"><script>alert(1)</script>';
+  const response = await renderRoute(
+    "/en/products",
+    new URLSearchParams({ buyer: maliciousBuyer })
+  );
+
+  assert.equal(response.status, 200);
+  assert.doesNotMatch(response.body, /<script>alert\(1\)<\/script>/);
+  assert.match(response.body, /buyer=buyer_%22%3E%3Cscript%3Ealert\(1\)%3C%2Fscript%3E/);
+});
+
 test("english catalog renders the locked product list with language controls and hreflang", async () => {
   const response = await renderRoute("/en/products", new URLSearchParams());
 

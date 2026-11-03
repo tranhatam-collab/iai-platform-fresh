@@ -15,7 +15,12 @@ export function createHealthServer(
   stats: RuntimeStats
 ) {
   return createServer(async (request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    let url: URL;
+    try {
+      url = new URL(request.url ?? "/", "http://127.0.0.1");
+    } catch {
+      return writeJson(response, 400, { ok: false, code: "INVALID_REQUEST_URL" });
+    }
 
     if (url.pathname === "/health") {
       return writeJson(response, 200, {
