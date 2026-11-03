@@ -31,6 +31,22 @@ The local Git object pack and multiple worktree files have been offloaded by mac
 
 No clone-based reconstruction may be presented as complete: most dataless changed files have no size-matching version at the tips of existing remote branches.
 
+### 2.1 Materialization recovery receipt
+
+Recovery was retried after the Mac was manually unlocked. The result remained `BLOCKED_LOCAL_MATERIALIZATION`:
+
+- `brctl download` was requested for the Git pack, all `13` tracked dataless paths, and the known untracked dataless workflow/entry-point paths.
+- Finder showed the repository waiting to upload hundreds of items, while `fileproviderctl evaluate` reported representative changed files as `isDownloaded=0`, `isDownloading=0`, `isUploaded=0`, and `isUploading=0`.
+- Stale Git/Cursor read processes were stopped and `fileproviderd` plus `bird` were restarted; materialization still did not advance.
+- macOS unified logs recorded `requestMaterialization failed`, `libfssync.MaterializationError 0`, Cocoa error `3072`, and repeated fetch/create requests with no progress.
+- Cursor and Windsurf Local History, local provider caches, alternate checkouts, remote branch tips/history, APFS local snapshots, and accessible Time Machine paths did not provide complete replacement bytes. Only `tests/integration/flow-mail-api-send.test.mjs` had one historical size match; using it alone would still create an incomplete reconstruction.
+- A read-only File Provider diagnostic snapshot was saved at `/tmp/iai-platform-fileprovider-diagnose-20261103`. Its iCloud dump is `/tmp/iai-platform-fileprovider-diagnose-20261103/FileProvider/com.apple.CloudDocs.iCloudDriveFileProvider/8{34}9_0_dump.log`, SHA-256 `40c4b6b898eab918bad140368312292160994abbc62aff44f8106b5d2a250f70`.
+- A pre-repair recovery archive containing all `47` currently readable changed/context files was verified at `/tmp/iai-platform-pre-repair-20261103/readable-worktree.tar.gz`, SHA-256 `712dc4c6ea2fb6be123e8e5e6fea406abce045477c47762c4c4b75b276894d8d`. Its inventory is `/tmp/iai-platform-pre-repair-20261103/inventory.json`, SHA-256 `90258b4585dabfc9418f7f2cb59697c1cfee156993a99fc78941245b7478d9ea`.
+
+A scoped `fileproviderctl repair` for this repository was authorized after the diagnostic and readable-file backup were verified. It was still running under `FPCKService` at `2026-11-03 23:45:35 +07`; this receipt records `REPAIR_IN_PROGRESS`, not a successful recovery. No placeholder overwrite, index purge, hook bypass, or force-push was performed.
+
+GitHub CLI authentication also remains pending: the configured `tranhatam-collab` token is invalid, and a browser device-login attempt was cancelled when macOS locked again. SSH remote access has not been counted as PR/API authentication.
+
 ## 3. Change streams awaiting complete review
 
 ### A. Security remediation and CI controls
